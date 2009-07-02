@@ -84,6 +84,11 @@ bool LinkLayer::createNetwork() {
 
 	qDebug() << "Network created, listening at port" << port;
 
+	master_node_def_t *def = new master_node_def_t;
+	def->addr = QHostAddress::LocalHost;
+	def->port = port;
+	masters.append(def);
+
 	return true;
 }
 
@@ -223,20 +228,37 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 	/* все следующие пакеты зашифрованы */
 
-	case NetworkInformationRequest: {
-		printf("FIXME: NetworkInformationRequest not implemented\n");
+	case GetMasterNodeRequest: {
+		get_master_node_reply_t reply;
 
-		sendPacket(NetworkInformationReply, host, port, QByteArray(), true);
+		master_node_def_t *def = selectMaster();
+
+		reply.addr = def->addr.toIPv4Address();
+		reply.port = def->port;
+
+		QByteArray data((char *) &reply, sizeof(reply));
+
+		sendPacket(GetMasterNodeReply, host, port, data, true);
 
 		break;
 	}
 
-	case NetworkInformationReply: {
-		printf("FIXME: NetworkInformationReply not implemented\n");
+	case GetMasterNodeReply: {
+		if(hdr->length < sizeof(get_master_node_reply_t) + sizeof(packet_header_t)) {
+			qWarning() << "Bad length" << hdr->length <<
+				"on incoming packet from" << host.toString() << ":" << port;
+
+			break;
+		}
+
+		get_master_node_reply_t *ver = (get_master_node_reply_t *) payload.data();
+
+		if(joinStep == RequestingMasterNode) {
+			joinGotMaster(QHostAddress(ver->addr), ver->port);
+		}
 
 		break;
 	}
-
 
 	default:
 		qWarning() << "Bad type" << hdr->type <<
@@ -336,11 +358,17 @@ void LinkLayer::joinGotVersion(int version) {
 		QCoreApplication::exit(1);
 	}
 
-	qDebug() << "Still joining";
+	qDebug() << "Requesting master node";
 
-	joinStep = RequestingNetworkInformation;
+	joinStep = RequestingMasterNode;
 
-	sendNetworkInformationRequest(remoteAddress, remotePort);
+	sendGetMasterNodeRequest(remoteAddress, remotePort);
+}
+
+void LinkLayer::joinGotMaster(QHostAddress host, quint16 port) {
+	qDebug() << "Registering in network via master" << host.toString() << ":" << port;
+
+	joinStep = RegisteringInNetwork;
 }
 
 void LinkLayer::sendProtocolVersionRequest(QHostAddress host, quint16 port) {
@@ -349,12 +377,16 @@ void LinkLayer::sendProtocolVersionRequest(QHostAddress host, quint16 port) {
 	sendPacket(ProtocolVersionRequest, host, port, data, false);
 }
 
-void LinkLayer::sendNetworkInformationRequest(QHostAddress host, quint16 port) {
+void LinkLayer::sendGetMasterNodeRequest(QHostAddress host, quint16 port) {
 	QByteArray data;
 
-	sendPacket(NetworkInformationRequest, host, port, data, true);
+	sendPacket(GetMasterNodeRequest, host, port, data, true);
 }
 
 void LinkLayer::publicKeyExchange(QHostAddress host, quint16 port) {
 	sendPacket(PublicKeyExchange, host, port, hostPair->getPublicKey(), false);
+}
+
+LinkLayer::master_node_def_t *LinkLayer::selectMaster() {
+	return masters.at(qrand() % masters.count());
 }

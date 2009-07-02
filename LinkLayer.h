@@ -47,6 +47,7 @@ private slots:
 	void haveDatagram();
 
 private:
+
 	enum {
 		ProtocolVersion	= 1,
 	};
@@ -64,8 +65,8 @@ private:
 
 		EncryptedPacket			= 8,
 
-		NetworkInformationRequest	= 9,
-		NetworkInformationReply		= 10,
+		GetMasterNodeRequest		= 9,
+		GetMasterNodeReply		= 10,
 
 
 	};
@@ -80,18 +81,32 @@ private:
 		uint32_t	version;
 	};
 
+	struct get_master_node_reply_t {
+		quint32	addr;
+		quint16	port;
+	};
+
+	struct master_node_def_t {
+		QHostAddress	addr;
+		quint16		port;
+	};
+
+
 	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
 
 	void sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data, bool encrypted);
 	void sendAsEncrypted(SparkleNode *node, QByteArray data);
 
 	void sendProtocolVersionRequest(QHostAddress host, quint16 port);
-	void sendNetworkInformationRequest(QHostAddress host, quint16 port);
+	void sendGetMasterNodeRequest(QHostAddress host, quint16 port);
 	void publicKeyExchange(QHostAddress host, quint16 port);
 
 	void joinGotVersion(int version);
+	void joinGotMaster(QHostAddress host, quint16 port);
 
 	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
+
+	master_node_def_t *selectMaster();
 
 	QUdpSocket *socket;
 
@@ -106,18 +121,14 @@ private:
 
 	enum join_step_t {
 		RequestingProtocolVersion,
-		RequestingNetworkInformation,
+		RequestingMasterNode,
+		RegisteringInNetwork,
 	};
 
 	join_step_t joinStep;
 
-	struct sparkleNode {
-		QHostAddress	address;
-		quint16		port;
-	};
-
-
 	QList<SparkleNode *> nodes;
+	QList<master_node_def_t *> masters;
 };
 
 #endif

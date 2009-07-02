@@ -77,8 +77,9 @@ int main(int argc, char *argv[]) {
 	QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
 	QDir().mkdir(configDir);
 
-//	uint time = QDateTime::currentDateTime().toTime_t();
-//	RAND_seed(&time, sizeof(time));
+
+	uint time = QDateTime::currentDateTime().toTime_t();
+	qsrand(time);
 
 	RSAKeyPair hostPair;
 
