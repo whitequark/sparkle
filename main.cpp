@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009  Serge Gridassov
+ * Copyright (C) 2009 Sergey Gridassov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
 
 	app.setApplicationName("sparkle");
 
-	int keyLen = 2048;
-	quint16 port = 27404;
+	int keyLen = 1024;
+	quint16 port = 1801;
 	bool createNetwork = false;
 	QString nodeName;
 

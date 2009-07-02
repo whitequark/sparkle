@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009  Serge Gridassov
+ * Copyright (C) 2009 Sergey Gridassov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

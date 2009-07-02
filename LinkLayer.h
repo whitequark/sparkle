@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009  Serge Gridassov
+ * Copyright (C) 2009 Sergey Gridassov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,6 @@ private slots:
 
 private:
 	enum {
-		PacketMagic	= 0x799c739d,
 		ProtocolVersion	= 1,
 	};
 
@@ -57,7 +56,6 @@ private:
 	};
 
 	struct packet_header_t {
-		uint32_t	magic;
 		uint16_t	type;
 		uint16_t	length;
 	};

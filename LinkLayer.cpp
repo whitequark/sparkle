@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009  Serge Gridassov
+ * Copyright (C) 2009 Sergey Gridassov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,9 +90,8 @@ void LinkLayer::haveDatagram() {
 void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 port) {
 	const packet_header_t *hdr = (packet_header_t *) data.constData();
 
-	if(hdr->magic != PacketMagic) {
-		qWarning() << "Bad magic" << hdr->magic <<
-				"on incoming packet from" << host.toString() << ":" << port;
+	if((size_t) data.size() < sizeof(packet_header_t) || hdr->length != data.size()) {
+		qWarning() << "Malformed packet from" << host.toString() << ":" << port;
 
 		return;
 	}
@@ -180,7 +179,6 @@ void LinkLayer::sendProtocolVersionRequest(QHostAddress host, quint16 port) {
 void LinkLayer::sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data) {
 	packet_header_t hdr;
 
-	hdr.magic = PacketMagic;
 	hdr.length = sizeof(packet_header_t) + data.size();
 	hdr.type = type;
 
