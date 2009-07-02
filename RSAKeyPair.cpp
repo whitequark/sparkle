@@ -104,3 +104,88 @@ bool RSAKeyPair::readFromFile(QString filename) {
 
 }
 
+QByteArray RSAKeyPair::getPublicKey() {
+	BIO *mem = BIO_new(BIO_s_mem());
+
+	if(mem == NULL)
+		return QByteArray();
+
+	if(PEM_write_bio_RSAPublicKey(mem, key) == 0) {
+		BIO_free(mem);
+
+		return QByteArray();
+	}
+
+	char *pointer;
+	long len = BIO_get_mem_data(mem, &pointer);
+
+	QByteArray data(pointer, len);
+
+	BIO_free(mem);
+
+	return data;
+}
+
+bool RSAKeyPair::setPublicKey(QByteArray data) {
+	BIO *mem = BIO_new_mem_buf(data.data(), data.size());
+
+	if(mem == NULL)
+		return false;
+
+	RSA *newKey = PEM_read_bio_RSAPublicKey(mem, NULL, NULL, NULL);
+
+	BIO_free(mem);
+
+	if(newKey) {
+		RSA_free(key);
+
+		key = newKey;
+
+		return true;
+	} else
+		return false;
+
+}
+
+QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
+	QByteArray output;
+
+	int rsize = RSA_size(key);
+
+	int flen = rsize - 41;
+	unsigned char chunk[rsize];
+
+	for(; plaintext.size() > 0; ) {
+		int dlen = qMin<int>(flen, plaintext.length());
+
+		int enc = RSA_public_encrypt(dlen, (unsigned char *) plaintext.data(), chunk, key, RSA_PKCS1_OAEP_PADDING);
+
+		output += QByteArray((char *) chunk, enc);
+
+		plaintext = plaintext.right(plaintext.size() - dlen);
+	}
+
+	return output;
+}
+
+QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
+	QByteArray output;
+
+	int rsize = RSA_size(key);
+
+	int flen = rsize - 41;
+
+	unsigned char chunk[flen];
+
+	for(; cryptotext.size() > 0; ) {
+		int dlen = qMin<int>(rsize, cryptotext.size());
+
+		int dec = RSA_private_decrypt(dlen, (unsigned char *) cryptotext.data(), chunk, key, RSA_PKCS1_OAEP_PADDING);
+
+		output += QByteArray((char *) chunk, dec);
+
+		cryptotext = cryptotext.right(cryptotext.size() - rsize);
+	}
+
+	return output;
+}

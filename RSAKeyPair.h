@@ -32,6 +32,12 @@ public:
 	bool generate(int bits);
 	bool writeToFile(QString filename);
 	bool readFromFile(QString filename);
+
+	QByteArray getPublicKey();
+	bool setPublicKey(QByteArray key);
+
+	QByteArray encrypt(QByteArray data);
+	QByteArray decrypt(QByteArray data);
 private:
 	RSA *key;
 };

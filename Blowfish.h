@@ -19,6 +19,7 @@
 #ifndef __BLOWFISH__H__
 #define __BLOWFISH__H__
 
+#include <openssl/blowfish.h>
 #include <QObject>
 
 class Blowfish: public QObject
@@ -27,6 +28,19 @@ class Blowfish: public QObject
 public:
 	Blowfish(QObject *parent = 0);
 	virtual ~Blowfish();
+
+	bool operator=(const Blowfish &another);
+	void generate();
+
+	QByteArray getKey();
+	void setKey(QByteArray raw);
+	
+	QByteArray encrypt(QByteArray data);
+	QByteArray decrypt(QByteArray data);
+
+private:
+	BF_KEY key;
+	QByteArray rawKey;
 };
 
 #endif

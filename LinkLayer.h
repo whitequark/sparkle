@@ -23,10 +23,10 @@
 #include <QHostInfo>
 
 #include "RSAKeyPair.h"
-#include "SparkleNode.h"
 
 class QUdpSocket;
 class QHostAddress;
+class SparkleNode;
 
 class LinkLayer : public QObject
 {
@@ -49,22 +49,23 @@ private slots:
 private:
 	enum {
 		ProtocolVersion	= 1,
-
-		PacketEncrypted	= 1,
 	};
 
 	enum packet_type_t {
-		ProtocolVersionRequest	= 1,
-		ProtocolVersionReply	= 2,
+		ProtocolVersionRequest		= 1,
+		ProtocolVersionReply		= 2,
 
-		PublicKeyExchange	= 3,
-		PublicKeyReply		= 4,
+		PublicKeyExchange		= 3,
+		PublicKeyReply			= 4,
 
-		SessionKeyExchange	= 5,
-		SessionKeyReply		= 6,
+		SessionKeyExchange		= 5,
+		SessionKeyReply			= 6,
+		SessionKeyAcknowlege		= 7,
 
-		NetworkInformationRequest	= 7,
-		NetworkInformationReply		= 8,
+		EncryptedPacket			= 8,
+
+		NetworkInformationRequest	= 9,
+		NetworkInformationReply		= 10,
 
 
 	};
@@ -72,7 +73,6 @@ private:
 	struct packet_header_t {
 		uint16_t	type;
 		uint16_t	length;
-		uint32_t	flags;
 
 	};
 
@@ -83,6 +83,7 @@ private:
 	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
 
 	void sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data, bool encrypted);
+	void sendAsEncrypted(SparkleNode *node, QByteArray data);
 
 	void sendProtocolVersionRequest(QHostAddress host, quint16 port);
 	void sendNetworkInformationRequest(QHostAddress host, quint16 port);
@@ -90,7 +91,7 @@ private:
 
 	void joinGotVersion(int version);
 
-	SparkleNode getOrConstructNode(QHostAddress host, quint16 port);
+	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
 
 	QUdpSocket *socket;
 
@@ -116,7 +117,7 @@ private:
 	};
 
 
-	QList<SparkleNode> nodes;
+	QList<SparkleNode *> nodes;
 };
 
 #endif

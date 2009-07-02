@@ -22,6 +22,7 @@
 #include <QHostInfo>
 
 #include "LinkLayer.h"
+#include "SparkleNode.h"
 
 LinkLayer::LinkLayer(RSAKeyPair *hostPair, quint16 port, QObject *parent) : QObject(parent)
 {
@@ -35,6 +36,21 @@ LinkLayer::LinkLayer(RSAKeyPair *hostPair, quint16 port, QObject *parent) : QObj
 
 LinkLayer::~LinkLayer() {
 
+}
+
+void hexdump(const char *title, QByteArray data) {
+	printf("Dumping %s\n", title);
+
+	unsigned char *raw = (unsigned char *) data.data();
+
+	for(int i = 0; i < data.size(); i++) {
+		if(i % 8 == 0)
+			printf("\n");
+
+		printf("%02X ", raw[i]);
+	}
+
+	printf("\n");
 }
 
 bool LinkLayer::joinNetwork(QString node) {
@@ -90,7 +106,7 @@ void LinkLayer::haveDatagram() {
 void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 port) {
 	const packet_header_t *hdr = (packet_header_t *) data.constData();
 
-	if((size_t) data.size() < sizeof(packet_header_t) || hdr->length != data.size()) {
+	if((size_t) data.size() < sizeof(packet_header_t) || hdr->length > data.size()) {
 		qWarning() << "Malformed packet from" << host.toString() << ":" << port;
 
 		return;
@@ -98,7 +114,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 	QByteArray payload = data.right(data.size() - sizeof(packet_header_t));
 
-	switch((packet_type_t) hdr->type) {
+	switch((packet_type_t) hdr->type) {		
 	case ProtocolVersionRequest: {
 		protocol_version_reply_t ver;
 		ver.version = ProtocolVersion;
@@ -125,9 +141,9 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	}
 
 	case PublicKeyExchange: {
-		SparkleNode node = getOrConstructNode(host, port);
+		SparkleNode *node = getOrConstructNode(host, port);
 
-		node.setPublicKey(payload);
+		node->getRSA()->setPublicKey(payload);
 
 		sendPacket(PublicKeyReply, host, port, hostPair->getPublicKey(), false);
 
@@ -135,11 +151,88 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	}
 
 	case PublicKeyReply: {
-		SparkleNode node = getOrConstructNode(host, port);
+		SparkleNode *node = getOrConstructNode(host, port);
 
-		node.setPublicKey(payload);
+		node->getRSA()->setPublicKey(payload);
 
-		printf("Generating session key\n");
+		node->getToKey()->generate();
+
+		QByteArray key = node->getToKey()->getKey();
+
+		sendPacket(SessionKeyExchange, host, port, node->getRSA()->encrypt(key), false);
+
+		break;
+	}
+
+	case SessionKeyExchange: {
+		SparkleNode *node = getOrConstructNode(host, port);
+
+		node->getToKey()->generate();
+
+		node->getFromKey()->setKey(hostPair->decrypt(payload));
+
+		QByteArray toKey = node->getRSA()->encrypt(node->getToKey()->getKey());
+
+		sendPacket(SessionKeyReply, host, port, toKey, false);
+
+		break;
+	}
+
+	case SessionKeyReply: {
+		SparkleNode *node = getOrConstructNode(host, port);
+
+		node->getFromKey()->setKey(hostPair->decrypt(payload));
+
+		sendPacket(SessionKeyAcknowlege, host, port, QByteArray(), false);
+
+		node->negotiationDone = true;
+
+		while(!node->isQueueEmpty())
+			sendAsEncrypted(node, node->getFromQueue());
+
+
+		break;
+	}
+
+	case SessionKeyAcknowlege: {
+		SparkleNode *node = getOrConstructNode(host, port);
+
+		node->negotiationDone = true;
+
+		while(!node->isQueueEmpty())
+			sendAsEncrypted(node, node->getFromQueue());
+
+		break;
+	}
+
+	case EncryptedPacket: {
+		SparkleNode *node = getOrConstructNode(host, port);
+
+		if(!node->negotiationDone) {
+			printf("Encrypted packet from unknown node\n");
+
+			break;
+		}
+
+		QByteArray decData = node->getFromKey()->decrypt(payload);
+
+		handleDatagram(decData, host, port);
+
+		break;
+	}
+
+	/* все следующие пакеты зашифрованы */
+
+	case NetworkInformationRequest: {
+		printf("FIXME: NetworkInformationRequest not implemented\n");
+
+		sendPacket(NetworkInformationReply, host, port, QByteArray(), true);
+
+		break;
+	}
+
+	case NetworkInformationReply: {
+		printf("FIXME: NetworkInformationReply not implemented\n");
 
 		break;
 	}
@@ -197,28 +290,37 @@ void LinkLayer::sendPacket(packet_type_t type, QHostAddress host, quint16 port,
 
 	hdr.length = sizeof(packet_header_t) + data.size();
 	hdr.type = type;
-	hdr.flags = encrypted ? PacketEncrypted : 0;
 
 	data.prepend(QByteArray((const char *) &hdr, sizeof(packet_header_t)));
 
 	if(!encrypted) {
 		socket->writeDatagram(data, host, port);
 	} else {
-		SparkleNode node = getOrConstructNode(host, port);
+		SparkleNode *node = getOrConstructNode(host, port);
 
-		node.appendQueue(data);
+		if(!node->negotiationDone) {
+			node->appendQueue(data);
 
-		publicKeyExchange(host, port);
+			publicKeyExchange(host, port);
+		} else {
+			sendAsEncrypted(node, data);
+		}
 	}
 }
 
+void LinkLayer::sendAsEncrypted(SparkleNode *node, QByteArray data) {
+	data = node->getToKey()->encrypt(data);
 
-SparkleNode LinkLayer::getOrConstructNode(QHostAddress host, quint16 port) {
-	foreach(SparkleNode node, nodes)
-		if(node.getHost() == host && node.getPort() == port)
+	return sendPacket(EncryptedPacket, node->getHost(), node->getPort(), data, false);
+}
+
+SparkleNode *LinkLayer::getOrConstructNode(QHostAddress host, quint16 port) {
+	foreach(SparkleNode *node, nodes)
+		if(node->getHost() == host && node->getPort() == port) {
 			return node;
+		}
 
-	SparkleNode node(host, port);
+	SparkleNode *node = new SparkleNode(host, port, this);
 
 	nodes.append(node);
 

@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
 	int keyLen = 1024;
 	quint16 port = 1801;
 	bool createNetwork = false;
-	QString nodeName;
+	QString nodeName, profile = "default";
 
 	{
 		QString keyLenStr, portStr, createStr;
@@ -49,6 +49,9 @@ int main(int argc, char *argv[]) {
 
 		parser.registerOption('n', "node", ArgumentsParser::RequiredArgument, &nodeName, NULL,
 				      NULL, "login using specified node", "ADDR");
+
+		parser.registerOption(QChar::Null, "profile", ArgumentsParser::RequiredArgument, &profile, NULL,
+		      NULL, "use specified profile", "PROFILE");
 
 		parser.registerOption(QChar::Null, "create", ArgumentsParser::NoArgument, &createStr, NULL,
 				      NULL, "create new network", NULL);
@@ -70,12 +73,12 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	uint time = QDateTime::currentDateTime().toTime_t();
-
-	RAND_seed(&time, sizeof(time));
-
-	QString configDir = QDir::homePath() + "/." + app.applicationName();;
+	QString configDir = QDir::homePath() + "/." + app.applicationName() + "/" + profile;
+	QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
 	QDir().mkdir(configDir);
+
+//	uint time = QDateTime::currentDateTime().toTime_t();
+//	RAND_seed(&time, sizeof(time));
 
 	RSAKeyPair hostPair;
 
@@ -105,7 +108,7 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 
-	LinkLayer link(port);
+	LinkLayer link(&hostPair, port);
 
 	if(createNetwork) {
 		if(!link.createNetwork()) {

@@ -18,11 +18,35 @@
 
 #include "SparkleNode.h"
 
-SparkleNode::SparkleNode(QObject *parent) : QObject(parent);
-{
+SparkleNode::SparkleNode(QHostAddress host, quint16 port, QObject *parent) : QObject(parent) {
+	this->host = host;
+	this->port = port;
+
+	negotiationDone = false;
+}
+
+SparkleNode::~SparkleNode() {
 
 }
 
-SparleNode::~SparkleNode() {
 
+QHostAddress SparkleNode::getHost() {
+	return host;
 }
+
+quint16 SparkleNode::getPort() {
+	return port;
+}
+
+void SparkleNode::appendQueue(QByteArray data) {
+	queue.append(data);
+}
+
+bool SparkleNode::isQueueEmpty() {
+	return queue.empty();
+}
+
+QByteArray SparkleNode::getFromQueue() {
+	return queue.takeFirst();
+}
+
