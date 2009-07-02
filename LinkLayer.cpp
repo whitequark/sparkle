@@ -23,14 +23,14 @@
 
 #include "LinkLayer.h"
 
-LinkLayer::LinkLayer(quint16 port, QObject *parent) : QObject(parent)
+LinkLayer::LinkLayer(RSAKeyPair *hostPair, quint16 port, QObject *parent) : QObject(parent)
 {
-    this->port = port;
+	this->port = port;
+	this->hostPair = hostPair;
 
-    socket = new QUdpSocket(this);
+	socket = new QUdpSocket(this);
 
-    connect(socket, SIGNAL(readyRead()), this, SLOT(haveDatagram()));
-
+	connect(socket, SIGNAL(readyRead()), this, SLOT(haveDatagram()));
 }
 
 LinkLayer::~LinkLayer() {
@@ -104,7 +104,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 		ver.version = ProtocolVersion;
 
 		sendPacket(ProtocolVersionReply, host, port, QByteArray((const char *) &ver,
-							sizeof(protocol_version_reply_t)));
+							sizeof(protocol_version_reply_t)), false);
 
 		break;
 	}
@@ -123,6 +123,27 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 		break;
 	}
+
+	case PublicKeyExchange: {
+		SparkleNode node = getOrConstructNode(host, port);
+
+		node.setPublicKey(payload);
+
+		sendPacket(PublicKeyReply, host, port, hostPair->getPublicKey(), false);
+
+		break;
+	}
+
+	case PublicKeyReply: {
+		SparkleNode node = getOrConstructNode(host, port);
+
+		node.setPublicKey(payload);
+
+		printf("Generating session key\n");
+
+		break;
+	}
+
 
 	default:
 		qWarning() << "Bad type" << hdr->type <<
@@ -170,22 +191,40 @@ void LinkLayer::joinTargetLookedUp(QHostInfo host) {
 	QCoreApplication::exit(1);
 }
 
-void LinkLayer::sendProtocolVersionRequest(QHostAddress host, quint16 port) {
-	QByteArray data;
-
-	sendPacket(ProtocolVersionRequest, host, port, data);
-}
-
-void LinkLayer::sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data) {
+void LinkLayer::sendPacket(packet_type_t type, QHostAddress host, quint16 port,
+			   QByteArray data, bool encrypted) {
 	packet_header_t hdr;
 
 	hdr.length = sizeof(packet_header_t) + data.size();
 	hdr.type = type;
+	hdr.flags = encrypted ? PacketEncrypted : 0;
 
 	data.prepend(QByteArray((const char *) &hdr, sizeof(packet_header_t)));
 
-	socket->writeDatagram(data, host, port);
+	if(!encrypted) {
+		socket->writeDatagram(data, host, port);
+	} else {
+		SparkleNode node = getOrConstructNode(host, port);
+
+		node.appendQueue(data);
+
+		publicKeyExchange(host, port);
+	}
 }
+
+
+SparkleNode LinkLayer::getOrConstructNode(QHostAddress host, quint16 port) {
+	foreach(SparkleNode node, nodes)
+		if(node.getHost() == host && node.getPort() == port)
+			return node;
+
+	SparkleNode node(host, port);
+
+	nodes.append(node);
+
+	return node;
+}
+
 
 void LinkLayer::joinGotVersion(int version) {
 	if(version != ProtocolVersion) {
@@ -196,4 +235,24 @@ void LinkLayer::joinGotVersion(int version) {
 	}
 
 	qDebug() << "Still joining";
+
+	joinStep = RequestingNetworkInformation;
+
+	sendNetworkInformationRequest(remoteAddress, remotePort);
+}
+
+void LinkLayer::sendProtocolVersionRequest(QHostAddress host, quint16 port) {
+	QByteArray data;
+
+	sendPacket(ProtocolVersionRequest, host, port, data, false);
+}
+
+void LinkLayer::sendNetworkInformationRequest(QHostAddress host, quint16 port) {
+	QByteArray data;
+
+	sendPacket(NetworkInformationRequest, host, port, data, true);
+}
+
+void LinkLayer::publicKeyExchange(QHostAddress host, quint16 port) {
+	sendPacket(PublicKeyExchange, host, port, hostPair->getPublicKey(), false);
 }
