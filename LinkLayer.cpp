@@ -228,7 +228,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 	/* все следующие пакеты зашифрованы */
 
-	case GetMasterNodeRequest: {
+	case MasterNodeRequest: {
 		get_master_node_reply_t reply;
 
 		master_node_def_t *def = selectMaster();
@@ -238,12 +238,12 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 		QByteArray data((char *) &reply, sizeof(reply));
 
-		sendPacket(GetMasterNodeReply, host, port, data, true);
+		sendPacket(MasterNodeReply, host, port, data, true);
 
 		break;
 	}
 
-	case GetMasterNodeReply: {
+	case MasterNodeReply: {
 		if(hdr->length < sizeof(get_master_node_reply_t) + sizeof(packet_header_t)) {
 			qWarning() << "Bad length" << hdr->length <<
 				"on incoming packet from" << host.toString() << ":" << port;
@@ -362,7 +362,7 @@ void LinkLayer::joinGotVersion(int version) {
 
 	joinStep = RequestingMasterNode;
 
-	sendGetMasterNodeRequest(remoteAddress, remotePort);
+	sendMasterNodeRequest(remoteAddress, remotePort);
 }
 
 void LinkLayer::joinGotMaster(QHostAddress host, quint16 port) {
@@ -377,10 +377,10 @@ void LinkLayer::sendProtocolVersionRequest(QHostAddress host, quint16 port) {
 	sendPacket(ProtocolVersionRequest, host, port, data, false);
 }
 
-void LinkLayer::sendGetMasterNodeRequest(QHostAddress host, quint16 port) {
+void LinkLayer::sendMasterNodeRequest(QHostAddress host, quint16 port) {
 	QByteArray data;
 
-	sendPacket(GetMasterNodeRequest, host, port, data, true);
+	sendPacket(MasterNodeRequest, host, port, data, true);
 }
 
 void LinkLayer::publicKeyExchange(QHostAddress host, quint16 port) {

@@ -65,8 +65,8 @@ private:
 
 		EncryptedPacket			= 8,
 
-		GetMasterNodeRequest		= 9,
-		GetMasterNodeReply		= 10,
+		MasterNodeRequest		= 9,
+		MasterNodeReply			= 10,
 
 
 	};
@@ -98,7 +98,7 @@ private:
 	void sendAsEncrypted(SparkleNode *node, QByteArray data);
 
 	void sendProtocolVersionRequest(QHostAddress host, quint16 port);
-	void sendGetMasterNodeRequest(QHostAddress host, quint16 port);
+	void sendMasterNodeRequest(QHostAddress host, quint16 port);
 	void publicKeyExchange(QHostAddress host, quint16 port);
 
 	void joinGotVersion(int version);
