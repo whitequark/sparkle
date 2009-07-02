@@ -125,7 +125,8 @@ bool ArgumentsParser::parse() {
 
 					continue;
 				}
-			}
+			} else
+				arg = "set";
 
 			if(!invalid) {
 				if(matching->argument)

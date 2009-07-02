@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <QtDebug>
 #include <openssl/rand.h>
 #include <QCoreApplication>
 #include <QDateTime>
@@ -23,6 +24,7 @@
 
 #include "RSAKeyPair.h"
 #include "ArgumentsParser.h"
+#include "LinkLayer.h"
 
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
@@ -30,19 +32,42 @@ int main(int argc, char *argv[]) {
 	app.setApplicationName("sparkle");
 
 	int keyLen = 2048;
+	quint16 port = 27404;
+	bool createNetwork = false;
+	QString nodeName;
 
 	{
-		QString keyLenStr;
+		QString keyLenStr, portStr, createStr;
 
 		ArgumentsParser parser(app.arguments());
 
 		parser.registerOption(QChar::Null, "key-length", ArgumentsParser::RequiredArgument,
 			&keyLenStr, NULL, NULL, "generate RSA key pair with specified length", "BITS");
 
+		parser.registerOption('p', "port", ArgumentsParser::RequiredArgument, &portStr, NULL,
+				      NULL, "use specified UDP port", "PORT");
+
+		parser.registerOption('n', "node", ArgumentsParser::RequiredArgument, &nodeName, NULL,
+				      NULL, "login using specified node", "ADDR");
+
+		parser.registerOption(QChar::Null, "create", ArgumentsParser::NoArgument, &createStr, NULL,
+				      NULL, "create new network", NULL);
+
 		parser.parse();
 
 		if(!keyLenStr.isNull())
 			keyLen = keyLenStr.toInt();
+
+		createNetwork = createStr.isNull() == false;
+
+		if(!portStr.isNull())
+			port = portStr.toInt();
+	}
+
+	if(nodeName.isNull() && !createNetwork) {
+		fprintf(stderr, "Node name not set\n");
+
+		return 1;
 	}
 
 	uint time = QDateTime::currentDateTime().toTime_t();
@@ -75,10 +100,26 @@ int main(int argc, char *argv[]) {
 
 	} else
 		if(!hostPair.readFromFile(configDir + "/rsa_key")) {
-			printf("Reading RSA key pair failed!\n");
+			fprintf(stderr, "Reading RSA key pair failed!\n");
 
 			return 1;
 		}
+
+	LinkLayer link(port);
+
+	if(createNetwork) {
+		if(!link.createNetwork()) {
+			qCritical() << "Creating network failed:" << link.errorString();
+
+			return 1;
+		}
+	} else {
+		if(!link.joinNetwork(nodeName)) {
+			qCritical() << "Joining network failed:" << link.errorString();
+
+			return 1;
+		}
+	}
 
 	return app.exec();
 }
