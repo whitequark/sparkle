@@ -23,7 +23,7 @@
 #include <QDir>
 
 #include "RSAKeyPair.h"
-#include "ArgumentsParser.h"
+#include "ArgumentParser.h"
 #include "LinkLayer.h"
 
 int main(int argc, char *argv[]) {
@@ -39,21 +39,21 @@ int main(int argc, char *argv[]) {
 	{
 		QString keyLenStr, portStr, createStr;
 
-		ArgumentsParser parser(app.arguments());
+		ArgumentParser parser(app.arguments());
 
-		parser.registerOption(QChar::Null, "key-length", ArgumentsParser::RequiredArgument,
+		parser.registerOption(QChar::Null, "key-length", ArgumentParser::RequiredArgument,
 			&keyLenStr, NULL, NULL, "generate RSA key pair with specified length", "BITS");
 
-		parser.registerOption('p', "port", ArgumentsParser::RequiredArgument, &portStr, NULL,
+		parser.registerOption('p', "port", ArgumentParser::RequiredArgument, &portStr, NULL,
 				      NULL, "use specified UDP port", "PORT");
 
-		parser.registerOption('n', "node", ArgumentsParser::RequiredArgument, &nodeName, NULL,
+		parser.registerOption('n', "node", ArgumentParser::RequiredArgument, &nodeName, NULL,
 				      NULL, "login using specified node", "ADDR");
 
-		parser.registerOption(QChar::Null, "profile", ArgumentsParser::RequiredArgument, &profile, NULL,
+		parser.registerOption(QChar::Null, "profile", ArgumentParser::RequiredArgument, &profile, NULL,
 		      NULL, "use specified profile", "PROFILE");
 
-		parser.registerOption(QChar::Null, "create", ArgumentsParser::NoArgument, &createStr, NULL,
+		parser.registerOption(QChar::Null, "create", ArgumentParser::NoArgument, &createStr, NULL,
 				      NULL, "create new network", NULL);
 
 		parser.parse();

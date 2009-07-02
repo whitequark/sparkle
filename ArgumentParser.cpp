@@ -18,15 +18,15 @@
 
 #include <QCoreApplication>
 #include <QtDebug>
-#include "ArgumentsParser.h"
+#include "ArgumentParser.h"
 
 static void helpCallback(void *u, QString) {
-	ArgumentsParser::help_callback_info_t *t = (ArgumentsParser::help_callback_info_t *) u;
+	ArgumentParser::help_callback_info_t *t = (ArgumentParser::help_callback_info_t *) u;
 
 	printf("Usage: %s [OPTION]...\n", t->pclass->getArguments()[0].toAscii().data());
 	printf("\nMandatory arguments to long options are mandatory for short options too.\n");
 
-	foreach(ArgumentsParser::option_t *option, *t->optionsList) {
+	foreach(ArgumentParser::option_t *option, *t->optionsList) {
 
 		printf("  ");
 
@@ -41,9 +41,9 @@ static void helpCallback(void *u, QString) {
 			printf("--%s", option->longOpt.toAscii().data());
 		}
 
-		if(option->arg == ArgumentsParser::OptionalArgument) {
+		if(option->arg == ArgumentParser::OptionalArgument) {
 			printf(" [%s]", option->argumentDescription.toAscii().data());
-		} else if(option->arg == ArgumentsParser::RequiredArgument) {
+		} else if(option->arg == ArgumentParser::RequiredArgument) {
 			printf(" %s", option->argumentDescription.toAscii().data());
 		}
 
@@ -51,7 +51,7 @@ static void helpCallback(void *u, QString) {
 	}
 }
 
-ArgumentsParser::ArgumentsParser(QStringList arguments, QObject *parent) : QObject(parent) {
+ArgumentParser::ArgumentParser(QStringList arguments, QObject *parent) : QObject(parent) {
 	this->arguments = arguments;
 
 	hinfo.pclass = this;
@@ -61,12 +61,12 @@ ArgumentsParser::ArgumentsParser(QStringList arguments, QObject *parent) : QObje
 		"display this help", QString());
 }
 
-ArgumentsParser::~ArgumentsParser() {
+ArgumentParser::~ArgumentParser() {
 	foreach(option_t *ptr, optionsList)
 		delete ptr;
 }
 
-bool ArgumentsParser::parse() {
+bool ArgumentParser::parse() {
 	bool invalid = false;
 
 	for (QList<QString>::iterator i = arguments.begin() + 1; i != arguments.end(); i++) {
@@ -155,7 +155,7 @@ bool ArgumentsParser::parse() {
 	return true;
 }
 
-void ArgumentsParser::registerOption(QChar shortOpt, QString longOpt, ArgumentReq arg,
+void ArgumentParser::registerOption(QChar shortOpt, QString longOpt, ArgumentReq arg,
 		QString *argument, void (*callback)(void *, QString), void *u,
 		QString optionDescription, QString argumentDescription) {
 
@@ -172,6 +172,6 @@ void ArgumentsParser::registerOption(QChar shortOpt, QString longOpt, ArgumentRe
 	optionsList.append(option);
 }
 
-QStringList ArgumentsParser::getArguments() {
+QStringList ArgumentParser::getArguments() {
 	return arguments;
 }

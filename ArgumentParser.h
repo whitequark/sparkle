@@ -16,18 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ARGUMENTS_PARSER__H__
-#define __ARGUMENTS_PARSER__H__
+#ifndef __ARGUMENT_PARSER__H__
+#define __ARGUMENT_PARSER__H__
 
 #include <QObject>
 #include <QStringList>
 
-class ArgumentsParser: public QObject {
+class ArgumentParser: public QObject {
 	Q_OBJECT
 
 public:
-	ArgumentsParser(QStringList arguments, QObject *parent = 0);
-	virtual ~ArgumentsParser();
+	ArgumentParser(QStringList arguments, QObject *parent = 0);
+	virtual ~ArgumentParser();
 
 	enum ArgumentReq {
 		NoArgument,
@@ -55,7 +55,7 @@ public:
 	};
 
 	struct help_callback_info_t {
-		ArgumentsParser		*pclass;
+		ArgumentParser		*pclass;
 		QList<option_t *>	*optionsList;
 	};
 
