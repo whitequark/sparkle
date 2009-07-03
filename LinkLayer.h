@@ -76,7 +76,7 @@ private:
 		MasterNodeRequest		= 13,
 		MasterNodeReply			= 14,
 
-
+		RegisterRequest			= 15,
 
 	};
 
@@ -90,7 +90,7 @@ private:
 		uint32_t	version;
 	};
 
-	struct get_master_node_reply_t {
+	struct master_node_reply_t {
 		quint32	addr;
 		quint16	port;
 	};
@@ -121,6 +121,7 @@ private:
 	void sendPingRequest(quint32 seq, quint16 localport, QHostAddress host, quint16 port);
 	void sendMasterNodeRequest(QHostAddress host, quint16 port);
 	void publicKeyExchange(QHostAddress host, quint16 port);
+	void sendRegisterRequest(QHostAddress host, quint16 port);
 
 	void joinGotVersion(int version);
 	void joinPingGot();
