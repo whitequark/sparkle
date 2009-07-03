@@ -14,10 +14,13 @@ HEADERS += RSAKeyPair.h \
     ArgumentParser.h \
     LinkLayer.h \
     SparkleNode.h \
-    BlowfishKey.h
+    BlowfishKey.h \
+    PacketTransport.h \
+    UdpPacketTransport.h
 SOURCES += main.cpp \
     RSAKeyPair.cpp \
     ArgumentParser.cpp \
     LinkLayer.cpp \
     SparkleNode.cpp \
-    BlowfishKey.cpp
+    BlowfishKey.cpp \
+    UdpPacketTransport.cpp

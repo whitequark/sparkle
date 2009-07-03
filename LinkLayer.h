@@ -24,16 +24,16 @@
 
 #include "RSAKeyPair.h"
 
-class QUdpSocket;
 class QHostAddress;
 class SparkleNode;
+class PacketTransport;
 
 class LinkLayer : public QObject
 {
 	Q_OBJECT
 
 public:
-	LinkLayer(RSAKeyPair *hostPair, quint16 port, QObject *parent = 0);
+	LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair, QObject *parent = 0);
 	virtual ~LinkLayer();
 
 	bool createNetwork(QHostAddress local);
@@ -44,7 +44,7 @@ public:
 private slots:
 	void joinTargetLookedUp(QHostInfo host);
 
-	void haveDatagram();
+	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
 
 private:
 
@@ -91,9 +91,6 @@ private:
 		quint16		port;
 	};
 
-
-	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
-
 	void sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data, bool encrypted);
 	void sendAsEncrypted(SparkleNode *node, QByteArray data);
 
@@ -108,11 +105,10 @@ private:
 
 	master_node_def_t *selectMaster();
 
-	QUdpSocket *socket;
-
 	QHostAddress remoteAddress;
-	uint16_t port, remotePort;
+	uint16_t remotePort;
 
+	PacketTransport *transport;
 	RSAKeyPair *hostPair;
 
 	bool isMaster;

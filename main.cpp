@@ -25,6 +25,7 @@
 #include "RSAKeyPair.h"
 #include "ArgumentParser.h"
 #include "LinkLayer.h"
+#include "UdpPacketTransport.h"
 
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
@@ -109,7 +110,9 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 
-	LinkLayer link(&hostPair, port);
+	UdpPacketTransport *transport = new UdpPacketTransport(port);
+
+	LinkLayer link(transport, &hostPair);
 
 	if(createNetwork) {
 		if(!link.createNetwork(QHostAddress(nodeName))) {

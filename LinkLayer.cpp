@@ -17,21 +17,22 @@
  */
 
 #include <QCoreApplication>
-#include <QUdpSocket>
 #include <QStringList>
 #include <QHostInfo>
 
 #include "LinkLayer.h"
 #include "SparkleNode.h"
+#include "PacketTransport.h"
 
-LinkLayer::LinkLayer(RSAKeyPair *hostPair, quint16 port, QObject *parent) : QObject(parent)
+LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
+		     QObject *parent) : QObject(parent)
 {
-	this->port = port;
+	this->transport = transport;
+
+	connect(transport, SIGNAL(receivedPacket(QByteArray&,QHostAddress&,quint16)),
+		SLOT(handleDatagram(QByteArray&,QHostAddress&,quint16)));
+
 	this->hostPair = hostPair;
-
-	socket = new QUdpSocket(this);
-
-	connect(socket, SIGNAL(readyRead()), this, SLOT(haveDatagram()));
 }
 
 LinkLayer::~LinkLayer() {
@@ -76,36 +77,20 @@ bool LinkLayer::joinNetwork(QString node) {
 bool LinkLayer::createNetwork(QHostAddress local) {
 	isMaster = true;
 
-	if(socket->bind(port) == false) {
-		error = socket->errorString();
-
-		return false;
-	}
-
-	qDebug() << "Network created, listening at port" << port;
-
 	master_node_def_t *def = new master_node_def_t;
 	def->addr = local;
-	def->port = port;
+	def->port = transport->getPort();
 	masters.append(def);
+
+	qDebug() << "Network created, listening at port" << def->port;
+
+	transport->beginReceiving();
 
 	return true;
 }
 
 QString LinkLayer::errorString() {
 	return error;
-}
-
-void LinkLayer::haveDatagram() {
-	while(socket->hasPendingDatagrams()) {
-		QByteArray data(socket->pendingDatagramSize(), 0);
-		QHostAddress host;
-		quint16 port;
-
-		socket->readDatagram(data.data(), data.size(), &host, &port);
-
-		handleDatagram(data, host, port);
-	}
 }
 
 void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 port) {
@@ -285,13 +270,7 @@ void LinkLayer::joinTargetLookedUp(QHostInfo host) {
 
 			qDebug() << "Joining via" << remoteAddress.toString() << "port" << remotePort;
 
-			if(socket->bind(port) == false) {
-				qCritical() << "Binding failed:" << socket->errorString();
-
-				QCoreApplication::exit(1);
-
-				return;
-			}
+			transport->beginReceiving();
 
 			isMaster = false;
 
@@ -318,7 +297,7 @@ void LinkLayer::sendPacket(packet_type_t type, QHostAddress host, quint16 port,
 	data.prepend(QByteArray((const char *) &hdr, sizeof(packet_header_t)));
 
 	if(!encrypted) {
-		socket->writeDatagram(data, host, port);
+		transport->sendPacket(data, host, port);
 	} else {
 		SparkleNode *node = getOrConstructNode(host, port);
 
