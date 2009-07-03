@@ -791,9 +791,6 @@ void LinkLayer::processEthernet(QByteArray packet) {
 				}
 			}
 
-
-			qDebug() << "Searching for" << target.toString();
-
 			node_def_t *node = findByIP(target);
 
 			if(node != NULL)
@@ -803,8 +800,6 @@ void LinkLayer::processEthernet(QByteArray packet) {
 					qDebug() << "Target not exists";
 
 				} else {
-					qDebug() << "Requesting master for resolution";
-
 					awaiting.append(new QHostAddress(target));
 
 					sendRouteRequest(target);
@@ -818,11 +813,8 @@ void LinkLayer::processEthernet(QByteArray packet) {
 	case 0x800: {
 		node_def_t *node = findByMAC(hdr.to);
 
-		if(!node) {
-			qDebug() << "Warn: non-ARP packet to unknown node, dropped";
-
+		if(!node)
 			break;
-		}
 
 		sendPacket(DataPacket, node->addr, node->port, packet, true);
 
