@@ -381,6 +381,15 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 			sendPacket(RegisterReply, host, port, data, true);
 
+			routing_table_entry_t newRouteItem;
+			newRouteItem.inetIP = def->addr.toIPv4Address();
+			newRouteItem.isMaster = reply.isMaster;
+			newRouteItem.port = def->port;
+			newRouteItem.sparkleIP = def->sparkleAddress.toIPv4Address();
+			memcpy(newRouteItem.sparkleMac, def->sparkleMac, 6);
+
+			QByteArray newRoute((char *) &newRouteItem, sizeof(routing_table_entry_t));
+
 			QByteArray routingData;
 			size_t size = 0;
 
@@ -395,7 +404,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				QByteArray chunk((char *) &entry, sizeof(routing_table_entry_t));
 
 				if(ptr->sparkleAddress != this->sparkleIP)
-					sendPacket(RoutingTable, ptr->addr, ptr->port, chunk, true);
+					sendPacket(RoutingTable, ptr->addr, ptr->port, newRoute, true);
 
 
 				routingData += chunk;
@@ -408,30 +417,27 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				}
 			}
 
-			foreach(node_def_t *ptr, slaves) {
-				if(reply.isMaster == false && ptr->sparkleAddress != def->sparkleAddress)
-					continue;
+			if(reply.isMaster) {
+				foreach(node_def_t *ptr, slaves) {
+					routing_table_entry_t entry;
+					entry.inetIP = ptr->addr.toIPv4Address();
+					entry.isMaster = 0;
+					entry.port = ptr->port;
+					entry.sparkleIP = ptr->sparkleAddress.toIPv4Address();
+					memcpy(entry.sparkleMac, ptr->sparkleMac, 6);
 
-				routing_table_entry_t entry;
-				entry.inetIP = ptr->addr.toIPv4Address();
-				entry.isMaster = 0;
-				entry.port = ptr->port;
-				entry.sparkleIP = ptr->sparkleAddress.toIPv4Address();
-				memcpy(entry.sparkleMac, ptr->sparkleMac, 6);
+					routingData += QByteArray((char *) &entry, sizeof(routing_table_entry_t));
+					size += sizeof(routing_table_entry_t);
 
-				routingData += QByteArray((char *) &entry, sizeof(routing_table_entry_t));
-				size += sizeof(routing_table_entry_t);
-
-				if(size >= 65535 - sizeof(packet_header_t) * 2) {
-					sendPacket(RoutingTable, host, port, routingData, true);
-					size = 0;
-					routingData.clear();
+					if(size >= 65535 - sizeof(packet_header_t) * 2) {
+						sendPacket(RoutingTable, host, port, routingData, true);
+						size = 0;
+						routingData.clear();
+					}
 				}
-
-				if(reply.isMaster == false)
-					break;
+			} else {
+				sendPacket(RoutingTable, host, port, newRoute, true);
 			}
-
 
 			if(size > 0)
 				sendPacket(RoutingTable, host, port, routingData, true);
