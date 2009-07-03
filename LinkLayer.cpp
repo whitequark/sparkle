@@ -70,6 +70,9 @@ bool LinkLayer::joinNetwork(QString node) {
 
 	remotePort = parts[1].toInt();
 
+	masterCount = 0;
+	slaveCount = 0;
+
 	printf("Looking up for %s... ", parts[0].toAscii().data());
 
 	fflush(stdout);
@@ -87,6 +90,9 @@ bool LinkLayer::createNetwork(QHostAddress local) {
 	def->addr = local;
 	def->port = transport->getPort();
 	masters.append(def);
+
+	masterCount = 1;
+	slaveCount = 0;
 
 	qDebug() << "Network created, listening at port" << def->port;
 
@@ -141,7 +147,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 		node->keyNegotiationDone = false;
 
-		node->getRSA()->setPublicKey(payload);
+		node->setPublicKey(payload);
 
 		sendPacket(PublicKeyReply, host, port, hostPair->getPublicKey(), false);
 
@@ -151,7 +157,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	case PublicKeyReply: {
 		SparkleNode *node = getOrConstructNode(host, port);
 
-		node->getRSA()->setPublicKey(payload);
+		node->setPublicKey(payload);
 
 		node->getToKey()->generate();
 
@@ -334,9 +340,57 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	}
 
 	case RegisterRequest: {
-		SparkleNode *node = getOrConstructNode(host, port);
+		if(isMaster) {
+			SparkleNode *node = getOrConstructNode(host, port);
 
-		printf("Registering node %p...\n", node);
+			register_reply_t reply;
+			reply.addr = node->getIP().toIPv4Address();
+			QByteArray mac = node->getMAC();
+			memcpy(reply.mac, mac, sizeof(reply.mac));
+
+			if((slaveCount + 1) / 10 > masterCount) {
+				reply.isMaster = 1;
+				masterCount++;
+
+				master_node_def_t *def = new master_node_def_t;
+				def->addr = host;
+				def->port = port;
+				masters.append(def);
+			} else {
+				reply.isMaster = 0;
+				slaveCount--;
+			}
+
+			// TODO: уведомление узлов, добавление в таблицу
+
+			QByteArray data((char *) &reply, sizeof(reply));
+
+			sendPacket(RegisterReply, host, port, data, true);
+
+			// TODO: отправка таблицы
+		}
+
+		break;
+	}
+
+	case RegisterReply: {
+		if(hdr->length < sizeof(register_reply_t) + sizeof(packet_header_t)) {
+			qWarning() << "Bad length" << hdr->length <<
+				"on incoming packet from" << host.toString() << ":" << port;
+
+			break;
+		}
+
+		register_reply_t *reg = (register_reply_t *) payload.data();
+
+		QByteArray mac((char *) reg->mac, sizeof(reg->mac));
+
+		selfMac = mac;
+		sparkleIP = QHostAddress(reg->addr);
+		isMaster = reg->isMaster == 1;
+
+		qDebug() << "Registered in network as" << (isMaster ? "master," : "slave,") <<
+				"assigned IP" << sparkleIP.toString();
 
 		break;
 	}

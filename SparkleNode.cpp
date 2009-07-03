@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "SHA1Digest.h"
 #include "SparkleNode.h"
 
 SparkleNode::SparkleNode(QHostAddress host, quint16 port, QObject *parent) : QObject(parent) {
@@ -50,3 +51,31 @@ QByteArray SparkleNode::getFromQueue() {
 	return queue.takeFirst();
 }
 
+bool SparkleNode::setPublicKey(QByteArray key) {
+	if(!keyPair.setPublicKey(key))
+		return false;
+
+	fingerprint = SHA1Digest::calculateSHA1(key);
+
+	return true;
+}
+
+QByteArray SparkleNode::getMAC() {
+	QByteArray mac = "\x02";
+
+	mac += fingerprint.left(5);
+
+	return mac;
+}
+
+QHostAddress SparkleNode::getIP() {
+	char ip[4] = { 0, 0, 0, 14 };
+
+	ip[0] = fingerprint[0];
+	ip[1] = fingerprint[1];
+	ip[2] = fingerprint[2];
+
+	quint32 *num = (quint32 *) ip;
+
+	return QHostAddress(*num);
+}

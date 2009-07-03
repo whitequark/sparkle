@@ -16,52 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-#ifndef __SPARKLE_NODE__H__
-#define __SPARKLE_NODE__H__
+#ifndef __SHA1_DIGEST__H__
+#define __SHA1_DIGEST__H__
 
 #include <QObject>
-#include <QHostAddress>
 
-#include "RSAKeyPair.h"
-#include "BlowfishKey.h"
-
-
-class SparkleNode : public QObject
+class SHA1Digest : public QObject
 {
 	Q_OBJECT
 public:
-	SparkleNode(QHostAddress host, quint16 port, QObject *parent = 0);
+	SHA1Digest(QObject *parent = 0);
+	virtual ~SHA1Digest();
 
-	virtual ~SparkleNode();
-
-	QHostAddress getHost();
-	quint16 getPort();
-	void appendQueue(QByteArray data);
-
-	BlowfishKey *getFromKey() { return &fromKey; }
-	BlowfishKey *getToKey() { return &toKey; }
-
-	RSAKeyPair *getRSA() { return &keyPair; }
-
-	bool isQueueEmpty();
-	QByteArray getFromQueue();
-
-	bool keyNegotiationDone;
-
-	bool setPublicKey(QByteArray key);
-	QByteArray getMAC();
-	QHostAddress getIP();
-
-private:
-	QHostAddress host;
-	quint16 port;
-
-	QList<QByteArray> queue;
-	RSAKeyPair keyPair;
-	BlowfishKey fromKey, toKey;
-
-	QByteArray fingerprint;
+	static QByteArray calculateSHA1(QByteArray data);
 };
 
 #endif

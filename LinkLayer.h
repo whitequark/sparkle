@@ -77,6 +77,7 @@ private:
 		MasterNodeReply			= 14,
 
 		RegisterRequest			= 15,
+		RegisterReply			= 16,
 
 	};
 
@@ -114,6 +115,12 @@ private:
 		quint16		port;
 	};
 
+	struct register_reply_t {
+		quint32	addr;
+		quint8	mac[6];
+		quint8	isMaster;
+	};
+
 	void sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data, bool encrypted);
 	void sendAsEncrypted(SparkleNode *node, QByteArray data);
 
@@ -143,8 +150,12 @@ private:
 	bool pingReceived;
 
 	bool isMaster;
+	QByteArray selfMac;
+	QHostAddress sparkleIP;
 
 	QString error;
+
+	int masterCount, slaveCount;
 
 	enum join_step_t {
 		RequestingProtocolVersion,
