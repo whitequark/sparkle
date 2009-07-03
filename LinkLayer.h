@@ -43,6 +43,11 @@ public:
 
 	QString errorString();
 
+	QHostAddress getSparkleIP() { return this->sparkleIP; }
+	QByteArray getSparkleMac() { return selfMac; }
+
+	void processEthernet(QByteArray packet);
+
 private slots:
 	void joinTargetLookedUp(QHostInfo host);
 
@@ -50,8 +55,11 @@ private slots:
 
 	void pingTimedOut();
 
-private:
+signals:
+	void joined();
+	void sendPacketReq(QByteArray packet);
 
+private:
 	enum {
 		ProtocolVersion	= 1,
 	};
@@ -80,6 +88,11 @@ private:
 		RegisterReply			= 16,
 
 		RoutingTable			= 17,
+
+		RouteRequest			= 18,
+		NoRouteForEntry			= 19,
+
+		DataPacket			= 20,
 
 	};
 
@@ -133,6 +146,24 @@ private:
 		quint8	sparkleMac[6];
 	};
 
+	struct mac_header_t {
+		quint8	to[6];
+		quint8	from[6];
+		quint16	type;
+	} __attribute__((packed));
+
+	struct arp_packet_t {
+		quint16	htype;
+		quint16 ptype;
+		quint8	hlen;
+		quint8	plen;
+		quint16	oper;
+		quint8	sha[6];
+		quint32	spa;
+		quint8	tha[6];
+		quint32	tpa;
+	} __attribute__((packed));
+
 	void sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data, bool encrypted);
 	void sendAsEncrypted(SparkleNode *node, QByteArray data);
 
@@ -141,13 +172,19 @@ private:
 	void sendMasterNodeRequest(QHostAddress host, quint16 port);
 	void publicKeyExchange(QHostAddress host, quint16 port);
 	void sendRegisterRequest(QHostAddress host, quint16 port);
+	void sendRouteRequest(QHostAddress address);
 
 	void joinGotVersion(int version);
 	void joinPingGot();
 	void joinGotMaster(QHostAddress host, quint16 port);
 
+	void reverseMac(quint8 *mac);
+	void sendARPReply(node_def_t *node);
+
 	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
 
+	node_def_t *findByIP(QHostAddress ip);
+	node_def_t *findByMAC(quint8 *mac);
 	node_def_t *selectMaster();
 
 	QHostAddress remoteAddress, localAddress;
@@ -172,12 +209,14 @@ private:
 		RequestingPing,
 		RequestingMasterNode,
 		RegisteringInNetwork,
+		Joined,
 	};
 
 	join_step_t joinStep;
 
 	QList<SparkleNode *> nodes;
 	QList<node_def_t *> masters, slaves;
+	QList<QHostAddress *> awaiting;
 };
 
 #endif

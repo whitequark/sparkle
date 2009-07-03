@@ -54,14 +54,14 @@ public:
 	QHostAddress getIP();
 
 private:
-	QHostAddress host;
+	QHostAddress host, sparkleIP;
 	quint16 port;
 
 	QList<QByteArray> queue;
 	RSAKeyPair keyPair;
 	BlowfishKey fromKey, toKey;
 
-	QByteArray fingerprint;
+	QByteArray fingerprint, mac;
 };
 
 #endif

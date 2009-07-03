@@ -27,6 +27,10 @@
 #include "LinkLayer.h"
 #include "UdpPacketTransport.h"
 
+#ifdef Q_WS_X11
+#include "LinuxTAP.h"
+#endif
+
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
 
@@ -127,6 +131,16 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 	}
+
+#ifdef Q_WS_X11
+	LinuxTAP tap(&link);
+	if(tap.createInterface("sparkle%d") == false) {
+		qCritical() << "Creating device failed:" << tap.errorString();
+
+		return 1;
+	}
+
+#endif
 
 	return app.exec();
 }

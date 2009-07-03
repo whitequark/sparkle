@@ -20,6 +20,7 @@
 #include <QStringList>
 #include <QHostInfo>
 #include <QTimer>
+#include <arpa/inet.h>
 
 #include "LinkLayer.h"
 #include "SparkleNode.h"
@@ -111,6 +112,8 @@ bool LinkLayer::createNetwork(QHostAddress local) {
 	qDebug() << "Network created, listening at port" << def->port;
 
 	transport->beginReceiving();
+
+	QTimer::singleShot(0, this, SIGNAL(joined()));
 
 	return true;
 }
@@ -447,6 +450,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	}
 
 	case RegisterReply: {
+
 		if(hdr->length < sizeof(register_reply_t) + sizeof(packet_header_t)) {
 			qWarning() << "Bad length" << hdr->length <<
 				"on incoming packet from" << host.toString() << ":" << port;
@@ -454,16 +458,22 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 			break;
 		}
 
-		register_reply_t *reg = (register_reply_t *) payload.data();
+		if(joinStep == RegisteringInNetwork) {
+			register_reply_t *reg = (register_reply_t *) payload.data();
 
-		QByteArray mac((char *) reg->mac, sizeof(reg->mac));
+			QByteArray mac((char *) reg->mac, sizeof(reg->mac));
 
-		selfMac = mac;
-		sparkleIP = QHostAddress(reg->addr);
-		isMaster = reg->isMaster == 1;
+			selfMac = mac;
+			sparkleIP = QHostAddress(reg->addr);
+			isMaster = reg->isMaster == 1;
 
-		qDebug() << "Registered in network as" << (isMaster ? "master," : "slave,") <<
-				"assigned IP" << sparkleIP.toString();
+			qDebug() << "Registered in network as" << (isMaster ? "master," : "slave,") <<
+					"assigned IP" << sparkleIP.toString();
+
+			joinStep = Joined;
+
+			emit joined();
+		}
 
 		break;
 	}
@@ -487,7 +497,86 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				masters.append(def);
 			else
 				slaves.append(def);
+
+			foreach(QHostAddress *ptr, awaiting)
+				if(*ptr == def->sparkleAddress) {
+					delete ptr;
+					awaiting.removeOne(ptr);
+
+					sendARPReply(def);
+					break;
+				}
+
 		}
+
+		break;
+	}
+
+	case RouteRequest: {
+		if(hdr->length < sizeof(quint32) + sizeof(packet_header_t)) {
+			qWarning() << "Bad length" << hdr->length <<
+				"on incoming packet from" << host.toString() << ":" << port;
+
+			break;
+		}
+
+		quint32 *ip = (quint32 *) payload.data();
+
+		node_def_t *node = findByIP(QHostAddress(*ip));
+
+		if(node == NULL)
+			sendPacket(NoRouteForEntry, host, port, payload.left(sizeof(quint32)), true);
+		else {
+			routing_table_entry_t entry;
+			entry.inetIP = node->addr.toIPv4Address();
+			entry.isMaster = 0;
+			entry.port = node->port;
+			entry.sparkleIP = node->sparkleAddress.toIPv4Address();
+			memcpy(entry.sparkleMac, node->sparkleMac, 6);
+
+			sendPacket(RoutingTable, host, port,
+				   QByteArray((char *) &entry, sizeof(routing_table_entry_t)), true);
+		}
+
+		break;
+	}
+
+	case NoRouteForEntry: {
+		if(hdr->length < sizeof(quint32) + sizeof(packet_header_t)) {
+			qWarning() << "Bad length" << hdr->length <<
+				"on incoming packet from" << host.toString() << ":" << port;
+
+			break;
+		}
+
+		quint32 *ip = (quint32 *) payload.data();
+
+		QHostAddress target(*ip);
+
+		qDebug() << target.toString() << "not exists in network";
+
+		foreach(QHostAddress *ptr, awaiting) {
+			if(*ptr == target) {
+				delete ptr;
+				awaiting.removeOne(ptr);
+				break;
+			}
+		}
+
+		break;
+	}
+
+	case DataPacket: {
+		SparkleNode *node = getOrConstructNode(host, port);
+
+		mac_header_t mac;
+		memcpy(mac.from, node->getMAC().data(), 6);
+		memcpy(mac.to, selfMac.data(), 6);
+		mac.type = htons(0x0800);
+
+		QByteArray packet = QByteArray((char *) &mac, sizeof(mac_header_t)) + payload;
+
+		emit sendPacketReq(packet);
 
 		break;
 	}
@@ -657,4 +746,154 @@ void LinkLayer::sendPingRequest(quint32 seq, quint16 localport, QHostAddress hos
 
 	sendPacket(PingRequest, host, port, data, false);
 	pingTime.start();
+}
+
+void LinkLayer::reverseMac(quint8 *mac) {
+	quint8 nmac[6];
+
+	for(int i = 0; i < 6; i++)
+		nmac[i] = mac[5 - i];
+
+	memcpy(mac, nmac, 6);
+}
+
+void LinkLayer::processEthernet(QByteArray packet) {
+
+	mac_header_t hdr;
+	memcpy(&hdr, packet.data(), sizeof(mac_header_t));
+
+//	reverseMac(hdr.from);
+//	reverseMac(hdr.to);
+
+	if(memcmp(hdr.from, selfMac.data(), 6) != 0)
+		return;
+
+	hdr.type = ntohs(hdr.type);
+
+//	hexdump("Incoming packet", packet);
+
+	packet = packet.right(packet.size() - sizeof(mac_header_t));
+
+	switch(hdr.type) {
+	case 0x0806: {	// ARP
+		arp_packet_t *arp = (arp_packet_t *) packet.data();
+		if(ntohs(arp->htype) == 1 && ntohs(arp->ptype) == 0x800 &&
+				arp->hlen == 6 && arp->plen == 4 &&
+				ntohs(arp->oper) == 1) { // IPv4 over ethernet request
+
+			QHostAddress target(ntohl(arp->tpa));
+
+			foreach(QHostAddress *ptr, awaiting) {
+				if(*ptr == target) {
+					qDebug() << target.toString() << "still waiting resolution";
+
+					return;
+				}
+			}
+
+
+			qDebug() << "Searching for" << target.toString();
+
+			node_def_t *node = findByIP(target);
+
+			if(node != NULL)
+				sendARPReply(node);
+			else {
+				if(isMaster) {
+					qDebug() << "Target not exists";
+
+				} else {
+					qDebug() << "Requesting master for resolution";
+
+					awaiting.append(new QHostAddress(target));
+
+					sendRouteRequest(target);
+				}
+			}
+
+		}
+		break;
+	}
+
+	case 0x800: {
+		node_def_t *node = findByMAC(hdr.to);
+
+		if(!node) {
+			qDebug() << "Warn: non-ARP packet to unknown node, dropped";
+
+			break;
+		}
+
+		sendPacket(DataPacket, node->addr, node->port, packet, true);
+
+		break;
+	}
+
+	case 0x86dd:	// IPv6
+		break;
+
+
+	default:
+		printf("Ethernet packet with data size %d and type 0x%x dropped\n", packet.size(), hdr.type);
+
+		break;
+	}
+}
+
+void LinkLayer::sendARPReply(node_def_t *node) {
+	mac_header_t mac;
+
+	mac.type = htons(0x0806);
+	memcpy(mac.from, node->sparkleMac, 6);
+	memcpy(mac.to, selfMac.data(), 6);
+
+	arp_packet_t arp;
+	arp.htype = htons(1);
+	arp.ptype = htons(0x800);
+	arp.hlen = 6;
+	arp.plen = 4;
+	arp.oper = htons(2);
+	memcpy(arp.sha, node->sparkleMac, 6);
+	arp.spa = htonl(node->sparkleAddress.toIPv4Address());
+	memcpy(arp.tha, selfMac.data(), 6);
+	arp.tpa = sparkleIP.toIPv4Address();
+
+	QByteArray packet = QByteArray((char *) &mac, sizeof(mac_header_t)) +
+			    QByteArray((char *) &arp, sizeof(arp_packet_t));
+
+	emit sendPacketReq(packet);
+}
+
+LinkLayer::node_def_t *LinkLayer::findByIP(QHostAddress ip) {
+	foreach(node_def_t *def, masters)
+		if(def->sparkleAddress == ip)
+			return def;
+
+	foreach(node_def_t *def, slaves)
+		if(def->sparkleAddress == ip)
+			return def;
+
+	return NULL;
+}
+
+LinkLayer::node_def_t *LinkLayer::findByMAC(quint8 *mac) {
+	foreach(node_def_t *def, masters)
+		if(memcmp(def->sparkleMac, mac, 6) == 0)
+			return def;
+
+	foreach(node_def_t *def, slaves)
+		if(memcmp(def->sparkleMac, mac, 6) == 0)
+			return def;
+
+	return NULL;
+}
+
+
+void LinkLayer::sendRouteRequest(QHostAddress address) {
+	node_def_t *master = selectMaster();
+
+	quint32 addr = address.toIPv4Address();
+
+	sendPacket(RouteRequest, master->addr, master->port,
+		   QByteArray((char *) &addr, sizeof(quint32)), true);
 }
