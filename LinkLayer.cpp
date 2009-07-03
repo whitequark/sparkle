@@ -73,7 +73,7 @@ bool LinkLayer::joinNetwork(QString node) {
 	return true;
 }
 
-bool LinkLayer::createNetwork() {
+bool LinkLayer::createNetwork(QHostAddress local) {
 	isMaster = true;
 
 	if(socket->bind(port) == false) {
@@ -85,7 +85,7 @@ bool LinkLayer::createNetwork() {
 	qDebug() << "Network created, listening at port" << port;
 
 	master_node_def_t *def = new master_node_def_t;
-	def->addr = QHostAddress::LocalHost;
+	def->addr = local;
 	def->port = port;
 	masters.append(def);
 
@@ -147,6 +147,8 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 	case PublicKeyExchange: {
 		SparkleNode *node = getOrConstructNode(host, port);
+
+		node->keyNegotiationDone = false;
 
 		node->getRSA()->setPublicKey(payload);
 
@@ -384,6 +386,10 @@ void LinkLayer::sendMasterNodeRequest(QHostAddress host, quint16 port) {
 }
 
 void LinkLayer::publicKeyExchange(QHostAddress host, quint16 port) {
+	SparkleNode *node = getOrConstructNode(host, port);
+
+	node->keyNegotiationDone = false;
+
 	sendPacket(PublicKeyExchange, host, port, hostPair->getPublicKey(), false);
 }
 

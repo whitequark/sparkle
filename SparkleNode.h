@@ -24,7 +24,7 @@
 #include <QHostAddress>
 
 #include "RSAKeyPair.h"
-#include "Blowfish.h"
+#include "BlowfishKey.h"
 
 
 class SparkleNode : public QObject
@@ -39,8 +39,8 @@ public:
 	quint16 getPort();
 	void appendQueue(QByteArray data);
 
-	Blowfish *getFromKey() { return &fromKey; }
-	Blowfish *getToKey() { return &toKey; }
+	BlowfishKey *getFromKey() { return &fromKey; }
+	BlowfishKey *getToKey() { return &toKey; }
 
 	RSAKeyPair *getRSA() { return &keyPair; }
 
@@ -55,7 +55,7 @@ private:
 
 	QList<QByteArray> queue;
 	RSAKeyPair keyPair;
-	Blowfish fromKey, toKey;
+	BlowfishKey fromKey, toKey;
 };
 
 #endif

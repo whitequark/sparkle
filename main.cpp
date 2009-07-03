@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 				      NULL, "use specified UDP port", "PORT");
 
 		parser.registerOption('n', "node", ArgumentParser::RequiredArgument, &nodeName, NULL,
-				      NULL, "login using specified node", "ADDR");
+				      NULL, "login using specified node, or use as local address when creating network", "ADDR");
 
 		parser.registerOption(QChar::Null, "profile", ArgumentParser::RequiredArgument, &profile, NULL,
 		      NULL, "use specified profile", "PROFILE");
@@ -67,8 +67,8 @@ int main(int argc, char *argv[]) {
 			port = portStr.toInt();
 	}
 
-	if(nodeName.isNull() && !createNetwork) {
-		fprintf(stderr, "Node name not set\n");
+	if(nodeName.isNull()) {
+		fprintf(stderr, "'node' option is mandatory \n");
 
 		return 1;
 	}
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 	LinkLayer link(&hostPair, port);
 
 	if(createNetwork) {
-		if(!link.createNetwork()) {
+		if(!link.createNetwork(QHostAddress(nodeName))) {
 			qCritical() << "Creating network failed:" << link.errorString();
 
 			return 1;

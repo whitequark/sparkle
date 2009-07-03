@@ -22,14 +22,13 @@
 #include <openssl/blowfish.h>
 #include <QObject>
 
-class Blowfish: public QObject
+class BlowfishKey: public QObject
 {
 	Q_OBJECT
 public:
-	Blowfish(QObject *parent = 0);
-	virtual ~Blowfish();
+	BlowfishKey(QObject *parent = 0);
+	virtual ~BlowfishKey();
 
-	bool operator=(const Blowfish &another);
 	void generate();
 
 	QByteArray getKey();

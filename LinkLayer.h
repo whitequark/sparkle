@@ -36,7 +36,7 @@ public:
 	LinkLayer(RSAKeyPair *hostPair, quint16 port, QObject *parent = 0);
 	virtual ~LinkLayer();
 
-	bool createNetwork();
+	bool createNetwork(QHostAddress local);
 	bool joinNetwork(QString nodeName);
 
 	QString errorString();

@@ -18,41 +18,35 @@
 
 
 #include <openssl/rand.h>
-#include "Blowfish.h"
+#include "BlowfishKey.h"
 
-Blowfish::Blowfish(QObject *parent) : QObject(parent)
+BlowfishKey::BlowfishKey(QObject *parent) : QObject(parent)
 {
 
 }
 
-Blowfish::~Blowfish() {
+BlowfishKey::~BlowfishKey() {
 
 }
 
-bool Blowfish::operator=(const Blowfish &another) {
-	this->key = another.key;
-
-	return true;
-}
-
-void Blowfish::generate() {
+void BlowfishKey::generate() {
 	rawKey.resize(32);
 	RAND_bytes((unsigned char *) rawKey.data(), rawKey.size());
 
 	BF_set_key(&key, rawKey.size(), (unsigned char *) rawKey.data());
 }
 
-QByteArray Blowfish::getKey() {
+QByteArray BlowfishKey::getKey() {
 	return rawKey;
 }
 
-void Blowfish::setKey(QByteArray raw) {
+void BlowfishKey::setKey(QByteArray raw) {
 	rawKey = raw;
 
 	BF_set_key(&key, rawKey.size(), (unsigned char *) rawKey.data());
 }
 
-QByteArray Blowfish::encrypt(QByteArray data) {
+QByteArray BlowfishKey::encrypt(QByteArray data) {
 	unsigned char chunk[8];
 
 	QByteArray output;
@@ -66,7 +60,7 @@ QByteArray Blowfish::encrypt(QByteArray data) {
 	return output;
 }
 
-QByteArray Blowfish::decrypt(QByteArray data) {
+QByteArray BlowfishKey::decrypt(QByteArray data) {
 	unsigned char chunk[8];
 
 	QByteArray output;
