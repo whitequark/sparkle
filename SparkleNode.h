@@ -47,7 +47,7 @@ public:
 	bool isQueueEmpty();
 	QByteArray getFromQueue();
 
-	bool negotiationDone;
+	bool keyNegotiationDone;
 
 private:
 	QHostAddress host;

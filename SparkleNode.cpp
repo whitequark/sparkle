@@ -22,7 +22,7 @@ SparkleNode::SparkleNode(QHostAddress host, quint16 port, QObject *parent) : QOb
 	this->host = host;
 	this->port = port;
 
-	negotiationDone = false;
+	keyNegotiationDone = false;
 }
 
 SparkleNode::~SparkleNode() {

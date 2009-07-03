@@ -190,7 +190,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 		sendPacket(SessionKeyAcknowlege, host, port, QByteArray(), false);
 
-		node->negotiationDone = true;
+		node->keyNegotiationDone = true;
 
 		while(!node->isQueueEmpty())
 			sendAsEncrypted(node, node->getFromQueue());
@@ -202,7 +202,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	case SessionKeyAcknowlege: {
 		SparkleNode *node = getOrConstructNode(host, port);
 
-		node->negotiationDone = true;
+		node->keyNegotiationDone = true;
 
 		while(!node->isQueueEmpty())
 			sendAsEncrypted(node, node->getFromQueue());
@@ -213,7 +213,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	case EncryptedPacket: {
 		SparkleNode *node = getOrConstructNode(host, port);
 
-		if(!node->negotiationDone) {
+		if(!node->keyNegotiationDone) {
 			printf("Encrypted packet from unknown node\n");
 
 			break;
@@ -320,7 +320,7 @@ void LinkLayer::sendPacket(packet_type_t type, QHostAddress host, quint16 port,
 	} else {
 		SparkleNode *node = getOrConstructNode(host, port);
 
-		if(!node->negotiationDone) {
+		if(!node->keyNegotiationDone) {
 			node->appendQueue(data);
 
 			publicKeyExchange(host, port);
