@@ -79,6 +79,8 @@ private:
 		RegisterRequest			= 15,
 		RegisterReply			= 16,
 
+		RoutingTable			= 17,
+
 	};
 
 	struct packet_header_t {
@@ -110,15 +112,25 @@ private:
 		quint32 seq;
 	};
 
-	struct master_node_def_t {
+	struct node_def_t {
 		QHostAddress	addr;
 		quint16		port;
+		QHostAddress	sparkleAddress;
+		quint8		sparkleMac[6];
 	};
 
 	struct register_reply_t {
 		quint32	addr;
 		quint8	mac[6];
 		quint8	isMaster;
+	};
+
+	struct routing_table_entry_t {
+		quint32	sparkleIP;
+		quint32	inetIP;
+		quint16	port;
+		quint8	isMaster;
+		quint8	sparkleMac[6];
 	};
 
 	void sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data, bool encrypted);
@@ -136,7 +148,7 @@ private:
 
 	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
 
-	master_node_def_t *selectMaster();
+	node_def_t *selectMaster();
 
 	QHostAddress remoteAddress, localAddress;
 	quint16 remotePort;
@@ -155,8 +167,6 @@ private:
 
 	QString error;
 
-	int masterCount, slaveCount;
-
 	enum join_step_t {
 		RequestingProtocolVersion,
 		RequestingPing,
@@ -167,7 +177,7 @@ private:
 	join_step_t joinStep;
 
 	QList<SparkleNode *> nodes;
-	QList<master_node_def_t *> masters;
+	QList<node_def_t *> masters, slaves;
 };
 
 #endif

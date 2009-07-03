@@ -24,6 +24,7 @@
 #include "LinkLayer.h"
 #include "SparkleNode.h"
 #include "PacketTransport.h"
+#include "SHA1Digest.h"
 
 LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
 		     QObject *parent) : QObject(parent)
@@ -70,9 +71,6 @@ bool LinkLayer::joinNetwork(QString node) {
 
 	remotePort = parts[1].toInt();
 
-	masterCount = 0;
-	slaveCount = 0;
-
 	printf("Looking up for %s... ", parts[0].toAscii().data());
 
 	fflush(stdout);
@@ -85,14 +83,30 @@ bool LinkLayer::joinNetwork(QString node) {
 bool LinkLayer::createNetwork(QHostAddress local) {
 	isMaster = true;
 
-	master_node_def_t *def = new master_node_def_t;
+	QByteArray fingerprint = SHA1Digest::calculateSHA1(hostPair->getPublicKey());
+
+	node_def_t *def = new node_def_t;
 	this->localAddress = local;
 	def->addr = local;
 	def->port = transport->getPort();
-	masters.append(def);
 
-	masterCount = 1;
-	slaveCount = 0;
+	QByteArray mac = "\x02";
+	mac += fingerprint.left(5);
+	memcpy(def->sparkleMac, mac.data(), 6);
+
+	char ip[4] = { 0, 0, 0, 14 };
+
+	ip[0] = fingerprint[0];
+	ip[1] = fingerprint[1];
+	ip[2] = fingerprint[2];
+
+	quint32 *num = (quint32 *) ip;
+
+	def->sparkleAddress = QHostAddress(*num);
+	sparkleIP = def->sparkleAddress;
+	selfMac = mac;
+
+	masters.append(def);
 
 	qDebug() << "Network created, listening at port" << def->port;
 
@@ -310,7 +324,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 	case MasterNodeRequest: {
 		master_node_reply_t reply;
 
-		master_node_def_t *def = selectMaster();
+		node_def_t *def = selectMaster();
 
 		reply.addr = def->addr.toIPv4Address();
 		reply.port = def->port;
@@ -346,28 +360,81 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 			register_reply_t reply;
 			reply.addr = node->getIP().toIPv4Address();
 			QByteArray mac = node->getMAC();
-			memcpy(reply.mac, mac, sizeof(reply.mac));
+			memcpy(reply.mac, mac.data(), sizeof(reply.mac));
 
-			if((slaveCount + 1) / 10 > masterCount) {
+			node_def_t *def = new node_def_t;
+			def->addr = host;
+			def->port = port;
+			def->sparkleAddress = node->getIP();
+
+			memcpy(def->sparkleMac, mac.data(), sizeof(reply.mac));
+
+			if((slaves.count() + 1) / 10 > masters.count()) {
 				reply.isMaster = 1;
-				masterCount++;
-
-				master_node_def_t *def = new master_node_def_t;
-				def->addr = host;
-				def->port = port;
 				masters.append(def);
 			} else {
 				reply.isMaster = 0;
-				slaveCount--;
+				slaves.append(def);
 			}
-
-			// TODO: уведомление узлов, добавление в таблицу
 
 			QByteArray data((char *) &reply, sizeof(reply));
 
 			sendPacket(RegisterReply, host, port, data, true);
 
-			// TODO: отправка таблицы
+			QByteArray routingData;
+			size_t size = 0;
+
+			foreach(node_def_t *ptr, masters) {
+				routing_table_entry_t entry;
+				entry.inetIP = ptr->addr.toIPv4Address();
+				entry.isMaster = 1;
+				entry.port = ptr->port;
+				entry.sparkleIP = ptr->sparkleAddress.toIPv4Address();
+				memcpy(entry.sparkleMac, ptr->sparkleMac, 6);
+
+				QByteArray chunk((char *) &entry, sizeof(routing_table_entry_t));
+
+				if(ptr->sparkleAddress != this->sparkleIP)
+					sendPacket(RoutingTable, ptr->addr, ptr->port, chunk, true);
+
+
+				routingData += chunk;
+				size += sizeof(routing_table_entry_t);
+
+				if(size >= 65535 - sizeof(packet_header_t) * 2) {
+					sendPacket(RoutingTable, host, port, routingData, true);
+					size = 0;
+					routingData.clear();
+				}
+			}
+
+			foreach(node_def_t *ptr, slaves) {
+				if(reply.isMaster == false && ptr->sparkleAddress != def->sparkleAddress)
+					continue;
+
+				routing_table_entry_t entry;
+				entry.inetIP = ptr->addr.toIPv4Address();
+				entry.isMaster = 0;
+				entry.port = ptr->port;
+				entry.sparkleIP = ptr->sparkleAddress.toIPv4Address();
+				memcpy(entry.sparkleMac, ptr->sparkleMac, 6);
+
+				routingData += QByteArray((char *) &entry, sizeof(routing_table_entry_t));
+				size += sizeof(routing_table_entry_t);
+
+				if(size >= 65535 - sizeof(packet_header_t) * 2) {
+					sendPacket(RoutingTable, host, port, routingData, true);
+					size = 0;
+					routingData.clear();
+				}
+
+				if(reply.isMaster == false)
+					break;
+			}
+
+
+			if(size > 0)
+				sendPacket(RoutingTable, host, port, routingData, true);
 		}
 
 		break;
@@ -391,6 +458,30 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 		qDebug() << "Registered in network as" << (isMaster ? "master," : "slave,") <<
 				"assigned IP" << sparkleIP.toString();
+
+		break;
+	}
+
+	case RoutingTable: {
+		routing_table_entry_t *entry = (routing_table_entry_t *) payload.data();
+		int count = payload.length() / sizeof(routing_table_entry_t);
+
+		for(int i = 0; i < count; i++) {
+			node_def_t *def = new node_def_t;
+
+			def->addr = QHostAddress(entry[i].inetIP);
+			def->port = entry[i].port;
+			def->sparkleAddress = QHostAddress(entry[i].sparkleIP);
+			memcpy(def->sparkleMac, entry[i].sparkleMac, 6);
+
+			qDebug() << "Routing:" << def->sparkleAddress.toString() << ">>"
+					<< def->addr.toString() << ":" << def->port;
+
+			if(entry[i].isMaster)
+				masters.append(def);
+			else
+				slaves.append(def);
+		}
 
 		break;
 	}
@@ -437,6 +528,7 @@ void LinkLayer::joinTargetLookedUp(QHostInfo host) {
 
 void LinkLayer::sendPacket(packet_type_t type, QHostAddress host, quint16 port,
 			   QByteArray data, bool encrypted) {
+
 	packet_header_t hdr;
 
 	hdr.length = sizeof(packet_header_t) + data.size();
@@ -546,7 +638,7 @@ void LinkLayer::publicKeyExchange(QHostAddress host, quint16 port) {
 	sendPacket(PublicKeyExchange, host, port, hostPair->getPublicKey(), false);
 }
 
-LinkLayer::master_node_def_t *LinkLayer::selectMaster() {
+LinkLayer::node_def_t *LinkLayer::selectMaster() {
 	return masters.at(qrand() % masters.count());
 }
 
