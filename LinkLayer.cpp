@@ -19,6 +19,7 @@
 #include <QCoreApplication>
 #include <QStringList>
 #include <QHostInfo>
+#include <QTimer>
 
 #include "LinkLayer.h"
 #include "SparkleNode.h"
@@ -33,6 +34,10 @@ LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
 		SLOT(handleDatagram(QByteArray&,QHostAddress&,quint16)));
 
 	this->hostPair = hostPair;
+
+	pingTimer = new QTimer(this);
+	pingTimer->setSingleShot(true);
+	connect(pingTimer, SIGNAL(timeout()), SLOT(pingTimedOut()));
 }
 
 LinkLayer::~LinkLayer() {
@@ -78,6 +83,7 @@ bool LinkLayer::createNetwork(QHostAddress local) {
 	isMaster = true;
 
 	master_node_def_t *def = new master_node_def_t;
+	this->localAddress = local;
 	def->addr = local;
 	def->port = transport->getPort();
 	masters.append(def);
@@ -247,6 +253,85 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 		break;
 	}
 
+	case PingRequest: {
+		if(hdr->length < sizeof(ping_request_t) + sizeof(packet_header_t)) {
+			qWarning() << "Bad length" << hdr->length <<
+				"on incoming packet from" << host.toString() << ":" << port;
+
+			break;
+		}
+
+		ping_request_t *req = (ping_request_t *) payload.data();
+
+		ping_t ping;
+		ping.seq = req->seq;
+		ping.addr = host.toIPv4Address();
+
+		QByteArray pingData((char *) &ping, sizeof(ping_t));
+
+		sendPacket(Ping, host, req->port, pingData, false);
+
+		ping_completed_t comp;
+		comp.seq = req->seq;
+
+		QByteArray compData((char *) &comp, sizeof(ping_completed_t));
+
+		sendPacket(PingCompleted, host, port, compData, false);
+
+		break;
+	}
+
+	case Ping: {
+		if(hdr->length < sizeof(ping_t) + sizeof(packet_header_t)) {
+			qWarning() << "Bad length" << hdr->length <<
+				"on incoming packet from" << host.toString() << ":" << port;
+
+			break;
+		}
+
+		ping_t *ping = (ping_t *) payload.data();
+
+
+		if(ping->seq == pingSeq) {
+			qDebug() << "Ping:" << pingTime.elapsed() << "ms.";
+
+			if(joinStep == RequestingPing) {
+				pingReceived = true;
+
+				localAddress = QHostAddress(ping->addr);
+
+				if(pingTimer->isActive()) {
+					pingTimer->stop();
+					joinPingGot();
+				}
+			}
+		}
+
+		break;
+	}
+
+	case PingCompleted: {
+		if(hdr->length < sizeof(ping_completed_t) + sizeof(packet_header_t)) {
+			qWarning() << "Bad length" << hdr->length <<
+				"on incoming packet from" << host.toString() << ":" << port;
+
+			break;
+		}
+
+		ping_completed_t *ping = (ping_completed_t *) payload.data();
+
+		if(joinStep == RequestingPing) {
+			if(ping->seq == pingSeq) {
+				if(pingReceived)
+					joinPingGot();
+				else
+					pingTimer->start(10000);
+			}
+		}
+
+		break;
+	}
+
 	default:
 		qWarning() << "Bad type" << hdr->type <<
 			"on incoming packet from" << host.toString() << ":" << port;
@@ -339,12 +424,30 @@ void LinkLayer::joinGotVersion(int version) {
 		QCoreApplication::exit(1);
 	}
 
+	qDebug() << "Requesting ping";
+
+	joinStep = RequestingPing;
+
+	pingSeq = qrand();
+
+	sendPingRequest(pingSeq, transport->getPort(), remoteAddress, remotePort);
+}
+
+void LinkLayer::pingTimedOut() {
+	qCritical() << "Ping not passed though NAT. Forward port" << transport->getPort() <<
+			"on your firewall";
+
+	QCoreApplication::exit(1);
+}
+
+void LinkLayer::joinPingGot() {	
 	qDebug() << "Requesting master node";
 
 	joinStep = RequestingMasterNode;
 
 	sendMasterNodeRequest(remoteAddress, remotePort);
 }
+
 
 void LinkLayer::joinGotMaster(QHostAddress host, quint16 port) {
 	qDebug() << "Registering in network via master" << host.toString() << ":" << port;
@@ -374,4 +477,15 @@ void LinkLayer::publicKeyExchange(QHostAddress host, quint16 port) {
 
 LinkLayer::master_node_def_t *LinkLayer::selectMaster() {
 	return masters.at(qrand() % masters.count());
+}
+
+void LinkLayer::sendPingRequest(quint32 seq, quint16 localport, QHostAddress host, quint16 port) {
+	ping_request_t req;
+	req.seq = seq;
+	req.port = localport;
+
+	QByteArray data((char *) &req, sizeof(ping_request_t));
+
+	sendPacket(PingRequest, host, port, data, false);
+	pingTime.start();
 }

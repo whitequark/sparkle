@@ -21,10 +21,12 @@
 
 #include <QObject>
 #include <QHostInfo>
+#include <QTime>
 
 #include "RSAKeyPair.h"
 
 class QHostAddress;
+class QTimer;
 class SparkleNode;
 class PacketTransport;
 
@@ -46,6 +48,8 @@ private slots:
 
 	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
 
+	void pingTimedOut();
+
 private:
 
 	enum {
@@ -63,10 +67,15 @@ private:
 		SessionKeyReply			= 6,
 		SessionKeyAcknowlege		= 7,
 
-		EncryptedPacket			= 8,
+		PingRequest			= 8,
+		Ping				= 9,
+		PingCompleted			= 10,
 
-		MasterNodeRequest		= 9,
-		MasterNodeReply			= 10,
+		EncryptedPacket			= 12,
+
+		MasterNodeRequest		= 13,
+		MasterNodeReply			= 14,
+
 
 
 	};
@@ -86,6 +95,20 @@ private:
 		quint16	port;
 	};
 
+	struct ping_request_t {
+		quint32	seq;
+		quint16	port;
+	};
+
+	struct ping_t {
+		quint32 seq;
+		quint32 addr;
+	};
+
+	struct ping_completed_t {
+		quint32 seq;
+	};
+
 	struct master_node_def_t {
 		QHostAddress	addr;
 		quint16		port;
@@ -95,21 +118,28 @@ private:
 	void sendAsEncrypted(SparkleNode *node, QByteArray data);
 
 	void sendProtocolVersionRequest(QHostAddress host, quint16 port);
+	void sendPingRequest(quint32 seq, quint16 localport, QHostAddress host, quint16 port);
 	void sendMasterNodeRequest(QHostAddress host, quint16 port);
 	void publicKeyExchange(QHostAddress host, quint16 port);
 
 	void joinGotVersion(int version);
+	void joinPingGot();
 	void joinGotMaster(QHostAddress host, quint16 port);
 
 	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
 
 	master_node_def_t *selectMaster();
 
-	QHostAddress remoteAddress;
-	uint16_t remotePort;
+	QHostAddress remoteAddress, localAddress;
+	quint16 remotePort;
 
 	PacketTransport *transport;
 	RSAKeyPair *hostPair;
+
+	quint32 pingSeq;
+	QTime pingTime;
+	QTimer *pingTimer;
+	bool pingReceived;
 
 	bool isMaster;
 
@@ -117,6 +147,7 @@ private:
 
 	enum join_step_t {
 		RequestingProtocolVersion,
+		RequestingPing,
 		RequestingMasterNode,
 		RegisteringInNetwork,
 	};
