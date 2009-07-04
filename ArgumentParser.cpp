@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,9 @@
 
 #include <QCoreApplication>
 #include <QtDebug>
+
 #include "ArgumentParser.h"
+#include "Log.h"
 
 static void helpCallback(void *u, QString) {
 	ArgumentParser::help_callback_info_t *t = (ArgumentParser::help_callback_info_t *) u;
@@ -60,7 +62,7 @@ ArgumentParser::ArgumentParser(QStringList arguments, QObject *parent) : QObject
 	hinfo.optionsList = &this->optionsList;
 
 	registerOption(QChar::Null, "help", NoArgument, NULL, &helpCallback, (void *) &hinfo, 
-		"display this help", QString());
+		"\tdisplay this help", QString());
 }
 
 ArgumentParser::~ArgumentParser() {
@@ -97,14 +99,14 @@ bool ArgumentParser::parse() {
 					}
 
 			} else {
-				qWarning() << "Invalid option" << opt;
+				Log::warn("Invalid option %1") << opt;
 
 				invalid = true;
 
 				continue;
 			}
 		} else {
-			qWarning() << "Invalid option" << opt;
+			Log::warn("Invalid option %1") << opt;
 
 			invalid = true;
 
@@ -121,7 +123,7 @@ bool ArgumentParser::parse() {
 					arg = *i;
 
 				} else if(matching->arg == RequiredArgument) {
-					qWarning() << "Argument required for option" << opt;
+					Log::warn("Argument required for option %1") << opt;
 
 					invalid = true;
 
@@ -139,7 +141,7 @@ bool ArgumentParser::parse() {
 			}
 
 		} else {
-			qWarning() << "Invalid option" << opt;
+			Log::warn("Invalid option %1") << opt;
 
 			invalid = true;
 

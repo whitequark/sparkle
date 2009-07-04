@@ -10,7 +10,8 @@ QT -= gui
 QT += network
 
 # Input
-HEADERS += RSAKeyPair.h \
+HEADERS += Log.h \
+	RSAKeyPair.h \
     ArgumentParser.h \
     LinkLayer.h \
     SparkleNode.h \
@@ -20,6 +21,7 @@ HEADERS += RSAKeyPair.h \
     SHA1Digest.h \
     RoutesManager.h
 SOURCES += main.cpp \
+	Log.cpp \
     RSAKeyPair.cpp \
     ArgumentParser.cpp \
     LinkLayer.cpp \
