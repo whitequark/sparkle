@@ -23,8 +23,10 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
+
 #include "LinuxTAP.h"
 #include "LinkLayer.h"
+#include "Log.h"
 
 LinuxTAP::LinuxTAP(LinkLayer *link, QObject *parent) : QObject(parent)
 {
@@ -45,7 +47,7 @@ bool LinuxTAP::createInterface(QString pattern) {
 	tun = open("/dev/net/tun", O_RDWR);
 
 	if(tun == -1) {
-		qCritical("tap: cannot open /dev/net/tun: %s", strerror(errno));
+		Log::error("tap: cannot open /dev/net/tun: %1") << QString::fromLocal8Bit(strerror(errno));
 
 		return false;
 	}
@@ -55,15 +57,16 @@ bool LinuxTAP::createInterface(QString pattern) {
 	strncpy(ifr.ifr_name, pattern.toAscii().data(), IFNAMSIZ);
 
 	if(ioctl(tun, TUNSETIFF, &ifr) == -1) {
+		Log::error("tap: cannot create iface: %1") << QString::fromLocal8Bit(strerror(errno));
+
 		close(tun);
-		qCritical("tap: cannot create iface: %s", strerror(errno));
 
 		return false;
 	}
 
 	memcpy(device, ifr.ifr_name, IFNAMSIZ);
 
-	qDebug("tap: registered interface %s", device);
+	Log::debug("tap: registered interface %1") << device;
 
 	notify = new QSocketNotifier(tun, QSocketNotifier::Read, this);
 	connect(notify, SIGNAL(activated(int)), SLOT(haveData()));
@@ -75,17 +78,15 @@ bool LinuxTAP::createInterface(QString pattern) {
 void LinuxTAP::joined() {
 
 	if(tun == -1) {
-		qFatal("tap: joined to network before the device was created");
+		Log::fatal("tap: joined to network before the device was created");
 		
 		return;
 	}
 
-	qDebug("tap: configuring interface %s", device);
-
 	int fd = socket(PF_INET, SOCK_DGRAM, 0);
 
 	if(fd == -1) {
-		qFatal("tap: socket: %s", strerror(errno));
+		Log::fatal("tap: socket: %s") << QString::fromLocal8Bit(strerror(errno));
 		
 		return;
 	}
@@ -101,49 +102,51 @@ void LinuxTAP::joined() {
 	sockaddr->sin_addr.s_addr = htonl(link->getSparkleIP().toIPv4Address());
 
 	if(ioctl(fd, SIOCSIFADDR, &ifr) == -1) {
-		close(fd);
-		qFatal("tap: SIOCSIFADDR: %s", strerror(errno));
+		Log::fatal("tap: SIOCSIFADDR: %1") << QString::fromLocal8Bit(strerror(errno));
 
+		close(fd);
 		return;
 	}
 
 	sockaddr = (sockaddr_in *) &ifr.ifr_netmask;
 	sockaddr->sin_family = AF_INET;
-	sockaddr->sin_addr.s_addr = 0xff;
+	sockaddr->sin_addr.s_addr = 0xff; // 255.255.255.0
 
 	if(ioctl(fd, SIOCSIFNETMASK, &ifr) == -1) {
-		close(fd);
-		qFatal("tap: SIOCSIFNETMASK: %s", strerror(errno));
+		Log::fatal("tap: SIOCSIFNETMASK: %1") << QString::fromLocal8Bit(strerror(errno));
 
+		close(fd);
 		return;
 	}
 
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	memcpy(&ifr.ifr_hwaddr.sa_data, link->getSparkleMac().data(), 6);
 	if(ioctl(fd, SIOCSIFHWADDR, &ifr) == -1) {
-		close(fd);
-		qFatal("tap: SIOCSIFHWADDR: %s", strerror(errno));
+		Log::fatal("tap: SIOCSIFHWADDR: %1") << QString::fromLocal8Bit(strerror(errno));
 
+		close(fd);
 		return;
 	}
 
 	if(ioctl(fd, SIOCGIFFLAGS, &ifr) == -1) {
-		close(fd);
-		qFatal("tap: SIOCGIFFLAGS: %s", strerror(errno));
+		Log::fatal("tap: SIOCGIFFLAGS: %1") << QString::fromLocal8Bit(strerror(errno));
 
+		close(fd);
 		return;
 	}
 
 	ifr.ifr_flags |= IFF_UP;
 
 	if(ioctl(fd, SIOCSIFFLAGS, &ifr) == -1) {
-		close(fd);
-		qFatal("tap: SIOCGIFFLAGS: %s", strerror(errno));
+		Log::fatal("tap: cannot bring interface up: %1") << QString::fromLocal8Bit(strerror(errno));
 
+		close(fd);
 		return;
 	}
 
 	close(fd);
+
+	Log::debug("tap: configured interface %s") << device;
 
 	notify->setEnabled(true);
 }
