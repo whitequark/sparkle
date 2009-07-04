@@ -59,7 +59,7 @@ public:
 	inline Log& operator<<(char v)		{ stream->list.append(QString(v)); return *this; }
 	inline Log& operator<<(const char* v)	{ stream->list.append(v); return *this; }
 	inline Log& operator<<(bool v)		{ stream->list.append(v ? "true" : "false"); return *this; }
-	inline Log& operator<<(QString& v)	{ stream->list.append(v); return *this; }
+	inline Log& operator<<(const QString& v){ stream->list.append(v); return *this; }
 
 	inline static Log debug(const char* format)	{ return Log(format, Debug);	}
 	inline static Log info(const char* format)	{ return Log(format, Info);	}
