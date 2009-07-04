@@ -26,6 +26,7 @@
 #include "ArgumentParser.h"
 #include "LinkLayer.h"
 #include "UdpPacketTransport.h"
+#include "Log.h"
 
 #ifdef Q_WS_X11
 #include "LinuxTAP.h"
@@ -36,11 +37,12 @@ QHostAddress checkoutAddress(QString strAddr) {
 	if(!ipAddr.setAddress(strAddr)) {
 		QHostInfo hostInfo = QHostInfo::fromName(strAddr);
 		if(hostInfo.error() != QHostInfo::NoError) {
-			qWarning() << "cannot lookup address" << strAddr;
+			Log::warn("cannot lookup address for host %1") << strAddr;
 		} else {
 			QList<QHostAddress> list = hostInfo.addresses();
 			if(list.size() > 1)
-				qWarning() << "there are more than one IP address for host" << strAddr << ", using first";
+				Log::warn("there are more than one IP address for host %1, using first (%2)")
+						<< strAddr << list[0].toString();
 			
 			return list[0];
 		}
@@ -48,35 +50,9 @@ QHostAddress checkoutAddress(QString strAddr) {
 	return ipAddr;
 }
 
-void messageOutputHandler(QtMsgType type, const char *msg) {
-	switch(type) {
-		case QtDebugMsg: {
-			printf("[DEBUG] %s\n", msg);
-			break;
-		}
-
-		case QtWarningMsg: {
-			printf("[WARN ] %s\n", msg);
-			break;
-		}
-
-		case QtCriticalMsg: {
-			printf("[ERROR] %s\n", msg);
-			break;
-		}
-
-		case QtFatalMsg: {
-			printf("[FATAL] %s\n", msg);
-			QCoreApplication::exit(1);
-		}
-	}
-}
-
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
 	app.setApplicationName("sparkle");
-	
-	qInstallMsgHandler(messageOutputHandler);
 
 	QString profile = "default";
 	bool createNetwork = false;
@@ -110,16 +86,22 @@ int main(int argc, char *argv[]) {
 			return 0;
 		}
 
-		if(!createStr.isNull() && !joinStr.isNull())
-			qFatal("options --create and --join cannot be specified simultaneously");
+		if(!createStr.isNull() && !joinStr.isNull()) {
+			Log::fatal("options --create and --join cannot be specified simultaneously");
+			return 1;
+		}
 		
-		if(createStr.isNull() && joinStr.isNull())
-			qFatal("specify --create or --join option");
+		if(createStr.isNull() && joinStr.isNull()) {
+			Log::fatal("specify --create or --join option");
+			return 1;
+		}
 		
 		if(!createStr.isNull()) {
 			localAddress = checkoutAddress(createStr);
-			if(localAddress.isNull())
-				qFatal("invalid external address %s", createStr.toLocal8Bit().data());
+			if(localAddress.isNull()) {
+				Log::fatal("invalid external address %1") << createStr;
+				return 1;
+			}
 			createNetwork = true;
 		}
 		
@@ -127,14 +109,17 @@ int main(int argc, char *argv[]) {
 			QStringList parts = joinStr.split(":");
 
 			remoteAddress = checkoutAddress(parts[0]);
-			if(remoteAddress.isNull())
-				qFatal("invalid node address %s", parts[0].toLocal8Bit().data());
+			if(remoteAddress.isNull()) {
+				Log::fatal("invalid node address %1") << parts[0];
+				return 1;
+			}
 			
 			if(parts.size() == 1) {
 			} else if(parts.size() == 2) {
 				remotePort = parts[1].toInt();
 			} else {
-				qFatal("invalid node address %s", joinStr.toLocal8Bit().data());
+				Log::fatal("invalid node address %1") << joinStr;
+				return 1;
 			}
 		}
 		
@@ -160,15 +145,18 @@ int main(int argc, char *argv[]) {
 		qDebug("generating new RSA key pair (%d bits)", keyLength);
 
 		if(!hostPair.generate(keyLength)) {
-			qFatal("cannot generate new keypair");
+			Log::fatal("cannot generate new keypair");
+			return 1;
 		}
 
 		if(!hostPair.writeToFile(configDir + "/rsa_key")) {
-			qFatal("cannot write new keypair");
+			Log::fatal("cannot write new keypair");
+			return 1;
 		}
 	} else {
 		if(!hostPair.readFromFile(configDir + "/rsa_key")) {
-			qFatal("cannot read RSA keypair");
+			Log::fatal("cannot read RSA keypair");
+			return 1;
 		}
 	}
 
@@ -177,18 +165,21 @@ int main(int argc, char *argv[]) {
 
 	if(createNetwork) {
 		if(!link.createNetwork(localAddress)) {
-			qFatal("cannot create network");
+			Log::fatal("cannot create network");
+			return 1;
 		}
 	} else {
 		if(!link.joinNetwork(remoteAddress, remotePort)) {
-			qFatal("cannot join network");
+			Log::fatal("cannot join network");
+			return 1;
 		}
 	}
 
 #ifdef Q_WS_X11
 	LinuxTAP tap(&link);
 	if(tap.createInterface("sparkle%d") == false) {
-		qFatal("cannot initialize TAP");
+		Log::fatal("cannot initialize TAP");
+		return 1;
 	}
 
 #endif
