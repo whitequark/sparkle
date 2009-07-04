@@ -344,28 +344,12 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 				sendPacket(RegisterReply, node, data, true);
 
-				routing_table_entry_t newRouteItem;
-				newRouteItem.inetIP = def->addr.toIPv4Address();
-				newRouteItem.isMaster = reply.isMaster;
-				newRouteItem.port = def->port;
-				newRouteItem.sparkleIP = def->sparkleIP.toIPv4Address();
-				memcpy(newRouteItem.sparkleMac, def->sparkleMac.data(), 6);
-
-				QByteArray newRoute((char *) &newRouteItem, sizeof(routing_table_entry_t));
+				QByteArray newRoute = formRoute(def, reply.isMaster == 1);
 
 				QByteArray routingData;
 				size_t size = 0;
 
 				foreach(node_def_t *ptr, masters) {
-					routing_table_entry_t entry;
-					entry.inetIP = ptr->addr.toIPv4Address();
-					entry.isMaster = 1;
-					entry.port = ptr->port;
-					entry.sparkleIP = ptr->sparkleIP.toIPv4Address();
-					memcpy(entry.sparkleMac, ptr->sparkleMac.data(), 6);
-
-					QByteArray chunk((char *) &entry, sizeof(routing_table_entry_t));
-
 					if(ptr->sparkleIP != this->sparkleIP) {
 						SparkleNode *masterNode = getOrConstructNode(ptr->addr,
 											     ptr->port);
@@ -373,7 +357,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 						sendPacket(RoutingTable, masterNode, newRoute, true);
 					}
 
-					routingData += chunk;
+					routingData += formRoute(ptr, true);
 					size += sizeof(routing_table_entry_t);
 
 					if(size >= 65535 - sizeof(packet_header_t) * 2) {
@@ -385,19 +369,12 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 				if(reply.isMaster) {
 					foreach(node_def_t *ptr, slaves) {
-						routing_table_entry_t entry;
-						entry.inetIP = ptr->addr.toIPv4Address();
-						entry.isMaster = 0;
-						entry.port = ptr->port;
-						entry.sparkleIP = ptr->sparkleIP.toIPv4Address();
-						memcpy(entry.sparkleMac, ptr->sparkleMac.data(), 6);
-
 						SparkleNode *slaveNode = getOrConstructNode(ptr->addr,
 											    ptr->port);
 
 						sendPacket(RoutingTable, slaveNode, newRoute, true);
 
-						routingData += QByteArray((char *) &entry, sizeof(routing_table_entry_t));
+						routingData += formRoute(ptr, false);
 						size += sizeof(routing_table_entry_t);
 
 						if(size >= 65535 - sizeof(packet_header_t) * 2) {
@@ -457,7 +434,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				def->sparkleIP = QHostAddress(entry[i].sparkleIP);
 				def->sparkleMac = QByteArray((char *) entry[i].sparkleMac, 6);
 
-				qDebug() << "Routing:" << def->sparkleIP.toString() << ">>"
+				qDebug() << "Route:" << def->sparkleIP.toString() << ">>"
 						<< def->addr.toString() << ":" << def->port;
 
 				if(entry[i].isMaster)
@@ -494,15 +471,8 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 			if(requestedNode == NULL)
 				sendPacket(NoRouteForEntry, node, payload.left(sizeof(quint32)), true);
 			else {
-				routing_table_entry_t entry;
-				entry.inetIP = requestedNode->addr.toIPv4Address();
-				entry.isMaster = 0;
-				entry.port = requestedNode->port;
-				entry.sparkleIP = requestedNode->sparkleIP.toIPv4Address();
-				memcpy(entry.sparkleMac, requestedNode->sparkleMac.data(), 6);
-
 				sendPacket(RoutingTable, node,
-					   QByteArray((char *) &entry, sizeof(routing_table_entry_t)), true);
+					   formRoute(requrestedNode, false), true);
 			}
 
 			break;
@@ -833,4 +803,15 @@ LinkLayer::node_def_t *LinkLayer::findByMAC(quint8 *mac) {
 			return def;
 
 	return NULL;
+}
+
+QByteArray LinkLayer::formRoute(node_def_t *node, bool isMaster) {
+	routing_table_entry_t route;
+	route.inetIP = node->addr.toIPv4Address();
+	route.isMaster = isMaster ? 1 : 0;
+	route.port = node->port;
+	route.sparkleIP = node->sparkleIP.toIPv4Address();
+	memcpy(route.sparkleMac, node->sparkleMac.data(), 6);
+
+	return QByteArray((char *) &route, sizeof(routing_table_entry_t));
 }

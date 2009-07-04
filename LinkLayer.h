@@ -184,6 +184,8 @@ private:
 	node_def_t *findByMAC(quint8 *mac);
 	node_def_t *selectMaster();
 
+	QByteArray formRoute(node_def_t *node, bool isMaster);
+
 	QHostAddress remoteAddress, localAddress;
 	quint16 remotePort;
 
