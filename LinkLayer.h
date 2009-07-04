@@ -161,7 +161,7 @@ private:
 	} __attribute__((packed));
 
 	void sendPacket(packet_type_t type, SparkleNode *target, QByteArray data,
-			bool encrypted, quint16 port = -1);
+			bool encrypted, quint16 port = 0);
 	void sendAsEncrypted(SparkleNode *node, QByteArray data, quint16 port = 0);
 
 	void sendProtocolVersionRequest(QHostAddress host, quint16 port);
