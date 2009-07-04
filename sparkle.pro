@@ -17,8 +17,8 @@ HEADERS += RSAKeyPair.h \
     BlowfishKey.h \
     PacketTransport.h \
     UdpPacketTransport.h \
-    SHA1Digest.h
-
+    SHA1Digest.h \
+    RoutesManager.h
 SOURCES += main.cpp \
     RSAKeyPair.cpp \
     ArgumentParser.cpp \
@@ -26,9 +26,9 @@ SOURCES += main.cpp \
     SparkleNode.cpp \
     BlowfishKey.cpp \
     UdpPacketTransport.cpp \
-    SHA1Digest.cpp
-
-unix {
-SOURCES += LinuxTAP.cpp
-HEADERS += LinuxTAP.h
+    SHA1Digest.cpp \
+    RoutesManager.cpp
+unix { 
+    SOURCES += LinuxTAP.cpp
+    HEADERS += LinuxTAP.h
 }

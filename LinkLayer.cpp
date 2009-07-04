@@ -26,6 +26,7 @@
 #include "SparkleNode.h"
 #include "PacketTransport.h"
 #include "SHA1Digest.h"
+#include "RoutesManager.h"
 
 LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
 		     QObject *parent) : QObject(parent)
@@ -36,6 +37,8 @@ LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
 		SLOT(handleDatagram(QByteArray&, QHostAddress&, quint16)));
 
 	this->hostPair = hostPair;
+
+	routes = new RoutesManager(this);
 
 	pingTimer = new QTimer(this);
 	pingTimer->setSingleShot(true);
@@ -72,20 +75,23 @@ bool LinkLayer::createNetwork(QHostAddress local) {
 
 	QByteArray fingerprint = SHA1Digest::calculateSHA1(hostPair->getPublicKey());
 
-	node_def_t *def = new node_def_t;
-	this->localAddress = local;
-	def->addr = local;
-	def->port = transport->getPort();
+//	node_def_t *def = new node_def_t;
+//	this->localAddress = local;
+//	def->addr = local;
+//	def->port = transport->getPort();
 
-	def->sparkleMac = SparkleNode::calculateSparkleMac(fingerprint);
-	def->sparkleIP = SparkleNode::calculateSparkleIP(fingerprint);
+//	def->sparkleMac = SparkleNode::calculateSparkleMac(fingerprint);
+//	def->sparkleIP = SparkleNode::calculateSparkleIP(fingerprint);
 	
-	sparkleIP = def->sparkleIP;
-	sparkleMac = def->sparkleMac;
+//	sparkleIP = def->sparkleIP;
+//	sparkleMac = def->sparkleMac;
 
-	masters.append(def);
+//	masters.append(def);
 
-	qDebug() << "Network created, listening at port" << def->port;
+	routes->addRoute(local, transport->getPort(), SparkleNode::calculateSparkleIP(fingerprint),
+			 SparkleNode::calculateSparkleMac(fingerprint), true);
+
+	qDebug() << "Network created, listening at port" << transport->getPort();
 
 	transport->beginReceiving();
 
@@ -289,7 +295,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 		case MasterNodeRequest: {
 			master_node_reply_t reply;
 
-			node_def_t *def = selectMaster();
+			const node_def_t *def = routes->selectMaster();
 
 			reply.addr = def->addr.toIPv4Address();
 			reply.port = def->port;
@@ -325,19 +331,21 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				QByteArray mac = node->getSparkleMAC();
 				memcpy(reply.mac, mac.data(), sizeof(reply.mac));
 
-				node_def_t *def = new node_def_t;
+/*				node_def_t *def = new node_def_t;
 				def->addr = host;
 				def->port = port;
 				def->sparkleIP = node->getSparkleIP();
 
 				def->sparkleMac = mac;
+*/
+				const node_def_t *def;
 
-				if((slaves.count() + 1) / 10 > masters.count()) {
+				if((routes->getSlaveCount() + 1) / 10 > routes->getMasterCount()) {
+					def = routes->addRoute(host, port, node->getSparkleIP(), mac, true);
 					reply.isMaster = 1;
-					masters.append(def);
 				} else {
+					def = routes->addRoute(host, port, node->getSparkleIP(), mac, false);
 					reply.isMaster = 0;
-					slaves.append(def);
 				}
 
 				QByteArray data((char *) &reply, sizeof(reply));
@@ -349,7 +357,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				QByteArray routingData;
 				size_t size = 0;
 
-				foreach(node_def_t *ptr, masters) {
+				foreach(const node_def_t *ptr, routes->getMasters()) {
 					if(ptr->sparkleIP != this->sparkleIP) {
 						SparkleNode *masterNode = getOrConstructNode(ptr->addr,
 											     ptr->port);
@@ -368,7 +376,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				}
 
 				if(reply.isMaster) {
-					foreach(node_def_t *ptr, slaves) {
+					foreach(node_def_t *ptr, routes->getSlaves()) {
 						SparkleNode *slaveNode = getOrConstructNode(ptr->addr,
 											    ptr->port);
 
@@ -427,20 +435,21 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 			int count = payload.length() / sizeof(routing_table_entry_t);
 
 			for(int i = 0; i < count; i++) {
-				node_def_t *def = new node_def_t;
+				const node_def_t *def;
 
-				def->addr = QHostAddress(entry[i].inetIP);
-				def->port = entry[i].port;
-				def->sparkleIP = QHostAddress(entry[i].sparkleIP);
-				def->sparkleMac = QByteArray((char *) entry[i].sparkleMac, 6);
+				if(entry[i].isMaster)
+					def = routes->addRoute(QHostAddress(entry[i].inetIP),
+							 entry[i].port, QHostAddress(entry[i].sparkleIP),
+							 QByteArray((char *) entry[i].sparkleMac, 6),
+							 true);
+				else
+					def = routes->addRoute(QHostAddress(entry[i].inetIP),
+							 entry[i].port, QHostAddress(entry[i].sparkleIP),
+							 QByteArray((char *) entry[i].sparkleMac, 6),
+							 false);
 
 				qDebug() << "Route:" << def->sparkleIP.toString() << ">>"
 						<< def->addr.toString() << ":" << def->port;
-
-				if(entry[i].isMaster)
-					masters.append(def);
-				else
-					slaves.append(def);
 
 				foreach(QHostAddress *ptr, awaiting)
 					if(*ptr == def->sparkleIP) {
@@ -466,13 +475,13 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 			quint32 *ip = (quint32 *) payload.data();
 
-			node_def_t *requestedNode = findByIP(QHostAddress(*ip));
+			const node_def_t *requestedNode = routes->findByIP(QHostAddress(*ip));
 
 			if(requestedNode == NULL)
 				sendPacket(NoRouteForEntry, node, payload.left(sizeof(quint32)), true);
 			else {
 				sendPacket(RoutingTable, node,
-					   formRoute(requrestedNode, false), true);
+					   formRoute(requestedNode, false), true);
 			}
 
 			break;
@@ -640,10 +649,6 @@ void LinkLayer::publicKeyExchange(QHostAddress host, quint16 port) {
 	sendPacket(PublicKeyExchange, node, hostPair->getPublicKey(), false);
 }
 
-LinkLayer::node_def_t *LinkLayer::selectMaster() {
-	return masters.at(qrand() % masters.count());
-}
-
 void LinkLayer::sendPingRequest(quint32 seq, quint16 localport, QHostAddress host, quint16 port) {
 	SparkleNode *node = getOrConstructNode(host, port);
 
@@ -661,7 +666,7 @@ void LinkLayer::sendPingRequest(quint32 seq, quint16 localport, QHostAddress hos
 }
 
 void LinkLayer::sendRouteRequest(QHostAddress address) {
-	node_def_t *master = selectMaster();
+	const node_def_t *master = routes->selectMaster();
 	SparkleNode *masterNode = getOrConstructNode(master->addr, master->port);
 
 	quint32 addr = address.toIPv4Address();
@@ -713,7 +718,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 				}
 			}
 
-			node_def_t *node = findByIP(target);
+			const node_def_t *node = routes->findByIP(target);
 
 			if(node != NULL)
 				sendARPReply(node);
@@ -733,7 +738,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 	}
 
 	case 0x0800: {
-		node_def_t *node = findByMAC(hdr.to);
+		const node_def_t *node = routes->findByMAC(QByteArray((char *)hdr.to, 6));
 
 		if(!node)
 			break;
@@ -757,7 +762,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 	}
 }
 
-void LinkLayer::sendARPReply(node_def_t *node) {
+void LinkLayer::sendARPReply(const node_def_t *node) {
 	mac_header_t mac;
 
 	mac.type = htons(0x0806);
@@ -781,31 +786,7 @@ void LinkLayer::sendARPReply(node_def_t *node) {
 	emit sendPacketReq(packet);
 }
 
-LinkLayer::node_def_t *LinkLayer::findByIP(QHostAddress ip) {
-	foreach(node_def_t *def, masters)
-		if(def->sparkleIP == ip)
-			return def;
-
-	foreach(node_def_t *def, slaves)
-		if(def->sparkleIP == ip)
-			return def;
-
-	return NULL;
-}
-
-LinkLayer::node_def_t *LinkLayer::findByMAC(quint8 *mac) {
-	foreach(node_def_t *def, masters)
-		if(memcmp(def->sparkleMac, mac, 6) == 0)
-			return def;
-
-	foreach(node_def_t *def, slaves)
-		if(memcmp(def->sparkleMac, mac, 6) == 0)
-			return def;
-
-	return NULL;
-}
-
-QByteArray LinkLayer::formRoute(node_def_t *node, bool isMaster) {
+QByteArray LinkLayer::formRoute(const node_def_t *node, bool isMaster) {
 	routing_table_entry_t route;
 	route.inetIP = node->addr.toIPv4Address();
 	route.isMaster = isMaster ? 1 : 0;

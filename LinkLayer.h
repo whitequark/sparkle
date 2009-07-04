@@ -29,6 +29,7 @@ class QHostAddress;
 class QTimer;
 class SparkleNode;
 class PacketTransport;
+class RoutesManager;
 
 class LinkLayer : public QObject
 {
@@ -45,6 +46,13 @@ public:
 	QByteArray getSparkleMac() { return sparkleMac; }
 
 	void processPacket(QByteArray packet);
+
+	struct node_def_t {
+		QHostAddress	addr;
+		quint16		port;
+		QHostAddress	sparkleIP;
+		QByteArray	sparkleMac;
+	};
 
 private slots:
 	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
@@ -133,15 +141,6 @@ private:
 		quint8	sparkleMac[6];
 	};
 
-
-	struct node_def_t {
-		QHostAddress	addr;
-		quint16		port;
-		QHostAddress	sparkleIP;
-		QByteArray	sparkleMac;
-	};
-
-
 	struct mac_header_t {
 		quint8	to[6];
 		quint8	from[6];
@@ -176,21 +175,18 @@ private:
 	void joinGotMaster(QHostAddress host, quint16 port);
 
 	void reverseMac(quint8 *mac);
-	void sendARPReply(node_def_t *node);
+	void sendARPReply(const node_def_t *node);
 
 	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
 
-	node_def_t *findByIP(QHostAddress ip);
-	node_def_t *findByMAC(quint8 *mac);
-	node_def_t *selectMaster();
-
-	QByteArray formRoute(node_def_t *node, bool isMaster);
+	QByteArray formRoute(const node_def_t *node, bool isMaster);
 
 	QHostAddress remoteAddress, localAddress;
 	quint16 remotePort;
 
 	PacketTransport *transport;
 	RSAKeyPair *hostPair;
+	RoutesManager *routes;
 
 	quint32 pingSeq;
 	QTime pingTime;
@@ -214,7 +210,6 @@ private:
 	join_step_t joinStep;
 
 	QList<SparkleNode *> nodes;
-	QList<node_def_t *> masters, slaves;
 	QList<QHostAddress *> awaiting;
 };
 
