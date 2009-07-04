@@ -16,24 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "RoutesManager.h"
+#include "RouteManager.h"
 
-RoutesManager::RoutesManager(QObject *parent) : QObject(parent)
+RouteManager::RouteManager(QObject *parent) : QObject(parent)
 {
 
 }
 
-RoutesManager::~RoutesManager() {
+RouteManager::~RouteManager() {
 
 }
 
 
-const LinkLayer::node_def_t *RoutesManager::selectMaster() {
+const LinkLayer::node_def_t *RouteManager::selectMaster() {
 	return masters.at(qrand() % masters.count());
 }
 
 
-const LinkLayer::node_def_t *RoutesManager::findByIP(QHostAddress ip) {
+const LinkLayer::node_def_t *RouteManager::findByIP(QHostAddress ip) {
 	foreach(LinkLayer::node_def_t *def, masters)
 		if(def->sparkleIP == ip)
 			return def;
@@ -45,7 +45,7 @@ const LinkLayer::node_def_t *RoutesManager::findByIP(QHostAddress ip) {
 	return NULL;
 }
 
-const LinkLayer::node_def_t *RoutesManager::findByMAC(QByteArray mac) {
+const LinkLayer::node_def_t *RouteManager::findByMAC(QByteArray mac) {
 	foreach(LinkLayer::node_def_t *def, masters)
 		if(def->sparkleMac == mac)
 			return def;
@@ -57,15 +57,15 @@ const LinkLayer::node_def_t *RoutesManager::findByMAC(QByteArray mac) {
 	return NULL;
 }
 
-int RoutesManager::getMasterCount() {
+int RouteManager::getMasterCount() {
 	return masters.count();
 }
 
-int RoutesManager::getSlaveCount() {
+int RouteManager::getSlaveCount() {
 	return slaves.count();
 }
 
-const LinkLayer::node_def_t *RoutesManager::addRoute(QHostAddress addr,
+const LinkLayer::node_def_t *RouteManager::addRoute(QHostAddress addr,
 					      quint16 port, QHostAddress sparkleIP,
 					      QByteArray sparkleMac, bool isMaster) {
 

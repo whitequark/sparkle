@@ -23,13 +23,13 @@
 #include <QHostAddress>
 #include "LinkLayer.h"
 
-class RoutesManager : public QObject
+class RouteManager : public QObject
 {
 	Q_OBJECT
 
 public:
-	RoutesManager(QObject *parent = 0);
-	virtual ~RoutesManager();
+	RouteManager(QObject *parent = 0);
+	virtual ~RouteManager();
 
 	const LinkLayer::node_def_t *addRoute(QHostAddress addr,
 					      quint16 port, QHostAddress sparkleIP,

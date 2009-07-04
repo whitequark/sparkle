@@ -26,7 +26,7 @@
 #include "SparkleNode.h"
 #include "PacketTransport.h"
 #include "SHA1Digest.h"
-#include "RoutesManager.h"
+#include "RouteManager.h"
 
 LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
 		     QObject *parent) : QObject(parent)
@@ -38,7 +38,7 @@ LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
 
 	this->hostPair = hostPair;
 
-	routes = new RoutesManager(this);
+	routes = new RouteManager(this);
 
 	pingTimer = new QTimer(this);
 	pingTimer->setSingleShot(true);

@@ -29,7 +29,7 @@ class QHostAddress;
 class QTimer;
 class SparkleNode;
 class PacketTransport;
-class RoutesManager;
+class RouteManager;
 
 class LinkLayer : public QObject
 {
@@ -186,7 +186,7 @@ private:
 
 	PacketTransport *transport;
 	RSAKeyPair *hostPair;
-	RoutesManager *routes;
+	RouteManager *routes;
 
 	quint32 pingSeq;
 	QTime pingTime;
