@@ -49,5 +49,10 @@ void Log::emitMessage(loglevel_t loglevel, QString message) {
 	
 	if(loglevel >= Warning)	std::fprintf(stderr, qPrintable(final));
 	else			std::fprintf(stdout, qPrintable(final));
+	
+	if(loglevel == Fatal && !QCoreApplication::startingUp()) {
+		std::fprintf(stderr, "Fatal error encountered, exiting.\n");
+		QCoreApplication::exit(1);
+	}
 }
 
