@@ -34,7 +34,7 @@ public:
 	virtual quint16 getPort();
 
 public slots:
-	virtual void sendPacket(QByteArray &packet, QHostAddress &host, quint16 port);
+	virtual void sendPacket(QByteArray &packet, QHostAddress host, quint16 port);
 
 private slots:
 	void haveDatagram();

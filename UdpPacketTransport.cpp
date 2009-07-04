@@ -49,7 +49,7 @@ void UdpPacketTransport::haveDatagram() {
 	}
 }
 
-void UdpPacketTransport::sendPacket(QByteArray &packet, QHostAddress &host, quint16 port) {
+void UdpPacketTransport::sendPacket(QByteArray &packet, QHostAddress host, quint16 port) {
 	socket->writeDatagram(packet, host, port);
 }
 

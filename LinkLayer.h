@@ -160,8 +160,9 @@ private:
 		quint32	tpa;
 	} __attribute__((packed));
 
-	void sendPacket(packet_type_t type, QHostAddress host, quint16 port, QByteArray data, bool encrypted);
-	void sendAsEncrypted(SparkleNode *node, QByteArray data);
+	void sendPacket(packet_type_t type, SparkleNode *target, QByteArray data,
+			bool encrypted, quint16 port = -1);
+	void sendAsEncrypted(SparkleNode *node, QByteArray data, quint16 port = 0);
 
 	void sendProtocolVersionRequest(QHostAddress host, quint16 port);
 	void sendPingRequest(quint32 seq, quint16 localport, QHostAddress host, quint16 port);

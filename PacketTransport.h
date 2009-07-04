@@ -33,7 +33,7 @@ public:
 	virtual quint16 getPort() = 0;
 
 public slots:
-	virtual void sendPacket(QByteArray &packet, QHostAddress &host, quint16 port) = 0;
+	virtual void sendPacket(QByteArray &packet, QHostAddress host, quint16 port) = 0;
 
 signals:
 	virtual void receivedPacket(QByteArray &packet, QHostAddress &host, quint16 port) = 0;
