@@ -30,6 +30,7 @@ class QTimer;
 class SparkleNode;
 class PacketTransport;
 class RouteManager;
+class Route;
 
 class LinkLayer : public QObject
 {
@@ -46,13 +47,6 @@ public:
 	QByteArray getSparkleMac() { return sparkleMac; }
 
 	void processPacket(QByteArray packet);
-
-	struct node_def_t {
-		QHostAddress	addr;
-		quint16		port;
-		QHostAddress	sparkleIP;
-		QByteArray	sparkleMac;
-	};
 
 private slots:
 	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
@@ -175,11 +169,11 @@ private:
 	void joinGotMaster(QHostAddress host, quint16 port);
 
 	void reverseMac(quint8 *mac);
-	void sendARPReply(const node_def_t *node);
+	void sendARPReply(const Route *node);
 
 	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
 
-	QByteArray formRoute(const node_def_t *node, bool isMaster);
+	QByteArray formRoute(const Route *node, bool isMaster);
 
 	QHostAddress remoteAddress, localAddress;
 	quint16 remotePort;

@@ -16,12 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ROUTES_MANAGER_H__
-#define __ROUTES_MANAGER_H__
+#ifndef __ROUTE_MANAGER_H__
+#define __ROUTE_MANAGER_H__
 
 #include <QObject>
 #include <QHostAddress>
 #include "LinkLayer.h"
+
+class Route {
+public:
+	QHostAddress	addr;
+	quint16		port;
+	QHostAddress	sparkleIP;
+	QByteArray	sparkleMac;
+};
 
 class RouteManager : public QObject
 {
@@ -31,22 +39,22 @@ public:
 	RouteManager(QObject *parent = 0);
 	virtual ~RouteManager();
 
-	const LinkLayer::node_def_t *addRoute(QHostAddress addr,
+	const Route *addRoute(QHostAddress addr,
 					      quint16 port, QHostAddress sparkleIP,
 					      QByteArray sparkleMac, bool isMaster);
 
-	const LinkLayer::node_def_t *findByIP(QHostAddress ip);
-	const LinkLayer::node_def_t *findByMAC(QByteArray mac);
-	const LinkLayer::node_def_t *selectMaster();
+	const Route *findByIP(QHostAddress ip);
+	const Route *findByMAC(QByteArray mac);
+	const Route *selectMaster();
 
 	int getSlaveCount();
 	int getMasterCount();
 
-	const QList<LinkLayer::node_def_t *> &getMasters() { return masters; }
-	const QList<LinkLayer::node_def_t *> &getSlaves() { return slaves; }
+	const QList<Route *> &getMasters() { return masters; }
+	const QList<Route *> &getSlaves() { return slaves; }
 
 private:
-	QList<LinkLayer::node_def_t *> masters, slaves;
+	QList<Route *> masters, slaves;
 
 };
 

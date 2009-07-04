@@ -75,7 +75,7 @@ bool LinkLayer::createNetwork(QHostAddress local) {
 
 	QByteArray fingerprint = SHA1Digest::calculateSHA1(hostPair->getPublicKey());
 
-//	node_def_t *def = new node_def_t;
+//	Route *def = new node_def_t;
 //	this->localAddress = local;
 //	def->addr = local;
 //	def->port = transport->getPort();
@@ -295,7 +295,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 		case MasterNodeRequest: {
 			master_node_reply_t reply;
 
-			const node_def_t *def = routes->selectMaster();
+			const Route *def = routes->selectMaster();
 
 			reply.addr = def->addr.toIPv4Address();
 			reply.port = def->port;
@@ -331,14 +331,14 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				QByteArray mac = node->getSparkleMAC();
 				memcpy(reply.mac, mac.data(), sizeof(reply.mac));
 
-/*				node_def_t *def = new node_def_t;
+/*				Route *def = new node_def_t;
 				def->addr = host;
 				def->port = port;
 				def->sparkleIP = node->getSparkleIP();
 
 				def->sparkleMac = mac;
 */
-				const node_def_t *def;
+				const Route *def;
 
 				if((routes->getSlaveCount() + 1) / 10 > routes->getMasterCount()) {
 					def = routes->addRoute(host, port, node->getSparkleIP(), mac, true);
@@ -357,7 +357,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				QByteArray routingData;
 				size_t size = 0;
 
-				foreach(const node_def_t *ptr, routes->getMasters()) {
+				foreach(const Route *ptr, routes->getMasters()) {
 					if(ptr->sparkleIP != this->sparkleIP) {
 						SparkleNode *masterNode = getOrConstructNode(ptr->addr,
 											     ptr->port);
@@ -376,7 +376,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				}
 
 				if(reply.isMaster) {
-					foreach(node_def_t *ptr, routes->getSlaves()) {
+					foreach(Route *ptr, routes->getSlaves()) {
 						SparkleNode *slaveNode = getOrConstructNode(ptr->addr,
 											    ptr->port);
 
@@ -435,7 +435,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 			int count = payload.length() / sizeof(routing_table_entry_t);
 
 			for(int i = 0; i < count; i++) {
-				const node_def_t *def;
+				const Route *def;
 
 				if(entry[i].isMaster)
 					def = routes->addRoute(QHostAddress(entry[i].inetIP),
@@ -475,7 +475,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 			quint32 *ip = (quint32 *) payload.data();
 
-			const node_def_t *requestedNode = routes->findByIP(QHostAddress(*ip));
+			const Route *requestedNode = routes->findByIP(QHostAddress(*ip));
 
 			if(requestedNode == NULL)
 				sendPacket(NoRouteForEntry, node, payload.left(sizeof(quint32)), true);
@@ -666,7 +666,7 @@ void LinkLayer::sendPingRequest(quint32 seq, quint16 localport, QHostAddress hos
 }
 
 void LinkLayer::sendRouteRequest(QHostAddress address) {
-	const node_def_t *master = routes->selectMaster();
+	const Route *master = routes->selectMaster();
 	SparkleNode *masterNode = getOrConstructNode(master->addr, master->port);
 
 	quint32 addr = address.toIPv4Address();
@@ -718,7 +718,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 				}
 			}
 
-			const node_def_t *node = routes->findByIP(target);
+			const Route *node = routes->findByIP(target);
 
 			if(node != NULL)
 				sendARPReply(node);
@@ -738,7 +738,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 	}
 
 	case 0x0800: {
-		const node_def_t *node = routes->findByMAC(QByteArray((char *)hdr.to, 6));
+		const Route *node = routes->findByMAC(QByteArray((char *)hdr.to, 6));
 
 		if(!node)
 			break;
@@ -762,7 +762,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 	}
 }
 
-void LinkLayer::sendARPReply(const node_def_t *node) {
+void LinkLayer::sendARPReply(const Route *node) {
 	mac_header_t mac;
 
 	mac.type = htons(0x0806);
@@ -786,7 +786,7 @@ void LinkLayer::sendARPReply(const node_def_t *node) {
 	emit sendPacketReq(packet);
 }
 
-QByteArray LinkLayer::formRoute(const node_def_t *node, bool isMaster) {
+QByteArray LinkLayer::formRoute(const Route *node, bool isMaster) {
 	routing_table_entry_t route;
 	route.inetIP = node->addr.toIPv4Address();
 	route.isMaster = isMaster ? 1 : 0;
