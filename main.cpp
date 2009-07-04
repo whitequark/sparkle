@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
 		if(!createStr.isNull()) {
 			localAddress = checkoutAddress(createStr);
 			if(localAddress.isNull())
-				qFatal("invalid external address %s", createStr.data());
+				qFatal("invalid external address %s", createStr.toLocal8Bit().data());
 			createNetwork = true;
 		}
 		
@@ -128,13 +128,13 @@ int main(int argc, char *argv[]) {
 
 			remoteAddress = checkoutAddress(parts[0]);
 			if(remoteAddress.isNull())
-				qFatal("invalid node address %s", parts[0].data());
+				qFatal("invalid node address %s", parts[0].toLocal8Bit().data());
 			
 			if(parts.size() == 1) {
 			} else if(parts.size() == 2) {
 				remotePort = parts[1].toInt();
 			} else {
-				qFatal("invalid node address %s", joinStr.data());
+				qFatal("invalid node address %s", joinStr.toLocal8Bit().data());
 			}
 		}
 		

@@ -633,7 +633,7 @@ void LinkLayer::pingTimedOut() {
 	qCritical() << "Ping not passed though NAT. Forward port" << transport->getPort() <<
 			"on your firewall";
 
-	QCoreApplication::exit(1);
+	joinPingGot();
 }
 
 void LinkLayer::joinPingGot() {	
@@ -689,6 +689,8 @@ void LinkLayer::sendPingRequest(quint32 seq, quint16 localport, QHostAddress hos
 	req.port = localport;
 
 	QByteArray data((char *) &req, sizeof(ping_request_t));
+
+	pingReceived = false;
 
 	sendPacket(PingRequest, host, port, data, false);
 	pingTime.start();
