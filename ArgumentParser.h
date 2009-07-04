@@ -57,6 +57,7 @@ public:
 	struct help_callback_info_t {
 		ArgumentParser		*pclass;
 		QList<option_t *>	*optionsList;
+		bool				callbackCalled;
 	};
 
 private:

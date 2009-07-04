@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,113 +31,164 @@
 #include "LinuxTAP.h"
 #endif
 
+QHostAddress checkoutAddress(QString strAddr) {
+	QHostAddress ipAddr;
+	if(!ipAddr.setAddress(strAddr)) {
+		QHostInfo hostInfo = QHostInfo::fromName(strAddr);
+		if(hostInfo.error() != QHostInfo::NoError) {
+			qWarning() << "cannot lookup address" << strAddr;
+		} else {
+			QList<QHostAddress> list = hostInfo.addresses();
+			if(list.size() > 1)
+				qWarning() << "there are more than one IP address for host" << strAddr << ", using first";
+			
+			return list[0];
+		}
+	}
+	return ipAddr;
+}
+
+void messageOutputHandler(QtMsgType type, const char *msg) {
+	switch(type) {
+		case QtDebugMsg: {
+			printf("[DEBUG] %s\n", msg);
+			break;
+		}
+
+		case QtWarningMsg: {
+			printf("[WARN ] %s\n", msg);
+			break;
+		}
+
+		case QtCriticalMsg: {
+			printf("[ERROR] %s\n", msg);
+			break;
+		}
+
+		case QtFatalMsg: {
+			printf("[FATAL] %s\n", msg);
+			QCoreApplication::exit(1);
+		}
+	}
+}
+
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
-
 	app.setApplicationName("sparkle");
+	
+	qInstallMsgHandler(messageOutputHandler);
 
-	int keyLen = 1024;
-	quint16 port = 1801;
+	QString profile = "default";
 	bool createNetwork = false;
-	QString nodeName, profile = "default";
+	QHostAddress localAddress, remoteAddress;
+	quint16 localPort = 1801, remotePort = 1801;
+
+	int keyLength = 1024;
+	bool generateNewKeypair = false;
 
 	{
-		QString keyLenStr, portStr, createStr;
+		QString createStr, joinStr, portStr, keyLenStr;
 
 		ArgumentParser parser(app.arguments());
 
-		parser.registerOption(QChar::Null, "key-length", ArgumentParser::RequiredArgument,
-			&keyLenStr, NULL, NULL, "generate RSA key pair with specified length", "BITS");
+		parser.registerOption(QChar::Null, "profile", ArgumentParser::RequiredArgument, &profile, NULL,
+			NULL, "use specified profile", "PROFILE");
+
+		parser.registerOption('c', "create", ArgumentParser::RequiredArgument, &createStr, NULL,
+			NULL, "create new network using HOST as external address of this node", "HOST");
+
+		parser.registerOption('j', "join", ArgumentParser::RequiredArgument, &joinStr, NULL,
+			NULL, "join existing network (PORT defaults to 1801 if not specified)", "HOST:PORT");
 
 		parser.registerOption('p', "port", ArgumentParser::RequiredArgument, &portStr, NULL,
-				      NULL, "use specified UDP port", "PORT");
+			NULL, "listen at specified local UDP port PORT (defaults to 1801)", "PORT");
 
-		parser.registerOption('n', "node", ArgumentParser::RequiredArgument, &nodeName, NULL,
-				      NULL, "login using specified node, or use as local address when creating network", "ADDR");
+		parser.registerOption(QChar::Null, "generate-key", ArgumentParser::RequiredArgument,
+			&keyLenStr, NULL, NULL, "generate new RSA key pair with specified length", "BITS");
 
-		parser.registerOption(QChar::Null, "profile", ArgumentParser::RequiredArgument, &profile, NULL,
-		      NULL, "use specified profile", "PROFILE");
+		if(!parser.parse()) { // help was displayed
+			return 0;
+		}
 
-		parser.registerOption(QChar::Null, "create", ArgumentParser::NoArgument, &createStr, NULL,
-				      NULL, "create new network", NULL);
+		if(!createStr.isNull() && !joinStr.isNull())
+			qFatal("options --create and --join cannot be specified simultaneously");
+		
+		if(createStr.isNull() && joinStr.isNull())
+			qFatal("specify --create or --join option");
+		
+		if(!createStr.isNull()) {
+			localAddress = checkoutAddress(createStr);
+			if(localAddress.isNull())
+				qFatal("invalid external address %s", createStr.data());
+			createNetwork = true;
+		}
+		
+		if(!joinStr.isNull()) {
+			QStringList parts = joinStr.split(":");
 
-		parser.parse();
-
-		if(!keyLenStr.isNull())
-			keyLen = keyLenStr.toInt();
-
-		createNetwork = createStr.isNull() == false;
-
-		if(!portStr.isNull())
-			port = portStr.toInt();
-	}
-
-	if(nodeName.isNull()) {
-		fprintf(stderr, "'node' option is mandatory \n");
-
-		return 1;
+			remoteAddress = checkoutAddress(parts[0]);
+			if(remoteAddress.isNull())
+				qFatal("invalid node address %s", parts[0].data());
+			
+			if(parts.size() == 1) {
+			} else if(parts.size() == 2) {
+				remotePort = parts[1].toInt();
+			} else {
+				qFatal("invalid node address %s", joinStr.data());
+			}
+		}
+		
+		if(!keyLenStr.isNull()) {
+			generateNewKeypair = true;
+			keyLength = keyLenStr.toInt();
+		}
+		
+		if(!portStr.isNull()) {
+			localPort = portStr.toInt();
+		}
 	}
 
 	QString configDir = QDir::homePath() + "/." + app.applicationName() + "/" + profile;
 	QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
 	QDir().mkdir(configDir);
 
-
-	uint time = QDateTime::currentDateTime().toTime_t();
-	qsrand(time);
+	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	RSAKeyPair hostPair;
+	
+	if(!QFile::exists(configDir + "/rsa_key") || generateNewKeypair) {
+		qDebug("generating new RSA key pair (%d bits)", keyLength);
 
-	if(!QFile::exists(configDir + "/rsa_key")) {
-		printf("Generating RSA key pair (%d bits)...", keyLen);
-
-		fflush(stdout);
-
-		if(!hostPair.generate(keyLen)) {
-			printf(" failed!\n");
-
-			return 1;
+		if(!hostPair.generate(keyLength)) {
+			qFatal("cannot generate new keypair");
 		}
 
 		if(!hostPair.writeToFile(configDir + "/rsa_key")) {
-			printf(" writing failed!\n");
-
-			return 1;
+			qFatal("cannot write new keypair");
 		}
-
-		printf(" done\n");
-
-	} else
+	} else {
 		if(!hostPair.readFromFile(configDir + "/rsa_key")) {
-			fprintf(stderr, "Reading RSA key pair failed!\n");
-
-			return 1;
+			qFatal("cannot read RSA keypair");
 		}
+	}
 
-	UdpPacketTransport *transport = new UdpPacketTransport(port);
-
+	UdpPacketTransport *transport = new UdpPacketTransport(localPort);
 	LinkLayer link(transport, &hostPair);
 
 	if(createNetwork) {
-		if(!link.createNetwork(QHostAddress(nodeName))) {
-			qCritical() << "Creating network failed:" << link.errorString();
-
-			return 1;
+		if(!link.createNetwork(localAddress)) {
+			qFatal("cannot create network");
 		}
 	} else {
-		if(!link.joinNetwork(nodeName)) {
-			qCritical() << "Joining network failed:" << link.errorString();
-
-			return 1;
+		if(!link.joinNetwork(remoteAddress, remotePort)) {
+			qFatal("cannot join network");
 		}
 	}
 
 #ifdef Q_WS_X11
 	LinuxTAP tap(&link);
 	if(tap.createInterface("sparkle%d") == false) {
-		qCritical() << "Creating device failed:" << tap.errorString();
-
-		return 1;
+		qFatal("cannot initialize TAP");
 	}
 
 #endif

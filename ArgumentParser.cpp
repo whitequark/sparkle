@@ -49,6 +49,8 @@ static void helpCallback(void *u, QString) {
 
 		printf("\t%s\n", option->optionDescription.toAscii().data());
 	}
+	
+	t->callbackCalled = true;
 }
 
 ArgumentParser::ArgumentParser(QStringList arguments, QObject *parent) : QObject(parent) {
@@ -146,13 +148,10 @@ bool ArgumentParser::parse() {
 
 	}
 
-	if(invalid) {
+	if(invalid)
 		helpCallback((void *) &hinfo, QString());
 
-		return false;
-	}
-
-	return true;
+	return !hinfo.callbackCalled;
 }
 
 void ArgumentParser::registerOption(QChar shortOpt, QString longOpt, ArgumentReq arg,
