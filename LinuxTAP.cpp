@@ -146,7 +146,7 @@ void LinuxTAP::joined() {
 
 	close(fd);
 
-	Log::debug("tap: configured interface %s") << device;
+	Log::debug("tap: configured interface %1") << device;
 
 	notify->setEnabled(true);
 }
