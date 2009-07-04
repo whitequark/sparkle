@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,9 @@ public:
 
 	QHostAddress getHost();
 	quint16 getPort();
-	void appendQueue(QByteArray data);
+
+	QByteArray getSparkleMAC();
+	QHostAddress getSparkleIP();
 
 	BlowfishKey *getFromKey() { return &fromKey; }
 	BlowfishKey *getToKey() { return &toKey; }
@@ -45,23 +47,28 @@ public:
 	RSAKeyPair *getRSA() { return &keyPair; }
 
 	bool isQueueEmpty();
-	QByteArray getFromQueue();
+	void pushQueue(QByteArray data);
+	QByteArray popQueue();
 
-	bool keyNegotiationDone;
+	bool isKeyNegotiationDone();
+	void setKeyNegotiationDone(bool isDone);
 
 	bool setPublicKey(QByteArray key);
-	QByteArray getMAC();
-	QHostAddress getIP();
 
 private:
-	QHostAddress host, sparkleIP;
+	QHostAddress host;
 	quint16 port;
+
+	QByteArray sparkleMAC;
+	QHostAddress sparkleIP;
+
+	QByteArray fingerprint;
 
 	QList<QByteArray> queue;
 	RSAKeyPair keyPair;
 	BlowfishKey fromKey, toKey;
 
-	QByteArray fingerprint, mac;
+	bool keyNegotiationDone;
 };
 
 #endif

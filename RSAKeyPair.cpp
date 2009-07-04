@@ -38,16 +38,17 @@ bool RSAKeyPair::generate(int bits) {
 		key = newKey;
 
 		return true;
-	} else
+	} else {
 		return false;
-
+	}
 }
 
 bool RSAKeyPair::writeToFile(QString filename) {
 	BIO *mem = BIO_new(BIO_s_mem());
 
-	if(mem == NULL)
+	if(mem == NULL) {
 		return false;
+	}
 
 	if(PEM_write_bio_RSAPrivateKey(mem, key, NULL, NULL, 0, NULL, NULL) == 0) {
 		BIO_free(mem);
@@ -142,9 +143,9 @@ bool RSAKeyPair::setPublicKey(QByteArray data) {
 		key = newKey;
 
 		return true;
-	} else
+	} else {
 		return false;
-
+	}
 }
 
 QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {

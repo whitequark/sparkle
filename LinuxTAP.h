@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,8 +36,6 @@ public:
 
 	bool createInterface(QString pattern);
 
-	QString errorString();
-
 private slots:
 	void joined();
 	void haveData();
@@ -46,8 +44,6 @@ private slots:
 private:
 	LinkLayer *link;
 	QSocketNotifier *notify;
-
-	QString error;
 
 	int tun;
 

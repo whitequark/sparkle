@@ -36,11 +36,11 @@ void BlowfishKey::generate() {
 	BF_set_key(&key, rawKey.size(), (unsigned char *) rawKey.data());
 }
 
-QByteArray BlowfishKey::getKey() {
+QByteArray BlowfishKey::getBytes() {
 	return rawKey;
 }
 
-void BlowfishKey::setKey(QByteArray raw) {
+void BlowfishKey::setBytes(QByteArray raw) {
 	rawKey = raw;
 
 	BF_set_key(&key, rawKey.size(), (unsigned char *) rawKey.data());

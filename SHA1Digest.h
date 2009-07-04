@@ -25,10 +25,11 @@ class SHA1Digest : public QObject
 {
 	Q_OBJECT
 public:
+	static QByteArray calculateSHA1(QByteArray data);
+
+private:
 	SHA1Digest(QObject *parent = 0);
 	virtual ~SHA1Digest();
-
-	static QByteArray calculateSHA1(QByteArray data);
 };
 
 #endif

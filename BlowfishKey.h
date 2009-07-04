@@ -31,8 +31,8 @@ public:
 
 	void generate();
 
-	QByteArray getKey();
-	void setKey(QByteArray raw);
+	QByteArray getBytes();
+	void setBytes(QByteArray raw);
 	
 	QByteArray encrypt(QByteArray data);
 	QByteArray decrypt(QByteArray data);

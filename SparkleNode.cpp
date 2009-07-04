@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,6 @@ SparkleNode::~SparkleNode() {
 
 }
 
-
 QHostAddress SparkleNode::getHost() {
 	return host;
 }
@@ -39,15 +38,15 @@ quint16 SparkleNode::getPort() {
 	return port;
 }
 
-void SparkleNode::appendQueue(QByteArray data) {
-	queue.append(data);
-}
-
 bool SparkleNode::isQueueEmpty() {
 	return queue.empty();
 }
 
-QByteArray SparkleNode::getFromQueue() {
+void SparkleNode::pushQueue(QByteArray data) {
+	queue.append(data);
+}
+
+QByteArray SparkleNode::popQueue() {
 	return queue.takeFirst();
 }
 
@@ -57,7 +56,7 @@ bool SparkleNode::setPublicKey(QByteArray key) {
 
 	fingerprint = SHA1Digest::calculateSHA1(key);
 
-	char ip[4] = { 0, 0, 0, 14 };
+	char ip[4] = { 0, 0, 0, 14 }; // FIXME byte order
 
 	ip[0] = fingerprint[0];
 	ip[1] = fingerprint[1];
@@ -67,17 +66,25 @@ bool SparkleNode::setPublicKey(QByteArray key) {
 
 	sparkleIP = QHostAddress(*num);
 
-	mac = "\x02";
-
-	mac += fingerprint.left(5);
+	sparkleMAC = "\x02";
+	sparkleMAC += fingerprint.left(5);
 
 	return true;
 }
 
-QByteArray SparkleNode::getMAC() {
-	return mac;
+QByteArray SparkleNode::getSparkleMAC() {
+	return sparkleMAC;
 }
 
-QHostAddress SparkleNode::getIP() {
+QHostAddress SparkleNode::getSparkleIP() {
 	return sparkleIP;
 }
+
+bool SparkleNode::isKeyNegotiationDone() {
+	return keyNegotiationDone;
+}
+
+void SparkleNode::setKeyNegotiationDone(bool isDone) {
+	keyNegotiationDone = isDone;
+}
+

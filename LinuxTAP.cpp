@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,38 +34,36 @@ LinuxTAP::LinuxTAP(LinkLayer *link, QObject *parent) : QObject(parent)
 	connect(link, SIGNAL(sendPacketReq(QByteArray)), SLOT(sendPacket(QByteArray)));
 
 	tun = -1;
-	framebuf = new char[1518];
+	framebuf = new char[1518]; // FIXME define MTU
 }
 
 LinuxTAP::~LinuxTAP() {
 	delete framebuf;
 }
 
-QString LinuxTAP::errorString() {
-	return error;
-}
-
 bool LinuxTAP::createInterface(QString pattern) {
 	tun = open("/dev/net/tun", O_RDWR);
 
 	if(tun == -1) {
-		error = QString::fromLocal8Bit(strerror(errno));
+		qCritical() << "tap: cannot open /dev/net/tun: " << QString::fromLocal8Bit(strerror(errno));
 
 		return false;
 	}
+	
 	struct ifreq ifr;
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
 	strncpy(ifr.ifr_name, pattern.toAscii().data(), IFNAMSIZ);
 
 	if(ioctl(tun, TUNSETIFF, &ifr) == -1) {
-		error = QString::fromLocal8Bit(strerror(errno));
-
 		close(tun);
+		qCritical() << "tap: cannot create iface: " << QString::fromLocal8Bit(strerror(errno));
 
 		return false;
 	}
 
 	memcpy(device, ifr.ifr_name, IFNAMSIZ);
+
+	qDebug() << "tap: registered interface " << device;
 
 	notify = new QSocketNotifier(tun, QSocketNotifier::Read, this);
 	connect(notify, SIGNAL(activated(int)), SLOT(haveData()));
@@ -77,24 +75,24 @@ bool LinuxTAP::createInterface(QString pattern) {
 void LinuxTAP::joined() {
 
 	if(tun == -1) {
-		printf("Joined to network, but device not opened\n");
-
+		qFatal("tap: joined to network before the device was created");
+		
 		return;
 	}
 
-	printf("Configuring %s\n", device);
+	qDebug() << "tap: configuring interface " << device;
 
 	int fd = socket(PF_INET, SOCK_DGRAM, 0);
 
 	if(fd == -1) {
-		perror("socket");
-
+		qFatal("tap: socket: %s", strerror(errno));
+		
 		return;
 	}
 
 	struct ifreq ifr;
 
-	memset(&ifr, 0, sizeof(ifreq));
+	memset(&ifr, 0, sizeof(ifreq)); // FIXME assign MTU
 
 	memcpy(ifr.ifr_name, device, IFNAMSIZ);
 
@@ -103,9 +101,9 @@ void LinuxTAP::joined() {
 	sockaddr->sin_addr.s_addr = htonl(link->getSparkleIP().toIPv4Address());
 
 	if(ioctl(fd, SIOCSIFADDR, &ifr) == -1) {
-		perror("ioctl(SIOCSIFADDR)");
-
 		close(fd);
+		qFatal("tap: SIOCSIFADDR: %s", strerror(errno));
+
 		return;
 	}
 
@@ -114,34 +112,34 @@ void LinuxTAP::joined() {
 	sockaddr->sin_addr.s_addr = 0xff;
 
 	if(ioctl(fd, SIOCSIFNETMASK, &ifr) == -1) {
-		perror("ioctl(SIOCSIFNETMASK)");
-
 		close(fd);
+		qFatal("tap: SIOCSIFNETMASK: %s", strerror(errno));
+
 		return;
 	}
 
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	memcpy(&ifr.ifr_hwaddr.sa_data, link->getSparkleMac().data(), 6);
 	if(ioctl(fd, SIOCSIFHWADDR, &ifr) == -1) {
-		perror("ioctl(SIOCSIFHWADDR)");
-
 		close(fd);
+		qFatal("tap: SIOCSIFHWADDR: %s", strerror(errno));
+
 		return;
 	}
 
 	if(ioctl(fd, SIOCGIFFLAGS, &ifr) == -1) {
-		perror("ioctl(SIOCGIFFLAGS)");
-
 		close(fd);
+		qFatal("tap: SIOCGIFFLAGS: %s", strerror(errno));
+
 		return;
 	}
 
 	ifr.ifr_flags |= IFF_UP;
 
 	if(ioctl(fd, SIOCSIFFLAGS, &ifr) == -1) {
-		perror("ioctl(SIOCSIFFLAGS)");
-
 		close(fd);
+		qFatal("tap: SIOCGIFFLAGS: %s", strerror(errno));
+
 		return;
 	}
 
@@ -151,9 +149,9 @@ void LinuxTAP::joined() {
 }
 
 void LinuxTAP::haveData() {
-	int len = read(tun, framebuf, 1518);
+	int len = read(tun, framebuf, 1518); // FIXME MTU
 
-	link->processEthernet(QByteArray((char *) framebuf, len));
+	link->processPacket(QByteArray((char *) framebuf, len));
 }
 
 void LinuxTAP::sendPacket(QByteArray data) {
