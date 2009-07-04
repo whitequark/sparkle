@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
 	RSAKeyPair hostPair;
 	
 	if(!QFile::exists(configDir + "/rsa_key") || generateNewKeypair) {
-		qDebug("generating new RSA key pair (%d bits)", keyLength);
+		Log::debug("generating new RSA key pair (%1 bits)") << keyLength;
 
 		if(!hostPair.generate(keyLength)) {
 			Log::fatal("cannot generate new keypair");
