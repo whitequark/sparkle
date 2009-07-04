@@ -56,6 +56,13 @@ bool SparkleNode::setPublicKey(QByteArray key) {
 
 	fingerprint = SHA1Digest::calculateSHA1(key);
 
+	sparkleIP = calculateSparkleIP(fingerprint);
+	sparkleMAC = calculateSparkleMac(fingerprint);
+
+	return true;
+}
+
+QHostAddress SparkleNode::calculateSparkleIP(QByteArray fingerprint) {
 	char ip[4] = { 0, 0, 0, 14 }; // FIXME byte order
 
 	ip[0] = fingerprint[0];
@@ -64,12 +71,15 @@ bool SparkleNode::setPublicKey(QByteArray key) {
 
 	quint32 *num = (quint32 *) ip;
 
-	sparkleIP = QHostAddress(*num);
+	return QHostAddress(*num);
+}
 
-	sparkleMAC = "\x02";
-	sparkleMAC += fingerprint.left(5);
+QByteArray SparkleNode::calculateSparkleMac(QByteArray fingerprint) {
+	QByteArray mac = "\x02";
 
-	return true;
+	mac += fingerprint.left(5);
+
+	return mac;
 }
 
 QByteArray SparkleNode::getSparkleMAC() {

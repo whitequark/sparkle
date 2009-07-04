@@ -77,21 +77,11 @@ bool LinkLayer::createNetwork(QHostAddress local) {
 	def->addr = local;
 	def->port = transport->getPort();
 
-	QByteArray mac = "\x02";
-	mac += fingerprint.left(5);
-	memcpy(def->sparkleMac, mac.data(), 6);
-
-	char ip[4] = { 0, 0, 0, 14 };
-
-	ip[0] = fingerprint[0];
-	ip[1] = fingerprint[1];
-	ip[2] = fingerprint[2];
-
-	quint32 *num = (quint32 *) ip;
-
-	def->sparkleAddress = QHostAddress(*num);
-	sparkleIP = def->sparkleAddress;
-	selfMac = mac;
+	def->sparkleMac = SparkleNode::calculateSparkleMac(fingerprint);
+	def->sparkleIP = SparkleNode::calculateSparkleIP(fingerprint);
+	
+	sparkleIP = def->sparkleIP;
+	sparkleMac = def->sparkleMac;
 
 	masters.append(def);
 
@@ -349,9 +339,9 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				node_def_t *def = new node_def_t;
 				def->addr = host;
 				def->port = port;
-				def->sparkleAddress = node->getSparkleIP();
+				def->sparkleIP = node->getSparkleIP();
 
-				memcpy(def->sparkleMac, mac.data(), sizeof(reply.mac));
+				def->sparkleMac = mac;
 
 				if((slaves.count() + 1) / 10 > masters.count()) {
 					reply.isMaster = 1;
@@ -369,8 +359,8 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				newRouteItem.inetIP = def->addr.toIPv4Address();
 				newRouteItem.isMaster = reply.isMaster;
 				newRouteItem.port = def->port;
-				newRouteItem.sparkleIP = def->sparkleAddress.toIPv4Address();
-				memcpy(newRouteItem.sparkleMac, def->sparkleMac, 6);
+				newRouteItem.sparkleIP = def->sparkleIP.toIPv4Address();
+				memcpy(newRouteItem.sparkleMac, def->sparkleMac.data(), 6);
 
 				QByteArray newRoute((char *) &newRouteItem, sizeof(routing_table_entry_t));
 
@@ -382,12 +372,12 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 					entry.inetIP = ptr->addr.toIPv4Address();
 					entry.isMaster = 1;
 					entry.port = ptr->port;
-					entry.sparkleIP = ptr->sparkleAddress.toIPv4Address();
-					memcpy(entry.sparkleMac, ptr->sparkleMac, 6);
+					entry.sparkleIP = ptr->sparkleIP.toIPv4Address();
+					memcpy(entry.sparkleMac, ptr->sparkleMac.data(), 6);
 
 					QByteArray chunk((char *) &entry, sizeof(routing_table_entry_t));
 
-					if(ptr->sparkleAddress != this->sparkleIP)
+					if(ptr->sparkleIP != this->sparkleIP)
 						sendPacket(RoutingTable, ptr->addr, ptr->port, newRoute, true);
 
 
@@ -407,8 +397,8 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 						entry.inetIP = ptr->addr.toIPv4Address();
 						entry.isMaster = 0;
 						entry.port = ptr->port;
-						entry.sparkleIP = ptr->sparkleAddress.toIPv4Address();
-						memcpy(entry.sparkleMac, ptr->sparkleMac, 6);
+						entry.sparkleIP = ptr->sparkleIP.toIPv4Address();
+						memcpy(entry.sparkleMac, ptr->sparkleMac.data(), 6);
 
 						routingData += QByteArray((char *) &entry, sizeof(routing_table_entry_t));
 						size += sizeof(routing_table_entry_t);
@@ -444,7 +434,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 				QByteArray mac((char *) reg->mac, sizeof(reg->mac));
 
-				selfMac = mac;
+				sparkleMac = mac;
 				sparkleIP = QHostAddress(reg->addr);
 				isMaster = reg->isMaster == 1;
 
@@ -468,10 +458,10 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 				def->addr = QHostAddress(entry[i].inetIP);
 				def->port = entry[i].port;
-				def->sparkleAddress = QHostAddress(entry[i].sparkleIP);
-				memcpy(def->sparkleMac, entry[i].sparkleMac, 6);
+				def->sparkleIP = QHostAddress(entry[i].sparkleIP);
+				def->sparkleMac = QByteArray((char *) entry[i].sparkleMac, 6);
 
-				qDebug() << "Routing:" << def->sparkleAddress.toString() << ">>"
+				qDebug() << "Routing:" << def->sparkleIP.toString() << ">>"
 						<< def->addr.toString() << ":" << def->port;
 
 				if(entry[i].isMaster)
@@ -480,7 +470,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 					slaves.append(def);
 
 				foreach(QHostAddress *ptr, awaiting)
-					if(*ptr == def->sparkleAddress) {
+					if(*ptr == def->sparkleIP) {
 						delete ptr;
 						awaiting.removeOne(ptr);
 
@@ -512,7 +502,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 				entry.inetIP = node->addr.toIPv4Address();
 				entry.isMaster = 0;
 				entry.port = node->port;
-				entry.sparkleIP = node->sparkleAddress.toIPv4Address();
+				entry.sparkleIP = node->sparkleIP.toIPv4Address();
 				memcpy(entry.sparkleMac, node->sparkleMac, 6);
 
 				sendPacket(RoutingTable, host, port,
@@ -552,7 +542,7 @@ void LinkLayer::handleDatagram(QByteArray &data, QHostAddress &host, quint16 por
 
 			mac_header_t mac;
 			memcpy(mac.from, node->getSparkleMAC().data(), 6);
-			memcpy(mac.to, selfMac.data(), 6);
+			memcpy(mac.to, sparkleMac.data(), 6);
 			mac.type = htons(0x0800);
 
 			QByteArray packet = QByteArray((char *) &mac, sizeof(mac_header_t)) + payload;
@@ -712,7 +702,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 //	reverseMac(hdr.from);
 //	reverseMac(hdr.to);
 
-	if(memcmp(hdr.from, selfMac.data(), 6) != 0)
+	if(memcmp(hdr.from, sparkleMac.data(), 6) != 0)
 		return;
 
 	hdr.type = ntohs(hdr.type);
@@ -784,7 +774,7 @@ void LinkLayer::sendARPReply(node_def_t *node) {
 
 	mac.type = htons(0x0806);
 	memcpy(mac.from, node->sparkleMac, 6);
-	memcpy(mac.to, selfMac.data(), 6);
+	memcpy(mac.to, sparkleMac.data(), 6);
 
 	arp_packet_t arp;
 	arp.htype = htons(1);
@@ -793,8 +783,8 @@ void LinkLayer::sendARPReply(node_def_t *node) {
 	arp.plen = 4;
 	arp.oper = htons(2);
 	memcpy(arp.sha, node->sparkleMac, 6);
-	arp.spa = htonl(node->sparkleAddress.toIPv4Address());
-	memcpy(arp.tha, selfMac.data(), 6);
+	arp.spa = htonl(node->sparkleIP.toIPv4Address());
+	memcpy(arp.tha, sparkleMac.data(), 6);
 	arp.tpa = sparkleIP.toIPv4Address();
 
 	QByteArray packet = QByteArray((char *) &mac, sizeof(mac_header_t)) +
@@ -805,11 +795,11 @@ void LinkLayer::sendARPReply(node_def_t *node) {
 
 LinkLayer::node_def_t *LinkLayer::findByIP(QHostAddress ip) {
 	foreach(node_def_t *def, masters)
-		if(def->sparkleAddress == ip)
+		if(def->sparkleIP == ip)
 			return def;
 
 	foreach(node_def_t *def, slaves)
-		if(def->sparkleAddress == ip)
+		if(def->sparkleIP == ip)
 			return def;
 
 	return NULL;

@@ -41,8 +41,8 @@ public:
 	bool joinNetwork(QHostAddress host, quint16 port);
 	bool createNetwork(QHostAddress localAddress);
 
-	QHostAddress getSparkleIP() { return this->sparkleIP; }
-	QByteArray getSparkleMac() { return selfMac; }
+	QHostAddress getSparkleIP() { return sparkleIP; }
+	QByteArray getSparkleMac() { return sparkleMac; }
 
 	void processPacket(QByteArray packet);
 
@@ -119,13 +119,6 @@ private:
 		quint32 seq;
 	};
 
-	struct node_def_t {
-		QHostAddress	addr;
-		quint16		port;
-		QHostAddress	sparkleAddress;
-		quint8		sparkleMac[6];
-	};
-
 	struct register_reply_t {
 		quint32	addr;
 		quint8	mac[6];
@@ -139,6 +132,15 @@ private:
 		quint8	isMaster;
 		quint8	sparkleMac[6];
 	};
+
+
+	struct node_def_t {
+		QHostAddress	addr;
+		quint16		port;
+		QHostAddress	sparkleIP;
+		QByteArray	sparkleMac;
+	};
+
 
 	struct mac_header_t {
 		quint8	to[6];
@@ -193,7 +195,7 @@ private:
 	bool pingReceived;
 
 	bool isMaster;
-	QByteArray selfMac;
+	QByteArray sparkleMac;
 	QHostAddress sparkleIP;
 
 	QString error;

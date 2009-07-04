@@ -55,16 +55,21 @@ public:
 
 	bool setPublicKey(QByteArray key);
 
+	static QHostAddress calculateSparkleIP(QByteArray fingerprint);
+	static QByteArray calculateSparkleMac(QByteArray fingerprint);
+
 private:
 	QHostAddress host;
 	quint16 port;
 
-	QByteArray sparkleMAC;
-	QHostAddress sparkleIP;
 
 	QByteArray fingerprint;
 
+	QByteArray sparkleMAC;
+	QHostAddress sparkleIP;
+
 	QList<QByteArray> queue;
+
 	RSAKeyPair keyPair;
 	BlowfishKey fromKey, toKey;
 
