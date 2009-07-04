@@ -45,7 +45,7 @@ bool LinuxTAP::createInterface(QString pattern) {
 	tun = open("/dev/net/tun", O_RDWR);
 
 	if(tun == -1) {
-		qCritical() << "tap: cannot open /dev/net/tun: " << QString::fromLocal8Bit(strerror(errno));
+		qCritical("tap: cannot open /dev/net/tun: %s", strerror(errno));
 
 		return false;
 	}
@@ -56,14 +56,14 @@ bool LinuxTAP::createInterface(QString pattern) {
 
 	if(ioctl(tun, TUNSETIFF, &ifr) == -1) {
 		close(tun);
-		qCritical() << "tap: cannot create iface: " << QString::fromLocal8Bit(strerror(errno));
+		qCritical("tap: cannot create iface: %s", strerror(errno));
 
 		return false;
 	}
 
 	memcpy(device, ifr.ifr_name, IFNAMSIZ);
 
-	qDebug() << "tap: registered interface " << device;
+	qDebug("tap: registered interface %s", device);
 
 	notify = new QSocketNotifier(tun, QSocketNotifier::Read, this);
 	connect(notify, SIGNAL(activated(int)), SLOT(haveData()));
@@ -80,7 +80,7 @@ void LinuxTAP::joined() {
 		return;
 	}
 
-	qDebug() << "tap: configuring interface " << device;
+	qDebug("tap: configuring interface %s", device);
 
 	int fd = socket(PF_INET, SOCK_DGRAM, 0);
 

@@ -38,21 +38,16 @@ public:
 	LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair, QObject *parent = 0);
 	virtual ~LinkLayer();
 
-	bool createNetwork(QHostAddress local);
-	bool joinNetwork(QString nodeName);
-
-	QString errorString();
+	bool joinNetwork(QHostAddress host, quint16 port);
+	bool createNetwork(QHostAddress localAddress);
 
 	QHostAddress getSparkleIP() { return this->sparkleIP; }
 	QByteArray getSparkleMac() { return selfMac; }
 
-	void processEthernet(QByteArray packet);
+	void processPacket(QByteArray packet);
 
 private slots:
-	void joinTargetLookedUp(QHostInfo host);
-
 	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
-
 	void pingTimedOut();
 
 signals:
@@ -99,7 +94,6 @@ private:
 	struct packet_header_t {
 		uint16_t	type;
 		uint16_t	length;
-
 	};
 
 	struct protocol_version_reply_t {
