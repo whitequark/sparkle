@@ -86,7 +86,7 @@ void LinuxTAP::joined() {
 	int fd = socket(PF_INET, SOCK_DGRAM, 0);
 
 	if(fd == -1) {
-		Log::fatal("tap: socket: %s") << QString::fromLocal8Bit(strerror(errno));
+		Log::fatal("tap: socket: %1") << QString::fromLocal8Bit(strerror(errno));
 		
 		return;
 	}
@@ -146,7 +146,7 @@ void LinuxTAP::joined() {
 
 	close(fd);
 
-	Log::debug("tap: configured interface %1") << device;
+	Log::debug("tap: ready");
 
 	notify->setEnabled(true);
 }

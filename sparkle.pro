@@ -15,7 +15,8 @@ HEADERS += Log.h \
 	PacketTransport.h \
 	UdpPacketTransport.h \
 	SHA1Digest.h \
-	RouteManager.h
+	Router.h \
+	Route.h
 SOURCES += main.cpp \
 	Log.cpp \
 	RSAKeyPair.cpp \
@@ -25,7 +26,9 @@ SOURCES += main.cpp \
 	BlowfishKey.cpp \
 	UdpPacketTransport.cpp \
 	SHA1Digest.cpp \
-	RouteManager.cpp
+	Router.cpp \
+	Route.cpp
+
 unix { 
 	SOURCES += LinuxTAP.cpp
 	HEADERS += LinuxTAP.h

@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,24 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "RouteManager.h"
+#include "Router.h"
 
-RouteManager::RouteManager(QObject *parent) : QObject(parent)
+Router::Router(QObject *parent) : QObject(parent)
 {
 
 }
 
-RouteManager::~RouteManager() {
-
-}
-
-
-const Route *RouteManager::selectMaster() {
+const Route *Router::selectMaster() {
 	return masters.at(qrand() % masters.count());
 }
 
 
-const Route *RouteManager::findByIP(QHostAddress ip) {
+const Route *Router::findByIP(QHostAddress ip) {
 	foreach(Route *def, masters)
 		if(def->sparkleIP == ip)
 			return def;
@@ -45,7 +40,7 @@ const Route *RouteManager::findByIP(QHostAddress ip) {
 	return NULL;
 }
 
-const Route *RouteManager::findByMAC(QByteArray mac) {
+const Route *Router::findByMAC(QByteArray mac) {
 	foreach(Route *def, masters)
 		if(def->sparkleMac == mac)
 			return def;
@@ -57,15 +52,15 @@ const Route *RouteManager::findByMAC(QByteArray mac) {
 	return NULL;
 }
 
-int RouteManager::getMasterCount() {
+int Router::getMasterCount() {
 	return masters.count();
 }
 
-int RouteManager::getSlaveCount() {
+int Router::getSlaveCount() {
 	return slaves.count();
 }
 
-const Route *RouteManager::addRoute(QHostAddress addr,
+const Route *Router::addRoute(QHostAddress addr,
 					      quint16 port, QHostAddress sparkleIP,
 					      QByteArray sparkleMac, bool isMaster) {
 

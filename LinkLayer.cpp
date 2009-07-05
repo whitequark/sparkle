@@ -38,7 +38,7 @@ LinkLayer::LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair,
 
 	this->hostPair = hostPair;
 
-	routes = new RouteManager(this);
+	routes = new Router(this);
 
 	pingTimer = new QTimer(this);
 	pingTimer->setSingleShot(true);

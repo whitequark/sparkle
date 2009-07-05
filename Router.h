@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,46 +16,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ROUTE_MANAGER_H__
-#define __ROUTE_MANAGER_H__
+#ifndef __ROUTER_H__
+#define __ROUTER_H__
 
 #include <QObject>
 #include <QHostAddress>
 #include "LinkLayer.h"
 
-class Route {
-public:
-	QHostAddress	addr;
-	quint16		port;
-	QHostAddress	sparkleIP;
-	QByteArray	sparkleMac;
-};
+class Route;
 
-class RouteManager : public QObject
+class Router : public QObject
 {
 	Q_OBJECT
 
 public:
-	RouteManager(QObject *parent = 0);
-	virtual ~RouteManager();
+	Router(QObject *parent = 0);
 
-	const Route *addRoute(QHostAddress addr,
-					      quint16 port, QHostAddress sparkleIP,
-					      QByteArray sparkleMac, bool isMaster);
+	const Route *addRoute(QHostAddress addr, quint16 port, SparkleNode* node);
 
-	const Route *findByIP(QHostAddress ip);
-	const Route *findByMAC(QByteArray mac);
-	const Route *selectMaster();
-
-	int getSlaveCount();
-	int getMasterCount();
-
-	const QList<Route *> &getMasters() { return masters; }
-	const QList<Route *> &getSlaves() { return slaves; }
+	const Route *findByIP(QHostAddress ip) const;
+	const Route *findByMAC(QByteArray mac) const;
+	const Route *selectMasterRoute() const;
 
 private:
 	QList<Route *> masters, slaves;
-
 };
 
 #endif
