@@ -43,7 +43,7 @@ bool RSAKeyPair::generate(int bits) {
 	}
 }
 
-bool RSAKeyPair::writeToFile(QString filename) {
+bool RSAKeyPair::writeToFile(QString filename) const {
 	BIO *mem = BIO_new(BIO_s_mem());
 
 	if(mem == NULL) {
@@ -105,7 +105,7 @@ bool RSAKeyPair::readFromFile(QString filename) {
 
 }
 
-QByteArray RSAKeyPair::getPublicKey() {
+QByteArray RSAKeyPair::getPublicKey() const {
 	BIO *mem = BIO_new(BIO_s_mem());
 
 	if(mem == NULL)

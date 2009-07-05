@@ -30,14 +30,15 @@ public:
 	virtual ~RSAKeyPair();
 
 	bool generate(int bits);
-	bool writeToFile(QString filename);
+	bool writeToFile(QString filename) const;
 	bool readFromFile(QString filename);
 
-	QByteArray getPublicKey();
+	QByteArray getPublicKey() const;
 	bool setPublicKey(QByteArray key);
 
 	QByteArray encrypt(QByteArray data);
 	QByteArray decrypt(QByteArray data);
+
 private:
 	RSA *key;
 };
