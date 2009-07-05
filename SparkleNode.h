@@ -26,54 +26,56 @@
 #include "RSAKeyPair.h"
 #include "BlowfishKey.h"
 
+class Router;
 
 class SparkleNode : public QObject
 {
 	Q_OBJECT
 public:
-	SparkleNode(QHostAddress host, quint16 port, QObject *parent = 0);
+	SparkleNode(QHostAddress realIP, quint16 realPort, Router& router);
 
-	virtual ~SparkleNode();
+	QHostAddress getRealIP() const		{ return realIP; }
+	quint16 getRealPort() const		{ return realPort; }
 
-	QHostAddress getHost();
-	quint16 getPort();
+	QHostAddress getSparkleIP() const	{ return sparkleIP; }
+	QByteArray getSparkleMAC() const	{ return sparkleMAC; }
+	
+	QString getPrettySparkleMAC() const;
 
-	QByteArray getSparkleMAC();
-	QHostAddress getSparkleIP();
+	const BlowfishKey *getHisSessionKey() const	{ return &hisSessionKey; }
+	const BlowfishKey *getMySessionKey() const	{ return &mySessionKey; }
+	
+	void setHisSessionKey(const QByteArray &keyBytes);
+	bool areKeysNegotiated();
 
-	BlowfishKey *getFromKey() { return &fromKey; }
-	BlowfishKey *getToKey() { return &toKey; }
+	const RSAKeyPair *getAuthKey() const	{ return &authKey; }
 
-	RSAKeyPair *getRSA() { return &keyPair; }
+	bool setAuthKey(const RSAKeyPair &keyPair);
+	bool setAuthKey(const QByteArray &publicKey);
+
+	void setMaster(bool isMaster);
+	bool isMaster();
 
 	bool isQueueEmpty();
 	void pushQueue(QByteArray data);
 	QByteArray popQueue();
 
-	bool isKeyNegotiationDone();
-	void setKeyNegotiationDone(bool isDone);
-
-	bool setPublicKey(QByteArray key);
-
-	static QHostAddress calculateSparkleIP(QByteArray fingerprint);
-	static QByteArray calculateSparkleMac(QByteArray fingerprint);
-
 private:
-	QHostAddress host;
-	quint16 port;
+	void configure();
 
+	QHostAddress realIP;
+	quint16 realPort;
 
-	QByteArray fingerprint;
-
-	QByteArray sparkleMAC;
 	QHostAddress sparkleIP;
+	QByteArray sparkleMAC;
+	
+	bool master;
+
+	RSAKeyPair authKey;
+	BlowfishKey hisSessionKey, mySessionKey;
+	bool keysNegotiated;
 
 	QList<QByteArray> queue;
-
-	RSAKeyPair keyPair;
-	BlowfishKey fromKey, toKey;
-
-	bool keyNegotiationDone;
 };
 
 #endif

@@ -18,24 +18,61 @@
 
 #include "SHA1Digest.h"
 #include "SparkleNode.h"
+#include "Log.h"
 
-SparkleNode::SparkleNode(QHostAddress host, quint16 port, QObject *parent) : QObject(parent) {
-	this->host = host;
-	this->port = port;
-
-	keyNegotiationDone = false;
+SparkleNode::SparkleNode(QHostAddress _realIP, quint16 _realPort, Router& router)
+		 : QObject(NULL), realIP(_realIP), realPort(_realPort) {
+	mySessionKey.generate();
 }
 
-SparkleNode::~SparkleNode() {
-
+QString SparkleNode::getPrettySparkleMAC() const {
+	QString hexMac = QString(sparkleMAC.toHex()).toUpper();
+	return hexMac.replace(QRegExp("(..)"), "\\1:").left(17);
 }
 
-QHostAddress SparkleNode::getHost() {
-	return host;
+void SparkleNode::setHisSessionKey(const QByteArray &keyBytes) {
+	hisSessionKey.setBytes(keyBytes);
+	keysNegotiated = true;
 }
 
-quint16 SparkleNode::getPort() {
-	return port;
+bool SparkleNode::areKeysNegotiated() {
+	return keysNegotiated;
+}
+
+bool SparkleNode::setAuthKey(const RSAKeyPair &keyPair) {
+	return setAuthKey(keyPair.getPublicKey());
+}
+
+bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
+	if(!authKey.setPublicKey(publicKey))
+		return false;
+	
+	configure();
+	
+	return true;
+}
+
+void SparkleNode::configure() {
+	QByteArray fingerprint = SHA1Digest::calculateSHA1(authKey.getPublicKey());
+
+	char ip[4] = { 0, 0, 0, 14 }; // FIXME
+
+	ip[0] = fingerprint[0];
+	ip[1] = fingerprint[1];
+	ip[2] = fingerprint[2];
+
+	sparkleIP = QHostAddress(*((quint32 *) ip));
+
+	sparkleMAC = "\x02";
+	sparkleMAC += fingerprint.left(5);
+}
+
+void SparkleNode::setMaster(bool isMaster) {
+	master = isMaster;
+}
+
+bool SparkleNode::isMaster() {
+	return master;
 }
 
 bool SparkleNode::isQueueEmpty() {
@@ -48,53 +85,5 @@ void SparkleNode::pushQueue(QByteArray data) {
 
 QByteArray SparkleNode::popQueue() {
 	return queue.takeFirst();
-}
-
-bool SparkleNode::setPublicKey(QByteArray key) {
-	if(!keyPair.setPublicKey(key))
-		return false;
-
-	fingerprint = SHA1Digest::calculateSHA1(key);
-
-	sparkleIP = calculateSparkleIP(fingerprint);
-	sparkleMAC = calculateSparkleMac(fingerprint);
-
-	return true;
-}
-
-QHostAddress SparkleNode::calculateSparkleIP(QByteArray fingerprint) {
-	char ip[4] = { 0, 0, 0, 14 }; // FIXME byte order
-
-	ip[0] = fingerprint[0];
-	ip[1] = fingerprint[1];
-	ip[2] = fingerprint[2];
-
-	quint32 *num = (quint32 *) ip;
-
-	return QHostAddress(*num);
-}
-
-QByteArray SparkleNode::calculateSparkleMac(QByteArray fingerprint) {
-	QByteArray mac = "\x02";
-
-	mac += fingerprint.left(5);
-
-	return mac;
-}
-
-QByteArray SparkleNode::getSparkleMAC() {
-	return sparkleMAC;
-}
-
-QHostAddress SparkleNode::getSparkleIP() {
-	return sparkleIP;
-}
-
-bool SparkleNode::isKeyNegotiationDone() {
-	return keyNegotiationDone;
-}
-
-void SparkleNode::setKeyNegotiationDone(bool isDone) {
-	keyNegotiationDone = isDone;
 }
 
