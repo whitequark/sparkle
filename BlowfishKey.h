@@ -34,8 +34,8 @@ public:
 	QByteArray getBytes() const;
 	void setBytes(QByteArray raw);
 	
-	QByteArray encrypt(QByteArray data);
-	QByteArray decrypt(QByteArray data);
+	QByteArray encrypt(QByteArray data) const;
+	QByteArray decrypt(QByteArray data) const;
 
 private:
 	BF_KEY key;

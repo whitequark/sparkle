@@ -46,7 +46,7 @@ void BlowfishKey::setBytes(QByteArray raw) {
 	BF_set_key(&key, rawKey.size(), (unsigned char *) rawKey.data());
 }
 
-QByteArray BlowfishKey::encrypt(QByteArray data) {
+QByteArray BlowfishKey::encrypt(QByteArray data) const {
 	unsigned char chunk[8];
 
 	QByteArray output;
@@ -60,7 +60,7 @@ QByteArray BlowfishKey::encrypt(QByteArray data) {
 	return output;
 }
 
-QByteArray BlowfishKey::decrypt(QByteArray data) {
+QByteArray BlowfishKey::decrypt(QByteArray data) const {
 	unsigned char chunk[8];
 
 	QByteArray output;
