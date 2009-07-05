@@ -27,6 +27,7 @@
 #include "LinkLayer.h"
 #include "UdpPacketTransport.h"
 #include "Log.h"
+#include "Router.h"
 
 #ifdef Q_WS_X11
 #include "LinuxTAP.h"
@@ -62,8 +63,14 @@ int main(int argc, char *argv[]) {
 	int keyLength = 1024;
 	bool generateNewKeypair = false;
 
+	QString configDir = QDir::homePath() + "/." + app.applicationName() + "/" + profile;
+	QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
+	QDir().mkdir(configDir);
+
+	qsrand(QDateTime::currentDateTime().toTime_t());
+
 	{
-		QString createStr, joinStr, portStr, keyLenStr;
+		QString createStr, joinStr, portStr, keyLenStr, getPubkeyStr;
 
 		ArgumentParser parser(app.arguments());
 
@@ -82,8 +89,23 @@ int main(int argc, char *argv[]) {
 		parser.registerOption(QChar::Null, "generate-key", ArgumentParser::RequiredArgument,
 			&keyLenStr, NULL, NULL, "generate new RSA key pair with specified length", "BITS");
 
+		parser.registerOption(QChar::Null, "get-pubkey", ArgumentParser::NoArgument,
+			&getPubkeyStr, NULL, NULL, "\tprint my public key", NULL);
+
 		if(!parser.parse()) { // help was displayed
 			return 0;
+		}
+		
+		if(!getPubkeyStr.isNull()) {
+			RSAKeyPair keyPair;
+	
+			if(!keyPair.readFromFile(configDir + "/rsa_key")) {
+				Log::fatal("cannot read RSA keypair");
+				return 1;
+			} else {
+				printf(QString(keyPair.getPublicKey()).toLocal8Bit().constData());
+				return 0;
+			}
 		}
 
 		if(!createStr.isNull() && !joinStr.isNull()) {
@@ -133,12 +155,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	QString configDir = QDir::homePath() + "/." + app.applicationName() + "/" + profile;
-	QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
-	QDir().mkdir(configDir);
-
-	qsrand(QDateTime::currentDateTime().toTime_t());
-
 	RSAKeyPair hostPair;
 	
 	if(!QFile::exists(configDir + "/rsa_key") || generateNewKeypair) {
@@ -159,30 +175,31 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 	}
+	
+	Router router;
+	UdpPacketTransport transport(localPort);
+	LinkLayer linkLayer(router, transport, hostPair);
 
-	UdpPacketTransport *transport = new UdpPacketTransport(localPort);
-	LinkLayer link(transport, &hostPair);
+#ifdef Q_WS_X11
+	LinuxTAP tap(linkLayer);
+	if(tap.createInterface("sparkle%d") == false) {
+		Log::fatal("cannot initialize TAP");
+		return 1;
+	}
+#endif
 
 	if(createNetwork) {
-		if(!link.createNetwork(localAddress)) {
+		if(!linkLayer.createNetwork(localAddress)) {
 			Log::fatal("cannot create network");
 			return 1;
 		}
 	} else {
-		if(!link.joinNetwork(remoteAddress, remotePort)) {
+		if(!linkLayer.joinNetwork(remoteAddress, remotePort)) {
 			Log::fatal("cannot join network");
 			return 1;
 		}
 	}
 
-#ifdef Q_WS_X11
-	LinuxTAP tap(&link);
-	if(tap.createInterface("sparkle%d") == false) {
-		Log::fatal("cannot initialize TAP");
-		return 1;
-	}
-
-#endif
-
 	return app.exec();
 }
+
