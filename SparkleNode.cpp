@@ -21,7 +21,7 @@
 #include "Log.h"
 
 SparkleNode::SparkleNode(QHostAddress _realIP, quint16 _realPort, Router& router)
-		 : QObject(NULL), realIP(_realIP), realPort(_realPort) {
+		 : QObject(NULL), realIP(_realIP), realPort(_realPort), authKeyPresent(false) {
 	mySessionKey.generate();
 }
 
@@ -44,8 +44,16 @@ bool SparkleNode::setAuthKey(const RSAKeyPair &keyPair) {
 }
 
 bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
+	if(authKeyPresent) {
+		Log::warn("Achtung! Attempt to assign new public key to authenticated node [%1]:%2, DROPPING.")
+				<< realIP.toString() << realPort;
+		return false;
+	}
+	
 	if(!authKey.setPublicKey(publicKey))
 		return false;
+	
+	authKeyPresent = true;
 	
 	configure();
 	

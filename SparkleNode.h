@@ -45,13 +45,13 @@ public:
 	const BlowfishKey *getHisSessionKey() const	{ return &hisSessionKey; }
 	const BlowfishKey *getMySessionKey() const	{ return &mySessionKey; }
 	
-	void setHisSessionKey(const QByteArray &keyBytes);
-	bool areKeysNegotiated();
-
 	const RSAKeyPair *getAuthKey() const	{ return &authKey; }
 
 	bool setAuthKey(const RSAKeyPair &keyPair);
 	bool setAuthKey(const QByteArray &publicKey);
+	
+	void setHisSessionKey(const QByteArray &keyBytes);
+	bool areKeysNegotiated();
 
 	void setMaster(bool isMaster);
 	bool isMaster();
@@ -72,6 +72,7 @@ private:
 	bool master;
 
 	RSAKeyPair authKey;
+	bool authKeyPresent;
 	BlowfishKey hisSessionKey, mySessionKey;
 	bool keysNegotiated;
 
