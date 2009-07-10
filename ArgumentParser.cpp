@@ -60,6 +60,7 @@ ArgumentParser::ArgumentParser(QStringList arguments, QObject *parent) : QObject
 
 	hinfo.pclass = this;
 	hinfo.optionsList = &this->optionsList;
+	hinfo.callbackCalled = false;
 
 	registerOption(QChar::Null, "help", NoArgument, NULL, &helpCallback, (void *) &hinfo, 
 		"\tdisplay this help", QString());
