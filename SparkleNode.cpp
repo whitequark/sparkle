@@ -25,6 +25,10 @@ SparkleNode::SparkleNode(QHostAddress _realIP, quint16 _realPort, Router& router
 	mySessionKey.generate();
 }
 
+bool SparkleNode::operator==(const SparkleNode& another) const {
+	return another.getRealIP() == realIP && another.getRealPort() == realPort;
+}
+
 QString SparkleNode::getPrettySparkleMAC() const {
 	QString hexMac = QString(sparkleMAC.toHex()).toUpper();
 	return hexMac.replace(QRegExp("(..)"), "\\1:").left(17);
@@ -45,9 +49,13 @@ bool SparkleNode::setAuthKey(const RSAKeyPair &keyPair) {
 
 bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 	if(authKeyPresent) {
-		Log::warn("Achtung! Attempt to assign new public key to authenticated node [%1]:%2, DROPPING.")
-				<< realIP.toString() << realPort;
-		return false;
+		if(authKey.getPublicKey() != publicKey) {
+			Log::warn("Achtung! Attempt to assign new public key to authenticated node [%1]:%2, DROPPING.")
+					<< realIP.toString() << realPort;
+			return false;
+		} else {
+			return true;
+		}
 	}
 	
 	if(!authKey.setPublicKey(publicKey))

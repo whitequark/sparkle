@@ -31,8 +31,11 @@ class Router;
 class SparkleNode : public QObject
 {
 	Q_OBJECT
+
 public:
 	SparkleNode(QHostAddress realIP, quint16 realPort, Router& router);
+	
+	bool operator==(const SparkleNode& another) const;
 
 	QHostAddress getRealIP() const		{ return realIP; }
 	quint16 getRealPort() const		{ return realPort; }
