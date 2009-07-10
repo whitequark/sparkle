@@ -40,7 +40,7 @@ private slots:
 	void haveDatagram();
 
 signals:
-	virtual void receivedPacket(QByteArray &packet, QHostAddress &host, quint16 port);
+	virtual void receivedPacket(QByteArray &packet, QHostAddress host, quint16 port);
 
 private:
 	QUdpSocket *socket;
