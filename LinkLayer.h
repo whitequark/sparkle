@@ -29,7 +29,7 @@ class QHostAddress;
 class QTimer;
 class SparkleNode;
 class PacketTransport;
-class RouteManager;
+class Router;
 class Route;
 
 class LinkLayer : public QObject
@@ -37,28 +37,23 @@ class LinkLayer : public QObject
 	Q_OBJECT
 
 public:
-	LinkLayer(PacketTransport *transport, RSAKeyPair *hostPair, QObject *parent = 0);
-	virtual ~LinkLayer();
+	LinkLayer(Router &router, PacketTransport &transport, RSAKeyPair &rsaKeyPair);
 
-	bool joinNetwork(QHostAddress host, quint16 port);
 	bool createNetwork(QHostAddress localAddress);
-
-	QHostAddress getSparkleIP() { return sparkleIP; }
-	QByteArray getSparkleMac() { return sparkleMac; }
+	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort);
 
 	void processPacket(QByteArray packet);
 
-private slots:
-	void handleDatagram(QByteArray &data, QHostAddress &host, quint16 port);
-	void pingTimedOut();
-
 signals:
-	void joined();
-	void sendPacketReq(QByteArray packet);
+	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
+	void tapPacketReady(QByteArray &packet);
+
+private slots:
+	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
 
 private:
 	enum {
-		ProtocolVersion	= 1,
+		ProtocolVersion	= 2,
 	};
 
 	enum packet_type_t {
@@ -66,20 +61,17 @@ private:
 		ProtocolVersionReply		= 2,
 
 		PublicKeyExchange		= 3,
-		PublicKeyReply			= 4,
+		SessionKeyExchange		= 4,
 
-		SessionKeyExchange		= 5,
-		SessionKeyReply			= 6,
-		SessionKeyAcknowlege		= 7,
+		Ping				= 5,
 
-		PingRequest			= 8,
-		Ping				= 9,
-		PingCompleted			= 10,
+		EncryptedPacket			= 6,
 
-		EncryptedPacket			= 12,
+		MasterNodeRequest		= 7,
+		MasterNodeReply			= 8,
 
-		MasterNodeRequest		= 13,
-		MasterNodeReply			= 14,
+		PingRequest			= 9,
+		PingInitiate			= 10,
 
 		RegisterRequest			= 15,
 		RegisterReply			= 16,
@@ -101,24 +93,25 @@ private:
 	struct protocol_version_reply_t {
 		uint32_t	version;
 	};
-
-	struct master_node_reply_t {
-		quint32	addr;
-		quint16	port;
+	
+	struct key_exchange_t {
+		quint8		needOthersKey;
 	};
 
+	struct master_node_reply_t {
+		quint32		addr;
+		quint16		port;
+	};
+	
 	struct ping_request_t {
-		quint32	seq;
-		quint16	port;
+		quint32		addr;
+		quint16		port;
+		quint8		count;
 	};
 
 	struct ping_t {
-		quint32 seq;
-		quint32 addr;
-	};
-
-	struct ping_completed_t {
-		quint32 seq;
+		quint32		addr;
+		quint16		port;
 	};
 
 	struct register_reply_t {
@@ -153,58 +146,75 @@ private:
 		quint32	tpa;
 	} __attribute__((packed));
 
-	void sendPacket(packet_type_t type, SparkleNode *target, QByteArray data,
-			bool encrypted, quint16 port = 0);
-	void sendAsEncrypted(SparkleNode *node, QByteArray data, quint16 port = 0);
+	enum join_step_t {
+		JoinVersionRequest,
+		JoinMasterNodeRequest,
+		JoinAwaitingPings,
+		JoinRegistration
+	};
 
-	void sendProtocolVersionRequest(QHostAddress host, quint16 port);
-	void sendPingRequest(quint32 seq, quint16 localport, QHostAddress host, quint16 port);
-	void sendMasterNodeRequest(QHostAddress host, quint16 port);
-	void publicKeyExchange(QHostAddress host, quint16 port);
-	void sendRegisterRequest(QHostAddress host, quint16 port);
-	void sendRouteRequest(QHostAddress address);
+	bool initTransport();	
 
-	void joinGotVersion(int version);
-	void joinPingGot();
-	void joinGotMaster(QHostAddress host, quint16 port);
+	SparkleNode* wrapNode(QHostAddress host, quint16 port);
+	
+	bool isMaster();
+
+	void sendPacket(packet_type_t type, QByteArray data, SparkleNode* node);
+	void sendEncryptedPacket(packet_type_t type, QByteArray data, SparkleNode *node);
+	void encryptAndSend(QByteArray data, SparkleNode *node);
+
+	enum packet_size_class_t {
+		PacketSizeEqual,
+		PacketSizeGreater
+	};
+
+	bool checkPacketSize(QByteArray& payload, quint16 requiredSize, 
+					SparkleNode* node, const char* packetName,
+							packet_size_class_t sizeClass = PacketSizeEqual);
+	bool checkPacketExpection(SparkleNode* node, const char* packetName, join_step_t neededStep);
+
+	void sendProtocolVersionRequest(SparkleNode* node);
+	void handleProtocolVersionRequest(QByteArray &payload, SparkleNode* node);
+
+	void sendProtocolVersionReply(SparkleNode* node);
+	void handleProtocolVersionReply(QByteArray &payload, SparkleNode* node);
+
+	void sendPublicKeyExchange(SparkleNode* node, const RSAKeyPair *key, bool needHisKey);
+	void handlePublicKeyExchange(QByteArray &payload, SparkleNode* node);
+
+	void sendSessionKeyExchange(SparkleNode* node, bool needHisKey);
+	void handleSessionKeyExchange(QByteArray &payload, SparkleNode* node);
+
+	void sendMasterNodeRequest(SparkleNode* node);
+	void handleMasterNodeRequest(QByteArray &payload, SparkleNode* node);
+	
+	void sendMasterNodeReply(SparkleNode* node, SparkleNode* masterNode);
+	void handleMasterNodeReply(QByteArray &payload, SparkleNode* node);
+
+	void sendPingRequest(SparkleNode* node, SparkleNode* target, int count);
+	void handlePingRequest(QByteArray &payload, SparkleNode* node);
+
+	void sendPingInitiate(SparkleNode* node, SparkleNode* target, int count);
+	void handlePingInitiate(QByteArray &payload, SparkleNode* node);
+
+	void doPing(SparkleNode* node, quint8 count);
+
+	void sendPing(SparkleNode* node);
+	void handlePing(QByteArray &payload, SparkleNode* node);
+
+	RSAKeyPair &hostKeyPair;
+	Router &router;
+	PacketTransport& transport;
+
+	QList<SparkleNode*> nodeSpool;
+	QList<SparkleNode*> awaitingNegotiation;
+
+	join_step_t joinStep;
+	
+	/* */
 
 	void reverseMac(quint8 *mac);
 	void sendARPReply(const Route *node);
-
-	SparkleNode *getOrConstructNode(QHostAddress host, quint16 port);
-
-	QByteArray formRoute(const Route *node, bool isMaster);
-
-	QHostAddress remoteAddress, localAddress;
-	quint16 remotePort;
-
-	PacketTransport *transport;
-	RSAKeyPair *hostPair;
-	RouteManager *routes;
-
-	quint32 pingSeq;
-	QTime pingTime;
-	QTimer *pingTimer;
-	bool pingReceived;
-
-	bool isMaster;
-	QByteArray sparkleMac;
-	QHostAddress sparkleIP;
-
-	QString error;
-
-	enum join_step_t {
-		RequestingProtocolVersion,
-		RequestingPing,
-		RequestingMasterNode,
-		RegisteringInNetwork,
-		Joined,
-	};
-
-	join_step_t joinStep;
-
-	QList<SparkleNode *> nodes;
-	QList<QHostAddress *> awaiting;
 };
 
 #endif

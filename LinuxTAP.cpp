@@ -28,19 +28,17 @@
 #include "LinkLayer.h"
 #include "Log.h"
 
-LinuxTAP::LinuxTAP(LinkLayer *link, QObject *parent) : QObject(parent)
+LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : QObject(NULL), linkLayer(_linkLayer)
 {
-	this->link = link;
-
-	connect(link, SIGNAL(joined()), SLOT(joined()));
-	connect(link, SIGNAL(sendPacketReq(QByteArray)), SLOT(sendPacket(QByteArray)));
+/*	connect(&linkLayer, SIGNAL(joined()), SLOT(joined()));
+	connect(&linkLayer, SIGNAL(sendPacketReq(QByteArray)), SLOT(sendPacket(QByteArray)));*/
 
 	tun = -1;
 	framebuf = new char[1518]; // FIXME define MTU
 }
 
 LinuxTAP::~LinuxTAP() {
-	delete framebuf;
+	delete[] framebuf;
 }
 
 bool LinuxTAP::createInterface(QString pattern) {
@@ -99,7 +97,7 @@ void LinuxTAP::joined() {
 
 	struct sockaddr_in *sockaddr = (sockaddr_in *) &ifr.ifr_addr;
 	sockaddr->sin_family = AF_INET;
-	sockaddr->sin_addr.s_addr = htonl(link->getSparkleIP().toIPv4Address());
+//	sockaddr->sin_addr.s_addr = htonl(link->getSparkleIP().toIPv4Address());
 
 	if(ioctl(fd, SIOCSIFADDR, &ifr) == -1) {
 		Log::fatal("tap: SIOCSIFADDR: %1") << QString::fromLocal8Bit(strerror(errno));
@@ -120,7 +118,7 @@ void LinuxTAP::joined() {
 	}
 
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-	memcpy(&ifr.ifr_hwaddr.sa_data, link->getSparkleMac().data(), 6);
+//	memcpy(&ifr.ifr_hwaddr.sa_data, link->getSparkleMac().data(), 6);
 	if(ioctl(fd, SIOCSIFHWADDR, &ifr) == -1) {
 		Log::fatal("tap: SIOCSIFHWADDR: %1") << QString::fromLocal8Bit(strerror(errno));
 
@@ -154,7 +152,7 @@ void LinuxTAP::joined() {
 void LinuxTAP::haveData() {
 	int len = read(tun, framebuf, 1518); // FIXME MTU
 
-	link->processPacket(QByteArray((char *) framebuf, len));
+//	link->processPacket(QByteArray((char *) framebuf, len));
 }
 
 void LinuxTAP::sendPacket(QByteArray data) {

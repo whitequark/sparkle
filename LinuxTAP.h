@@ -31,7 +31,7 @@ class LinuxTAP : public QObject
 	Q_OBJECT
 
 public:
-	LinuxTAP(LinkLayer *link, QObject *parent = 0);
+	LinuxTAP(LinkLayer &linkLayer);
 	~LinuxTAP();
 
 	bool createInterface(QString pattern);
@@ -42,7 +42,7 @@ private slots:
 	void sendPacket(QByteArray packet);
 
 private:
-	LinkLayer *link;
+	LinkLayer &linkLayer;
 	QSocketNotifier *notify;
 
 	int tun;

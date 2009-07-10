@@ -23,23 +23,27 @@
 #include <QHostAddress>
 #include "LinkLayer.h"
 
-class Route;
-
 class Router : public QObject
 {
 	Q_OBJECT
 
 public:
-	Router(QObject *parent = 0);
+	Router();
 
-	const Route *addRoute(QHostAddress addr, quint16 port, SparkleNode* node);
-
-	const Route *findByIP(QHostAddress ip) const;
-	const Route *findByMAC(QByteArray mac) const;
-	const Route *selectMasterRoute() const;
+	void setSelfNode(SparkleNode* node);
+	SparkleNode* getSelfNode() const;
+	
+	void addNode(SparkleNode* node);
+	
+	SparkleNode* searchNode(QHostAddress &realIP, quint16 realPort) const;
+	
+	SparkleNode* selectMaster() const;
+	QList<SparkleNode*> getMasters() const;
+	size_t getMasterCount() const;
 
 private:
-	QList<Route *> masters, slaves;
+	SparkleNode* self;
+	QList<SparkleNode*> nodes;
 };
 
 #endif

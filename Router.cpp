@@ -16,63 +16,88 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <QtGlobal>
+
 #include "Router.h"
+#include "SparkleNode.h"
+#include "Log.h"
 
-Router::Router(QObject *parent) : QObject(parent)
+Router::Router() : QObject(NULL), self(NULL)
 {
-
 }
 
-const Route *Router::selectMaster() {
-	return masters.at(qrand() % masters.count());
+void Router::setSelfNode(SparkleNode* node) {
+	Q_ASSERT(self != NULL);
+	
+	Log::debug("router: My MAC is %1 and IP is %2") << node->getPrettySparkleMAC()
+					<< node->getSparkleIP().toString();
+	
+	self = node;
+	addNode(self);
 }
 
+SparkleNode* Router::getSelfNode() const {
+	return self;
+}
 
-const Route *Router::findByIP(QHostAddress ip) {
-	foreach(Route *def, masters)
-		if(def->sparkleIP == ip)
-			return def;
+void Router::addNode(SparkleNode* node) {
+	Log::debug("router: adding node [%1]:%2 <=> %3 (%4)") << node->getRealIP().toString()
+			<< node->getRealPort() << node->getSparkleIP().toString()
+			<< (node->isMaster() ? "master" : "slave");
+	
+	nodes.append(self);
+}
 
-	foreach(Route *def, slaves)
-		if(def->sparkleIP == ip)
-			return def;
-
+SparkleNode* Router::searchNode(QHostAddress &realIP, quint16 realPort) const {
+	foreach(SparkleNode *node, nodes) {
+		if(node->getRealIP() == realIP && node->getRealPort() == realPort)
+			return node;
+	}
+	
 	return NULL;
 }
 
-const Route *Router::findByMAC(QByteArray mac) {
-	foreach(Route *def, masters)
-		if(def->sparkleMac == mac)
-			return def;
-
-	foreach(Route *def, slaves)
-		if(def->sparkleMac == mac)
-			return def;
-
-	return NULL;
+SparkleNode* Router::selectMaster() const {
+	QList<SparkleNode*> masters = getMasters();
+	
+	if(masters.size() == 0) {
+		Log::error("router: no masters are present according to my DB. Strange.");
+		
+		return NULL;
+	}
+	
+	if(masters.size() == 1) {
+		Log::warn ("router: only one master is present in network; this is BAD."
+			   " (If you just created a network, ignore this message)");
+		
+		return masters[0];
+	}
+	
+	if(getSelfNode() != NULL)
+		masters.removeOne(getSelfNode());
+	
+	return masters[qrand() % masters.size()];
 }
 
-int Router::getMasterCount() {
-	return masters.count();
+QList<SparkleNode*> Router::getMasters() const {
+	QList<SparkleNode*> masters;
+	
+	foreach(SparkleNode *node, nodes) {
+		if(node->isMaster())
+			masters.append(node);
+	}
+	
+	return masters;
 }
 
-int Router::getSlaveCount() {
-	return slaves.count();
+size_t Router::getMasterCount() const {
+	size_t count = 0;
+	
+	foreach(SparkleNode *node, nodes) {
+		if(node->isMaster())
+			count++;
+	}
+	
+	return count;
 }
 
-const Route *Router::addRoute(QHostAddress addr,
-					      quint16 port, QHostAddress sparkleIP,
-					      QByteArray sparkleMac, bool isMaster) {
-
-	Route *node = new Route;
-	node->addr = addr;
-	node->port = port;
-	node->sparkleIP = sparkleIP;
-	node->sparkleMac = sparkleMac;
-	if(isMaster)
-		masters.append(node);
-	else
-		slaves.append(node);
-
-	return node;
-}
