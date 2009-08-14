@@ -36,6 +36,7 @@ public:
 	SparkleNode(QHostAddress realIP, quint16 realPort, Router& router);
 	
 	bool operator==(const SparkleNode& another) const;
+	bool operator!=(const SparkleNode& another) const;
 
 	QHostAddress getRealIP() const		{ return realIP; }
 	quint16 getRealPort() const		{ return realPort; }
@@ -45,6 +46,9 @@ public:
 	
 	QString getPrettySparkleMAC() const;
 
+	void setSparkleIP(const QHostAddress& ip);
+	void setSparkleMAC(const QByteArray& mac);
+
 	const BlowfishKey *getHisSessionKey() const	{ return &hisSessionKey; }
 	const BlowfishKey *getMySessionKey() const	{ return &mySessionKey; }
 	
@@ -53,6 +57,8 @@ public:
 	bool setAuthKey(const RSAKeyPair &keyPair);
 	bool setAuthKey(const QByteArray &publicKey);
 	
+	void configureByKey();
+
 	void setHisSessionKey(const QByteArray &keyBytes);
 	bool areKeysNegotiated();
 
@@ -64,8 +70,6 @@ public:
 	QByteArray popQueue();
 
 private:
-	void configure();
-
 	QHostAddress realIP;
 	quint16 realPort;
 

@@ -29,9 +29,23 @@ bool SparkleNode::operator==(const SparkleNode& another) const {
 	return another.getRealIP() == realIP && another.getRealPort() == realPort;
 }
 
+bool SparkleNode::operator!=(const SparkleNode& another) const {
+	return !(*this == another);
+}
+
 QString SparkleNode::getPrettySparkleMAC() const {
 	QString hexMac = QString(sparkleMAC.toHex()).toUpper();
 	return hexMac.replace(QRegExp("(..)"), "\\1:").left(17);
+}
+
+void SparkleNode::setSparkleIP(const QHostAddress& ip)
+{
+	sparkleIP = ip;
+}
+
+void SparkleNode::setSparkleMAC(const QByteArray& mac)
+{
+	sparkleMAC = mac;
 }
 
 void SparkleNode::setHisSessionKey(const QByteArray &keyBytes) {
@@ -63,12 +77,10 @@ bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 	
 	authKeyPresent = true;
 	
-	configure();
-	
 	return true;
 }
 
-void SparkleNode::configure() {
+void SparkleNode::configureByKey() {
 	QByteArray fingerprint = SHA1Digest::calculateSHA1(authKey.getPublicKey());
 
 	char ip[4] = { 0, 0, 0, 14 }; // FIXME
