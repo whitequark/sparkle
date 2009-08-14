@@ -45,7 +45,7 @@ void Router::addNode(SparkleNode* node) {
 			<< node->getRealPort() << node->getSparkleIP().toString()
 			<< (node->isMaster() ? "master" : "slave");
 	
-	nodes.append(self);
+	nodes.append(node);
 }
 
 SparkleNode* Router::searchNode(QHostAddress &realIP, quint16 realPort) const {
