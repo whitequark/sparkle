@@ -30,7 +30,6 @@ class QTimer;
 class SparkleNode;
 class PacketTransport;
 class Router;
-class Route;
 
 class LinkLayer : public QObject
 {
@@ -47,9 +46,12 @@ public:
 signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
 	void tapPacketReady(QByteArray &packet);
+	void joined(SparkleNode* node);
 
 private slots:
 	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
+	
+	void pingTimeout();
 
 private:
 	enum {
@@ -76,10 +78,10 @@ private:
 		RegisterRequest			= 15,
 		RegisterReply			= 16,
 
-		RoutingTable			= 17,
+		Route				= 17,
 
 		RouteRequest			= 18,
-		NoRouteForEntry			= 19,
+		RouteMissing			= 19,
 
 		DataPacket			= 20,
 
@@ -114,18 +116,22 @@ private:
 		quint16		port;
 	};
 
-	struct register_reply_t {
-		quint32	addr;
-		quint8	mac[6];
-		quint8	isMaster;
+	struct register_request_t {
+		/* empty now */
 	};
 
-	struct routing_table_entry_t {
-		quint32	sparkleIP;
-		quint32	inetIP;
-		quint16	port;
+	struct register_reply_t {
 		quint8	isMaster;
-		quint8	sparkleMac[6];
+		quint32 sparkleIP;
+		quint8  sparkleMAC[6];
+	};
+
+	struct route_t {
+		quint32	sparkleIP;
+		quint8	sparkleMAC[6];
+		quint32	realIP;
+		quint16	realPort;
+		quint8	isMaster;
 	};
 
 	struct mac_header_t {
@@ -147,10 +153,12 @@ private:
 	} __attribute__((packed));
 
 	enum join_step_t {
+		NoJoinNeeded,
 		JoinVersionRequest,
 		JoinMasterNodeRequest,
 		JoinAwaitingPings,
-		JoinRegistration
+		JoinRegistration,
+		JoinFinished
 	};
 
 	bool initTransport();	
@@ -201,6 +209,16 @@ private:
 
 	void sendPing(SparkleNode* node);
 	void handlePing(QByteArray &payload, SparkleNode* node);
+	void joinGotPinged();
+
+	void sendRegisterRequest(SparkleNode* node);
+	void handleRegisterRequest(QByteArray &payload, SparkleNode* node);
+
+	void sendRegisterReply(SparkleNode* node);
+	void handleRegisterReply(QByteArray &payload, SparkleNode* node);
+
+	void sendRoute(SparkleNode* node, SparkleNode* target);
+	void handleRoute(QByteArray &payload, SparkleNode* node);
 
 	RSAKeyPair &hostKeyPair;
 	Router &router;
@@ -210,11 +228,11 @@ private:
 	QList<SparkleNode*> awaitingNegotiation;
 
 	join_step_t joinStep;
-	
-	/* */
 
-	void reverseMac(quint8 *mac);
-	void sendARPReply(const Route *node);
+	QTimer* pingTimer;
+	SparkleNode* joinMaster;
+	unsigned joinPingsEmitted, joinPingsArrived;
+	ping_t joinPing;
 };
 
 #endif

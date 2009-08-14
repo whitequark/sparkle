@@ -25,6 +25,7 @@
 
 class LinkLayer;
 class QSocketNotifier;
+class SparkleNode;
 
 class LinuxTAP : public QObject
 {
@@ -37,7 +38,7 @@ public:
 	bool createInterface(QString pattern);
 
 private slots:
-	void joined();
+	void joined(SparkleNode* node);
 	void haveData();
 	void sendPacket(QByteArray packet);
 

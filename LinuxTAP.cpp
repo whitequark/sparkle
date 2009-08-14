@@ -26,15 +26,18 @@
 
 #include "LinuxTAP.h"
 #include "LinkLayer.h"
+#include "SparkleNode.h"
 #include "Log.h"
+
+#define MTU 1518
 
 LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : QObject(NULL), linkLayer(_linkLayer)
 {
-/*	connect(&linkLayer, SIGNAL(joined()), SLOT(joined()));
-	connect(&linkLayer, SIGNAL(sendPacketReq(QByteArray)), SLOT(sendPacket(QByteArray)));*/
+	connect(&linkLayer, SIGNAL(joined(SparkleNode*)), SLOT(joined(SparkleNode*)));
+//	connect(&linkLayer, SIGNAL(sendPacketReq(QByteArray)), SLOT(sendPacket(QByteArray)));
 
 	tun = -1;
-	framebuf = new char[1518]; // FIXME define MTU
+	framebuf = new char[MTU];
 }
 
 LinuxTAP::~LinuxTAP() {
@@ -73,7 +76,7 @@ bool LinuxTAP::createInterface(QString pattern) {
 	return true;
 }
 
-void LinuxTAP::joined() {
+void LinuxTAP::joined(SparkleNode* node) {
 
 	if(tun == -1) {
 		Log::fatal("tap: joined to network before the device was created");
@@ -91,13 +94,14 @@ void LinuxTAP::joined() {
 
 	struct ifreq ifr;
 
-	memset(&ifr, 0, sizeof(ifreq)); // FIXME assign MTU
-
+	memset(&ifr, 0, sizeof(ifreq));
+	
+	ifr.ifr_mtu = MTU;
 	memcpy(ifr.ifr_name, device, IFNAMSIZ);
 
 	struct sockaddr_in *sockaddr = (sockaddr_in *) &ifr.ifr_addr;
 	sockaddr->sin_family = AF_INET;
-//	sockaddr->sin_addr.s_addr = htonl(link->getSparkleIP().toIPv4Address());
+	sockaddr->sin_addr.s_addr = htonl(node->getSparkleIP().toIPv4Address());
 
 	if(ioctl(fd, SIOCSIFADDR, &ifr) == -1) {
 		Log::fatal("tap: SIOCSIFADDR: %1") << QString::fromLocal8Bit(strerror(errno));
@@ -118,7 +122,7 @@ void LinuxTAP::joined() {
 	}
 
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-//	memcpy(&ifr.ifr_hwaddr.sa_data, link->getSparkleMac().data(), 6);
+	memcpy(&ifr.ifr_hwaddr.sa_data, node->getSparkleMAC().constData(), 6);
 	if(ioctl(fd, SIOCSIFHWADDR, &ifr) == -1) {
 		Log::fatal("tap: SIOCSIFHWADDR: %1") << QString::fromLocal8Bit(strerror(errno));
 
@@ -150,7 +154,7 @@ void LinuxTAP::joined() {
 }
 
 void LinuxTAP::haveData() {
-	int len = read(tun, framebuf, 1518); // FIXME MTU
+	int len = read(tun, framebuf, MTU);
 
 //	link->processPacket(QByteArray((char *) framebuf, len));
 }
