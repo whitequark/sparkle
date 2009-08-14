@@ -55,17 +55,13 @@ int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
 	app.setApplicationName("sparkle");
 
-	QString profile = "default";
+	QString profile = "default", configDir;
 	bool createNetwork = false;
 	QHostAddress localAddress, remoteAddress;
 	quint16 localPort = 1801, remotePort = 1801;
 
 	int keyLength = 1024;
 	bool generateNewKeypair = false;
-
-	QString configDir = QDir::homePath() + "/." + app.applicationName() + "/" + profile;
-	QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
-	QDir().mkdir(configDir);
 
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
@@ -96,6 +92,10 @@ int main(int argc, char *argv[]) {
 			return 0;
 		}
 		
+		configDir = QDir::homePath() + "/." + app.applicationName() + "/" + profile;
+		QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
+		QDir().mkdir(configDir);
+
 		if(!getPubkeyStr.isNull()) {
 			RSAKeyPair keyPair;
 	
