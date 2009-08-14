@@ -16,14 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <QString>
-#include <QRegExp>
+#include "RSAKeyPair.h"
+
 #include <QFile>
 #include <openssl/pem.h>
 #include <stdio.h>
-
-#include "RSAKeyPair.h"
-#include "Log.h"
 
 RSAKeyPair::RSAKeyPair(QObject *parent) : QObject(parent) {
 	key = RSA_new();
@@ -103,9 +100,9 @@ bool RSAKeyPair::readFromFile(QString filename) {
 		key = newKey;
 
 		return true;
-	} else {
+	} else
 		return false;
-	}
+
 }
 
 QByteArray RSAKeyPair::getPublicKey() const {
@@ -121,24 +118,16 @@ QByteArray RSAKeyPair::getPublicKey() const {
 	}
 
 	char *pointer;
-	BIO_get_mem_data(mem, &pointer);
+	long len = BIO_get_mem_data(mem, &pointer);
 
-	QString data(pointer);
+	QByteArray data(pointer, len);
 
 	BIO_free(mem);
-	
-	data.replace(QRegExp("-----BEGIN RSA PUBLIC KEY-----\n(.+)-----END RSA PUBLIC KEY-----\n"), "\\1");
-	
-	return QByteArray::fromBase64(data.toAscii());
+
+	return data;
 }
 
 bool RSAKeyPair::setPublicKey(QByteArray data) {
-	data = data.toBase64();
-	for(int i = 65; i < data.size(); i += 66) {
-		data.insert(i, "\n");
-	}
-	data = data.prepend("-----BEGIN RSA PUBLIC KEY-----\n").append("\n-----END RSA PUBLIC KEY-----\n");
-	
 	BIO *mem = BIO_new_mem_buf(data.data(), data.size());
 
 	if(mem == NULL)
