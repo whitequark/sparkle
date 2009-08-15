@@ -792,7 +792,7 @@ void LinkLayer::sendARPReply(SparkleNode* node) {
 	memcpy(arp->sha, eth->src, 6);
 	arp->spa = htonl(node->getSparkleIP().toIPv4Address());
 	memcpy(arp->tha, eth->dest, 6);
-	arp->tpa = htonl(node->getSparkleIP().toIPv4Address());
+	arp->tpa = htonl(self->getSparkleIP().toIPv4Address());
 	
 	emit tapPacketReady(packet);
 }
