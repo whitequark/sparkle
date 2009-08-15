@@ -753,7 +753,7 @@ void LinkLayer::processPacket(QByteArray packet) {
 			SparkleNode* resolved = router.searchSparkleNode(dest);
 			if(resolved != NULL) {
 				sendEncryptedPacket(DataPacket, packet, resolved);
-			} else {
+			} else if(htonl(ip->dest) >> 24 != 0xE0) { // avoid link-local
 				Log::info("link: received local IPv4 packet for unknown destination [%1]")
 						<< dest.toString();
 			}
@@ -795,80 +795,3 @@ void LinkLayer::sendARPReply(SparkleNode* node) {
 	emit tapPacketReady(packet);
 }
 
-/*void LinkLayer::processPacket(QByteArray packet) {
-	mac_header_t hdr;
-	memcpy(&hdr, packet.data(), sizeof(mac_header_t));
-
-//	reverseMac(hdr.from);
-//	reverseMac(hdr.to);
-
-	if(memcmp(hdr.from, sparkleMac.data(), 6) != 0)
-		return;
-
-	hdr.type = ntohs(hdr.type);
-
-//	hexdump("Incoming packet", packet);
-
-	packet = packet.right(packet.size() - sizeof(mac_header_t));
-
-	switch(hdr.type) {
-	case 0x0806: {	// ARP
-		arp_packet_t *arp = (arp_packet_t *) packet.data();
-		if(ntohs(arp->htype) == 1 && ntohs(arp->ptype) == 0x800 &&
-				arp->hlen == 6 && arp->plen == 4 &&
-				ntohs(arp->oper) == 1) { // IPv4 over ethernet request
-
-			QHostAddress target(ntohl(arp->tpa));
-
-			foreach(QHostAddress *ptr, awaiting) {
-				if(*ptr == target) {
-					qDebug() << target.toString() << "still waiting resolution";
-
-					return;
-				}
-			}
-
-			const Route *node = router->findByIP(target);
-
-			if(node != NULL)
-				sendARPReply(node);
-			else {
-				if(isMaster) {
-					qDebug() << "Target not exists";
-
-				} else {
-					awaiting.append(new QHostAddress(target));
-
-					sendRouteRequest(target);
-				}
-			}
-
-		}
-		break;
-	}
-
-	case 0x0800: {
-		const Route *node = router->findByMAC(QByteArray((char *)hdr.to, 6));
-
-		if(!node)
-			break;
-
-		SparkleNode *sparkleNode = getOrConstructNode(
-				node->addr, node->port);
-
-		sendPacket(DataPacket, sparkleNode, packet, true);
-
-		break;
-	}
-
-	case 0x86dd:	// IPv6
-		break;
-
-
-	default:
-		printf("Ethernet packet with data size %d and type 0x%x dropped\n", packet.size(), hdr.type);
-
-		break;
-	}
-}
-*/
