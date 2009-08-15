@@ -458,6 +458,9 @@ void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
 
 	node->setSparkleIP(QHostAddress(intr->sparkleIP));
 	node->setSparkleMAC(QByteArray((const char*) intr->sparkleMAC, 6));
+	node->setMaster(false);
+	
+	router.addNode(node);
 
 	Log::debug("link: node [%1]:%2 introduced itself as %3") << node->getRealIP().toString()
 			<< node->getRealPort() << node->getSparkleIP().toString();
@@ -703,6 +706,7 @@ void LinkLayer::sendRoute(SparkleNode* node, SparkleNode* target)
 	route.realIP = target->getRealIP().toIPv4Address();
 	route.realPort = target->getRealPort();
 	route.sparkleIP = target->getSparkleIP().toIPv4Address();
+	route.isMaster = target->isMaster();
 
 	Q_ASSERT(node->getSparkleMAC().length() == 6);
 	memcpy(route.sparkleMAC, target->getSparkleMAC().constData(), 6);
@@ -725,6 +729,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	SparkleNode* target = wrapNode(QHostAddress(route->realIP), route->realPort);
 	target->setSparkleIP(QHostAddress(route->sparkleIP));
 	target->setSparkleMAC(QByteArray((const char*) route->sparkleMAC, 6));
+	target->setMaster(route->isMaster);
 	
 	router.addNode(target);
 }
