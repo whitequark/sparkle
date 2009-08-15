@@ -3,6 +3,8 @@ TARGET = sparkgap
 DEPENDPATH += .
 INCLUDEPATH += .
 QMAKE_LIBS += -lssl
+CONFIG += release
+CONFIG -= debug
 QT -= gui
 QT += network
 
