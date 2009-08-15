@@ -72,7 +72,7 @@ bool LinkLayer::createNetwork(QHostAddress localIP) {
 	
 	Log::debug("link: created network, my endpoint is [%1]:%2") << localIP.toString() << transport.getPort();
 	
-	joinStep = NoJoinNeeded;
+	joinStep = JoinFinished;
 	emit joined(self);
 
 	return true;
@@ -219,6 +219,10 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 	
 	QByteArray decPayload = decData.right(decData.size() - sizeof(packet_header_t));
 	switch((packet_type_t) decHdr->type) {
+		case IntroducePacket:
+			handleIntroducePacket(decPayload, node);
+			return;
+			
 		case MasterNodeRequest:
 			handleMasterNodeRequest(decPayload, node);
 			return;
@@ -389,6 +393,9 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 				node = origNode;
 			}
 			
+			if(router.getSelfNode() == NULL || !router.getSelfNode()->isMaster())
+				sendIntroducePacket(node);
+			
 			sendSessionKeyExchange(node, true);
 		}
 	}
@@ -425,6 +432,35 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 		while(!node->isQueueEmpty())
 			encryptAndSend(node->popQueue(), node);
 	}
+}
+
+/* IntroducePacket */
+
+void LinkLayer::sendIntroducePacket(SparkleNode* node) {
+	introduce_packet_t intr;
+	intr.sparkleIP = router.getSelfNode()->getSparkleIP().toIPv4Address();
+	memcpy(intr.sparkleMAC, router.getSelfNode()->getSparkleMAC().constData(), 6);
+
+	sendEncryptedPacket(IntroducePacket, QByteArray((const char*) &intr, sizeof(introduce_packet_t)), node);
+}
+
+void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, sizeof(introduce_packet_t), node, "IntroducePacket"))
+		return;
+	
+	if(node->getSparkleMAC().length() > 0) {
+		Log::warn("link: node [%2]:%3 is already introduced as %1") << node->getSparkleIP().toString()
+				<< node->getRealIP().toString() << node->getRealPort();
+		return;
+	}
+	
+	const introduce_packet_t *intr = (const introduce_packet_t*) payload.constData();
+
+	node->setSparkleIP(QHostAddress(intr->sparkleIP));
+	node->setSparkleMAC(QByteArray((const char*) intr->sparkleMAC, 6));
+
+	Log::debug("link: node [%1]:%2 introduced itself as %3") << node->getRealIP().toString()
+			<< node->getRealPort() << node->getSparkleIP().toString();
 }
 
 /* MasterNodeRequest */

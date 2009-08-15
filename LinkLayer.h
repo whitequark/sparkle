@@ -55,7 +55,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 3,
+		ProtocolVersion	= 4,
 	};
 
 	enum packet_type_t {
@@ -67,23 +67,25 @@ private:
 
 		Ping				= 5,
 
-		EncryptedPacket			= 6,
+		EncryptedPacket			= 10,
 
-		MasterNodeRequest		= 7,
-		MasterNodeReply			= 8,
+		IntroducePacket			= 11,
 
-		PingRequest			= 9,
-		PingInitiate			= 10,
+		MasterNodeRequest		= 12,
+		MasterNodeReply			= 13,
 
-		RegisterRequest			= 15,
-		RegisterReply			= 16,
+		PingRequest			= 14,
+		PingInitiate			= 15,
 
-		Route				= 17,
+		RegisterRequest			= 16,
+		RegisterReply			= 17,
 
-		RouteRequest			= 18,
-		RouteMissing			= 19,
+		Route				= 18,
 
-		DataPacket			= 20,
+		RouteRequest			= 19,
+		RouteMissing			= 20,
+
+		DataPacket			= 30,
 	};
 
 	struct packet_header_t {
@@ -98,6 +100,11 @@ private:
 	struct key_exchange_t {
 		quint8		needOthersKey;
 		quint32		cookie;
+	};
+
+	struct introduce_packet_t {
+		quint32		sparkleIP;
+		quint8		sparkleMAC[8];
 	};
 
 	struct master_node_reply_t {
@@ -174,7 +181,6 @@ private:
 	} __attribute__((packed));
 
 	enum join_step_t {
-		NoJoinNeeded,
 		JoinVersionRequest,
 		JoinMasterNodeRequest,
 		JoinAwaitingPings,
@@ -214,6 +220,9 @@ private:
 	void sendSessionKeyExchange(SparkleNode* node, bool needHisKey);
 	void handleSessionKeyExchange(QByteArray &payload, SparkleNode* node);
 
+	void sendIntroducePacket(SparkleNode* node);
+	void handleIntroducePacket(QByteArray &payload, SparkleNode* node);
+	
 	void sendMasterNodeRequest(SparkleNode* node);
 	void handleMasterNodeRequest(QByteArray &payload, SparkleNode* node);
 	
