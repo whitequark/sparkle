@@ -76,8 +76,8 @@ SparkleNode* Router::selectMaster() const {
 	}
 	
 	if(masters.size() == 1) {
-		Log::warn ("router: only one master is present in network; this is BAD."
-			   " (If you just created a network, ignore this message)");
+/*		Log::warn ("router: only one master is present in network; this is BAD."
+			   " (If you just created a network, ignore this message)");*/
 		
 		return masters[0];
 	}
