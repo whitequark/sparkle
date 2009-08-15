@@ -753,6 +753,8 @@ void LinkLayer::processPacket(QByteArray packet) {
 			SparkleNode* resolved = router.searchSparkleNode(dest);
 			if(resolved != NULL) {
 				sendEncryptedPacket(DataPacket, packet, resolved);
+			} else if(htonl(ip->dest) == 0x0effffff) { // ignore broadcasta
+				/* do nothing */
 			} else if(htonl(ip->dest) >> 24 != 0xE0) { // avoid link-local
 				Log::info("link: received local IPv4 packet for unknown destination [%1]")
 						<< dest.toString();
