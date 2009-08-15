@@ -43,7 +43,7 @@ LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_
 	pingTimer->setInterval(5000); // FIXME
 	connect(pingTimer, SIGNAL(timeout()), SLOT(pingTimeout()));
 	
-	Log::debug("link layer (protocol version 2) is ready");
+	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
 }
 
 bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort) {
@@ -137,6 +137,7 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 			Log::debug("link: initiating negotiation with [%1]:%2")
 					<< node->getRealIP().toString() << node->getRealPort();
 			
+			awaitingNegotiation.append(node);
 			sendPublicKeyExchange(node, &hostKeyPair, true);
 		}
 	} else {
@@ -420,6 +421,7 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 	if(ke->needOthersKey) {
 		sendSessionKeyExchange(node, false);
 	} else {
+		awaitingNegotiation.removeOne(node);
 		while(!node->isQueueEmpty())
 			encryptAndSend(node->popQueue(), node);
 	}
