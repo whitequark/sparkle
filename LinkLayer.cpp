@@ -393,7 +393,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 				node = origNode;
 			}
 			
-			if(router.getSelfNode() == NULL || !router.getSelfNode()->isMaster())
+			if(router.getSelfNode() != NULL && !router.getSelfNode()->isMaster())
 				sendIntroducePacket(node);
 			
 			sendSessionKeyExchange(node, true);
