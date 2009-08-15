@@ -55,7 +55,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 2,
+		ProtocolVersion	= 3,
 	};
 
 	enum packet_type_t {
@@ -84,7 +84,6 @@ private:
 		RouteMissing			= 19,
 
 		DataPacket			= 20,
-
 	};
 
 	struct packet_header_t {
@@ -98,6 +97,7 @@ private:
 	
 	struct key_exchange_t {
 		quint8		needOthersKey;
+		quint32		cookie;
 	};
 
 	struct master_node_reply_t {
@@ -208,7 +208,7 @@ private:
 	void sendProtocolVersionReply(SparkleNode* node);
 	void handleProtocolVersionReply(QByteArray &payload, SparkleNode* node);
 
-	void sendPublicKeyExchange(SparkleNode* node, const RSAKeyPair *key, bool needHisKey);
+	void sendPublicKeyExchange(SparkleNode* node, const RSAKeyPair *key, bool needHisKey, quint32 cookie=0);
 	void handlePublicKeyExchange(QByteArray &payload, SparkleNode* node);
 
 	void sendSessionKeyExchange(SparkleNode* node, bool needHisKey);
@@ -257,6 +257,7 @@ private:
 
 	QList<SparkleNode*> nodeSpool;
 	QList<SparkleNode*> awaitingNegotiation;
+	QHash<quint32, SparkleNode*> cookies;
 
 	join_step_t joinStep;
 

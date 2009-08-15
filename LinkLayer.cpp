@@ -333,9 +333,16 @@ void LinkLayer::handleProtocolVersionReply(QByteArray &payload, SparkleNode* nod
 
 /* PublicKeyExchange */
 
-void LinkLayer::sendPublicKeyExchange(SparkleNode* node, const RSAKeyPair* key, bool needHisKey) {
+void LinkLayer::sendPublicKeyExchange(SparkleNode* node, const RSAKeyPair* key, bool needHisKey, quint32 cookie) {
 	key_exchange_t ke;
 	ke.needOthersKey = needHisKey;
+	
+	if(needHisKey) {
+		ke.cookie = qrand();
+		cookies[ke.cookie] = node;
+	} else {
+		ke.cookie = cookie;
+	}
 	
 	QByteArray request;
 	if(key)	request.append(key->getPublicKey());
@@ -356,12 +363,31 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 		Log::warn("link: received malformed public key from [%1]:%2")
 				<< node->getRealIP().toString() << node->getRealPort();
 	} else {
-		Log::debug("link: stored public key for [%1]:%2")
+		Log::debug("link: received public key for [%1]:%2")
 				<< node->getRealIP().toString() << node->getRealPort();
 		
 		if(ke->needOthersKey) {
-			sendPublicKeyExchange(node, NULL, false);
+			sendPublicKeyExchange(node, NULL, false, ke->cookie);
 		} else {
+			if(!cookies.contains(ke->cookie)) {
+				cookies.remove(ke->cookie);
+				Log::warn("link: unexpected pubkey from [%1]:%2")
+					<< node->getRealIP().toString() << node->getRealPort();
+				return;
+			}
+			
+			SparkleNode* origNode = cookies[ke->cookie];
+			cookies.remove(ke->cookie);
+			
+			if(*origNode != *node) {
+				Log::info("link: node [%1]:%2 is apparently behind the same NAT, rewriting")
+					<< origNode->getRealIP().toString() << origNode->getRealPort();
+				origNode->setRealIP(node->getRealIP());
+				origNode->setRealPort(node->getRealPort());
+				origNode->setAuthKey(key);
+				node = origNode;
+			}
+			
 			sendSessionKeyExchange(node, true);
 		}
 	}

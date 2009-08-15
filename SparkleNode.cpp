@@ -38,14 +38,20 @@ QString SparkleNode::getPrettySparkleMAC() const {
 	return hexMac.replace(QRegExp("(..)"), "\\1:").left(17);
 }
 
-void SparkleNode::setSparkleIP(const QHostAddress& ip)
-{
+void SparkleNode::setSparkleIP(const QHostAddress& ip) {
 	sparkleIP = ip;
 }
 
-void SparkleNode::setSparkleMAC(const QByteArray& mac)
-{
+void SparkleNode::setSparkleMAC(const QByteArray& mac) {
 	sparkleMAC = mac;
+}
+
+void SparkleNode::setRealIP(const QHostAddress& ip) {
+	realIP = ip;
+}
+
+void SparkleNode::setRealPort(quint16 port) {
+	realPort = port;
 }
 
 void SparkleNode::setHisSessionKey(const QByteArray &keyBytes) {

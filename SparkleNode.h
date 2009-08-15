@@ -49,6 +49,9 @@ public:
 	void setSparkleIP(const QHostAddress& ip);
 	void setSparkleMAC(const QByteArray& mac);
 
+	void setRealIP(const QHostAddress& ip);
+	void setRealPort(quint16 port);
+
 	const BlowfishKey *getHisSessionKey() const	{ return &hisSessionKey; }
 	const BlowfishKey *getMySessionKey() const	{ return &mySessionKey; }
 	
