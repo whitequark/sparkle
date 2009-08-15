@@ -19,10 +19,11 @@
 #include <QUdpSocket>
 #include "UdpPacketTransport.h"
 
-UdpPacketTransport::UdpPacketTransport(quint16 port, QObject *parent)
+UdpPacketTransport::UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent)
 	: PacketTransport(parent)
 {
 	this->port = port;
+	this->addr = addr;
 
 	socket = new QUdpSocket(this);
 
@@ -34,7 +35,7 @@ UdpPacketTransport::~UdpPacketTransport() {
 }
 
 bool UdpPacketTransport::beginReceiving() {
-	return socket->bind(port);
+	return socket->bind(addr, port);
 }
 
 void UdpPacketTransport::haveDatagram() {

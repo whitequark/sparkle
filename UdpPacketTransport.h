@@ -27,7 +27,7 @@ class UdpPacketTransport : public PacketTransport
 {
 	Q_OBJECT
 public:
-	UdpPacketTransport(quint16 port, QObject *parent = 0);
+	UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent = 0);
 	virtual ~UdpPacketTransport();
 
 	virtual bool beginReceiving();
@@ -46,6 +46,7 @@ private:
 	QUdpSocket *socket;
 
 	quint16 port;
+	QHostAddress addr;
 };
 
 #endif

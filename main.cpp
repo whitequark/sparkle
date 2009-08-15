@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 
 	QString profile = "default", configDir;
 	bool createNetwork = false;
-	QHostAddress localAddress, remoteAddress;
+	QHostAddress localAddress = QHostAddress::Any, remoteAddress;
 	quint16 localPort = 1801, remotePort = 1801;
 
 	int keyLength = 1024;
@@ -177,7 +177,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	Router router;
-	UdpPacketTransport transport(localPort);
+	UdpPacketTransport transport(localAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
 #ifdef Q_WS_X11
