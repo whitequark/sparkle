@@ -62,11 +62,13 @@ int main(int argc, char *argv[]) {
 
 	int keyLength = 1024;
 	bool generateNewKeypair = false;
+	
+	bool bindToEverything;
 
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	{
-		QString createStr, joinStr, portStr, keyLenStr, getPubkeyStr;
+		QString createStr, joinStr, portStr, keyLenStr, getPubkeyStr, bindEverythingStr;
 
 		ArgumentParser parser(app.arguments());
 
@@ -87,6 +89,9 @@ int main(int argc, char *argv[]) {
 
 		parser.registerOption(QChar::Null, "get-pubkey", ArgumentParser::NoArgument,
 			&getPubkeyStr, NULL, NULL, "\tprint my public key", NULL);
+		
+		parser.registerOption(QChar::Null, "bind-to-everything", ArgumentParser::NoArgument,
+			&bindEverythingStr, NULL, NULL, "bind to all interfaces (valid for network creation)", NULL);
 
 		if(!parser.parse()) { // help was displayed
 			return 0;
@@ -153,6 +158,8 @@ int main(int argc, char *argv[]) {
 		if(!portStr.isNull()) {
 			localPort = portStr.toInt();
 		}
+		
+		bindToEverything = !bindEverythingStr.isNull();
 	}
 
 	RSAKeyPair hostPair;
@@ -175,6 +182,9 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 	}
+	
+	if(bindToEverything)
+		localAddress = QHostAddress::Any;
 	
 	Router router;
 	UdpPacketTransport transport(localAddress, localPort);
