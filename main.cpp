@@ -183,11 +183,12 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
-	if(bindToEverything)
-		localAddress = QHostAddress::Any;
+	QHostAddress bindAddress;
+	if(bindToEverything)	bindAddress = QHostAddress::Any;
+	else			bindAddress = localAddress;
 	
 	Router router;
-	UdpPacketTransport transport(localAddress, localPort);
+	UdpPacketTransport transport(bindAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
 #ifdef Q_WS_X11
