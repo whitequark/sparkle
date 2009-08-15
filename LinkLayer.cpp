@@ -648,9 +648,7 @@ void LinkLayer::sendRegisterRequest(SparkleNode* node) {
 void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(register_request_t), node, "RegisterRequest"))
 		return;
-	
-	const register_request_t* req = (const register_request_t*) payload.constData();
-	
+		
 	node->configureByKey();
 	node->setMaster(false);
 

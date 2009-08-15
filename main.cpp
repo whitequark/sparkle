@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 				Log::fatal("cannot read RSA keypair");
 				return 1;
 			} else {
-				printf(QString(keyPair.getPublicKey()).toLocal8Bit().constData());
+				printf("%s", QString(keyPair.getPublicKey()).toLocal8Bit().constData());
 				return 0;
 			}
 		}

@@ -44,11 +44,9 @@ void Log::emitMessage(loglevel_t loglevel, QString message) {
 	
 	final += message;
 	final += "\n";
-	
-	final.replace('%', "%%"); // guard from printf() attack
-	
-	if(loglevel >= Warning)	std::fprintf(stderr, qPrintable(final));
-	else			std::fprintf(stdout, qPrintable(final));
+		
+	if(loglevel >= Warning)	std::fprintf(stderr, "%s", qPrintable(final));
+	else			std::fprintf(stdout, "%s", qPrintable(final));
 	
 	if(loglevel == Fatal) {
 		std::fprintf(stderr, "Fatal error encountered, exiting.\n");
