@@ -246,6 +246,14 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 			handleRoute(decPayload, node);
 			return;
 		
+		case RouteRequest:
+			handleRouteRequest(decPayload, node);
+			return;
+		
+		case RouteMissing:
+			handleRouteMissing(decPayload, node);
+			return;
+		
 		case DataPacket:
 			handleDataPacket(decPayload, node);
 			return;
@@ -657,6 +665,56 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	router.addNode(target);
 }
 
+/* RouteRequest */
+
+void LinkLayer::sendRouteRequest(QHostAddress host) {
+	route_request_t req;
+	req.sparkleIP = host.toIPv4Address();
+	
+	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)), 
+				router.selectMaster());
+}
+
+void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest"))
+		return;
+	
+	if(!router.getSelfNode()->isMaster()) {
+		Log::warn("link: i'm slave and got route request from [%1]:%2")
+			<< node->getRealIP().toString() << node->getRealPort();
+		return;
+	}
+
+	const route_request_t* req = (const route_request_t*) payload.constData();
+	QHostAddress host(req->sparkleIP);
+	
+	SparkleNode* target = router.searchSparkleNode(host);
+	if(target) {
+		sendRoute(node, target);
+	} else {
+		sendRouteMissing(node, host);
+	}
+}
+
+/* RouteMissing */
+
+void LinkLayer::sendRouteMissing(SparkleNode* node, QHostAddress host) {
+	route_missing_t req;
+	req.sparkleIP = host.toIPv4Address();
+	
+	sendEncryptedPacket(RouteMissing, QByteArray((const char*) &req, sizeof(route_request_t)), node);
+}
+
+void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, sizeof(route_missing_t), node, "RouteMissing"))
+		return;
+	
+	const route_missing_t* req = (const route_missing_t*) payload.constData();
+	QHostAddress host(req->sparkleIP);
+	
+	Log::info("link: no route to %1") << host.toString();
+}
+
 /* Data */
 
 void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
@@ -728,9 +786,13 @@ void LinkLayer::processPacket(QByteArray packet) {
 			}
 			
 			if(ntohs(arp->oper) == 1 /* request */) {
-				SparkleNode* resolved = router.searchSparkleNode(QHostAddress(ntohl(arp->tpa)));
+				QHostAddress dest(ntohl(arp->tpa));
+				SparkleNode* resolved = router.searchSparkleNode(dest);
 				if(resolved == NULL) {
-					Log::debug("no arp");
+					if(!self->isMaster())
+						sendRouteRequest(dest);
+					else
+						Log::info("link: no route to %1") << dest.toString();
 				} else {
 					sendARPReply(resolved);
 				}

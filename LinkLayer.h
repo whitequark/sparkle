@@ -134,6 +134,14 @@ private:
 		quint8	isMaster;
 	};
 
+	struct route_request_t {
+		quint32 sparkleIP;
+	};
+
+	struct route_missing_t {
+		quint32 sparkleIP;
+	};
+
 	struct ethernet_header_t {
 		quint8	dest[6];
 		quint8	src[6];
@@ -232,6 +240,12 @@ private:
 
 	void sendRoute(SparkleNode* node, SparkleNode* target);
 	void handleRoute(QByteArray &payload, SparkleNode* node);
+
+	void sendRouteRequest(QHostAddress addr);
+	void handleRouteRequest(QByteArray &payload, SparkleNode* node);
+
+	void sendRouteMissing(SparkleNode* node, QHostAddress addr);
+	void handleRouteMissing(QByteArray &payload, SparkleNode* node);
 
 	void handleDataPacket(QByteArray &payload, SparkleNode* node);
 	
