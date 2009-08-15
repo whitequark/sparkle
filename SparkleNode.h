@@ -33,7 +33,7 @@ class SparkleNode : public QObject
 	Q_OBJECT
 
 public:
-	SparkleNode(QHostAddress realIP, quint16 realPort, Router& router);
+	SparkleNode(QHostAddress realIP, quint16 realPort);
 	
 	bool operator==(const SparkleNode& another) const;
 	bool operator!=(const SparkleNode& another) const;

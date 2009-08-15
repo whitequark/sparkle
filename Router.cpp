@@ -48,7 +48,16 @@ void Router::addNode(SparkleNode* node) {
 	nodes.append(node);
 }
 
-SparkleNode* Router::searchNode(QHostAddress &realIP, quint16 realPort) const {
+SparkleNode* Router::searchSparkleNode(QHostAddress sparkleIP) const {
+	foreach(SparkleNode *node, nodes) {
+		if(node->getSparkleIP() == sparkleIP)
+			return node;
+	}
+	
+	return NULL;
+}
+
+SparkleNode* Router::searchNode(QHostAddress realIP, quint16 realPort) const {
 	foreach(SparkleNode *node, nodes) {
 		if(node->getRealIP() == realIP && node->getRealPort() == realPort)
 			return node;

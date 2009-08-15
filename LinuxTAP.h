@@ -39,8 +39,8 @@ public:
 
 private slots:
 	void joined(SparkleNode* node);
-	void haveData();
-	void sendPacket(QByteArray packet);
+	void getPacket();
+	void sendPacket(QByteArray& packet);
 
 private:
 	LinkLayer &linkLayer;

@@ -34,7 +34,7 @@
 LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : QObject(NULL), linkLayer(_linkLayer)
 {
 	connect(&linkLayer, SIGNAL(joined(SparkleNode*)), SLOT(joined(SparkleNode*)));
-//	connect(&linkLayer, SIGNAL(sendPacketReq(QByteArray)), SLOT(sendPacket(QByteArray)));
+	connect(&linkLayer, SIGNAL(tapPacketReady(QByteArray&)), SLOT(sendPacket(QByteArray&)));
 
 	tun = -1;
 	framebuf = new char[MTU];
@@ -70,7 +70,7 @@ bool LinuxTAP::createInterface(QString pattern) {
 	Log::debug("tap: registered interface %1") << device;
 
 	notify = new QSocketNotifier(tun, QSocketNotifier::Read, this);
-	connect(notify, SIGNAL(activated(int)), SLOT(haveData()));
+	connect(notify, SIGNAL(activated(int)), SLOT(getPacket()));
 	notify->setEnabled(true);
 
 	return true;
@@ -153,12 +153,11 @@ void LinuxTAP::joined(SparkleNode* node) {
 	notify->setEnabled(true);
 }
 
-void LinuxTAP::haveData() {
+void LinuxTAP::getPacket() {
 	int len = read(tun, framebuf, MTU);
-
-//	link->processPacket(QByteArray((char *) framebuf, len));
+	linkLayer.processPacket(QByteArray((char *) framebuf, len));
 }
 
-void LinuxTAP::sendPacket(QByteArray data) {
+void LinuxTAP::sendPacket(QByteArray &data) {
 	write(tun, data.data(), data.size());
 }

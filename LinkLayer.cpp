@@ -59,7 +59,7 @@ bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort) {
 }
 
 bool LinkLayer::createNetwork(QHostAddress localIP) {
-	SparkleNode *self = new SparkleNode(localIP, transport.getPort(), router);
+	SparkleNode *self = new SparkleNode(localIP, transport.getPort());
 	Q_CHECK_PTR(self);
 	self->setMaster(true);
 	self->setAuthKey(hostKeyPair);
@@ -102,7 +102,7 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 			return node;
 	}
 	
-	SparkleNode* node = new SparkleNode(host, port, router);
+	SparkleNode* node = new SparkleNode(host, port);
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
 	
@@ -244,6 +244,10 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 		
 		case Route:
 			handleRoute(decPayload, node);
+			return;
+		
+		case DataPacket:
+			handleDataPacket(decPayload, node);
 			return;
 		
 		default: {
@@ -653,18 +657,145 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	router.addNode(target);
 }
 
-/* ======= END ======= */
+/* Data */
 
-/*void LinkLayer::reverseMac(quint8 *mac) {
-	quint8 nmac[6];
+void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
+	if(!checkPacketSize(packet, sizeof(ethernet_header_t) + sizeof(ipv4_header_t),
+				node, "Data", PacketSizeGreater))
+		return;
+	
+	const ethernet_header_t* eth = (const ethernet_header_t*) packet.constData();
+	SparkleNode* self = router.getSelfNode();
 
-	for(int i = 0; i < 6; i++)
-		nmac[i] = mac[5 - i];
+	if(memcmp(eth->src, node->getSparkleMAC().constData(), 6) != 0) {
+		Log::warn("link: remote [%1] packet with malformed source MAC") << node->getSparkleIP().toString();
+		return;
+	}
 
-	memcpy(mac, nmac, 6);
+	if(memcmp(eth->dest, self->getSparkleMAC().constData(), 6) != 0) {
+		Log::warn("link: remote [%1] packet with malformed destination MAC") << node->getSparkleIP().toString();
+		return;
+	}
+	
+	if(ntohs(eth->type) != 0x0800) { // IP
+		Log::warn("link: remote [%1] non-IP (%2) packet") << node->getSparkleIP().toString()
+			<< QString::number(ntohs(eth->type), 16).rightJustified(4, '0');
+		return;
+	}
+
+	QByteArray payload = packet.right(packet.size() - sizeof(ethernet_header_t));
+	const ipv4_header_t* ip = (const ipv4_header_t*) payload.constData();
+
+	if(ntohl(ip->src) != node->getSparkleIP().toIPv4Address()) {
+		Log::warn("link: received IPv4 packet with malformed source address");
+		return;
+	}
+
+	if(ntohl(ip->dest) != self->getSparkleIP().toIPv4Address()) {
+		Log::warn("link: received IPv4 packet with malformed destination address");
+		return;
+	}
+	
+	emit tapPacketReady(packet);
 }
 
+/* ======= END ======= */
+
 void LinkLayer::processPacket(QByteArray packet) {
+	const ethernet_header_t* eth = (const ethernet_header_t*) packet.constData();
+	SparkleNode* self = router.getSelfNode();
+
+	if(memcmp(eth->src, self->getSparkleMAC().constData(), 6) != 0) {
+		Log::warn("link: local packet from unknown source MAC");
+		return;
+	}
+	
+	QByteArray payload = packet.right(packet.size() - sizeof(ethernet_header_t));
+	switch(ntohs(eth->type)) {
+		case 0x0806: { // ARP
+			if(memcmp(eth->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) != 0) {
+				Log::warn("link: non-broadcasted local ARP packet");
+				return;
+			}
+			
+			const arp_packet_t* arp = (const arp_packet_t*) payload.constData();
+			if(!(ntohs(arp->htype) == 1 /* ethernet */ && ntohs(arp->ptype) == 0x0800 /* ipv4 */ &&
+				arp->hlen == 6 && arp->plen == 4 &&
+					ntohl(arp->spa) == self->getSparkleIP().toIPv4Address() &&
+					!memcmp(arp->sha, eth->src, 6))) {
+				Log::warn("link: invalid local arp packet received");
+				return;
+			}
+			
+			if(ntohs(arp->oper) == 1 /* request */) {
+				SparkleNode* resolved = router.searchSparkleNode(QHostAddress(ntohl(arp->tpa)));
+				if(resolved == NULL) {
+					Log::debug("no arp");
+				} else {
+					sendARPReply(resolved);
+				}
+			} else {
+				Log::info("link: ARP packet with unexpected OPER=%1 received") << ntohs(arp->oper);
+				return;
+			}
+			
+			break;
+		}
+		
+		case 0x0800: { // IPv4
+			const ipv4_header_t* ip = (const ipv4_header_t*) payload.constData();
+			if(ntohl(ip->src) != self->getSparkleIP().toIPv4Address()) {
+				Log::warn("link: received local IPv4 packet with malformed source address");
+				return;
+			}
+			
+			QHostAddress dest(ntohl(ip->dest));
+			SparkleNode* resolved = router.searchSparkleNode(dest);
+			if(resolved != NULL) {
+				sendEncryptedPacket(DataPacket, packet, resolved);
+			} else {
+				Log::info("link: received local IPv4 packet for unknown destination [%1]")
+						<< dest.toString();
+			}
+			break;
+		}
+		
+		case 0x86dd: { // IPv6
+			/* Silently ignore. There're no IPv6 addresses assigned to iface anyway */
+			break;
+		}
+		
+		default: {
+			Log::warn("link: received local packet of unknown type %1")
+					<< QString::number(ntohs(eth->type), 16).rightJustified(4, '0');
+		}
+	}
+}
+
+void LinkLayer::sendARPReply(SparkleNode* node) {
+	QByteArray packet(sizeof(ethernet_header_t) + sizeof(arp_packet_t), 0);
+	SparkleNode* self = router.getSelfNode();
+	
+	ethernet_header_t* eth = (ethernet_header_t*) packet.data();
+	memcpy(eth->dest, self->getSparkleMAC().constData(), 6);
+	memcpy(eth->src, node->getSparkleMAC().constData(), 6);
+	eth->type = htons(0x0806); // ARP
+	
+	arp_packet_t* arp = (arp_packet_t*) (packet.data() + sizeof(ethernet_header_t));
+	arp->htype = htons(1); // ethernet
+	arp->ptype = htons(0x0800); // IPv4
+	arp->hlen = 6;
+	arp->plen = 4;
+	arp->oper = htons(2); // reply
+	memcpy(arp->sha, eth->src, 6);
+	arp->spa = htonl(node->getSparkleIP().toIPv4Address());
+	memcpy(arp->tha, eth->dest, 6);
+	arp->tpa = htonl(node->getSparkleIP().toIPv4Address());
+	
+	emit tapPacketReady(packet);
+}
+
+/*void LinkLayer::processPacket(QByteArray packet) {
 	mac_header_t hdr;
 	memcpy(&hdr, packet.data(), sizeof(mac_header_t));
 
@@ -740,27 +871,4 @@ void LinkLayer::processPacket(QByteArray packet) {
 		break;
 	}
 }
-
-void LinkLayer::sendARPReply(const Route *node) {
-	mac_header_t mac;
-
-	mac.type = htons(0x0806);
-	memcpy(mac.from, node->sparkleMac, 6);
-	memcpy(mac.to, sparkleMac.data(), 6);
-
-	arp_packet_t arp;
-	arp.htype = htons(1);
-	arp.ptype = htons(0x800);
-	arp.hlen = 6;
-	arp.plen = 4;
-	arp.oper = htons(2);
-	memcpy(arp.sha, node->sparkleMac, 6);
-	arp.spa = htonl(node->sparkleIP.toIPv4Address());
-	memcpy(arp.tha, sparkleMac.data(), 6);
-	arp.tpa = sparkleIP.toIPv4Address();
-
-	QByteArray packet = QByteArray((char *) &mac, sizeof(mac_header_t)) +
-			    QByteArray((char *) &arp, sizeof(arp_packet_t));
-
-	emit sendPacketReq(packet);
-}*/
+*/

@@ -20,7 +20,7 @@
 #include "SparkleNode.h"
 #include "Log.h"
 
-SparkleNode::SparkleNode(QHostAddress _realIP, quint16 _realPort, Router& router)
+SparkleNode::SparkleNode(QHostAddress _realIP, quint16 _realPort)
 		 : QObject(NULL), realIP(_realIP), realPort(_realPort), authKeyPresent(false) {
 	mySessionKey.generate();
 }

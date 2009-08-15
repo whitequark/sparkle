@@ -35,7 +35,8 @@ public:
 	
 	void addNode(SparkleNode* node);
 	
-	SparkleNode* searchNode(QHostAddress &realIP, quint16 realPort) const;
+	SparkleNode* searchNode(QHostAddress realIP, quint16 realPort) const;
+	SparkleNode* searchSparkleNode(QHostAddress sparkleIP) const;
 	
 	SparkleNode* selectMaster() const;
 	QList<SparkleNode*> getMasters() const;

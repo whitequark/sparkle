@@ -134,9 +134,9 @@ private:
 		quint8	isMaster;
 	};
 
-	struct mac_header_t {
-		quint8	to[6];
-		quint8	from[6];
+	struct ethernet_header_t {
+		quint8	dest[6];
+		quint8	src[6];
 		quint16	type;
 	} __attribute__((packed));
 
@@ -150,6 +150,19 @@ private:
 		quint32	spa;
 		quint8	tha[6];
 		quint32	tpa;
+	} __attribute__((packed));
+
+	struct ipv4_header_t {
+		quint8  version;
+		quint8  diffserv;
+		quint16 size;
+		quint16 id;
+		quint16 fragments;
+		quint8  ttl;
+		quint8  protocol;
+		quint16 checksum;
+		quint32 src;
+		quint32 dest;
 	} __attribute__((packed));
 
 	enum join_step_t {
@@ -219,6 +232,10 @@ private:
 
 	void sendRoute(SparkleNode* node, SparkleNode* target);
 	void handleRoute(QByteArray &payload, SparkleNode* node);
+
+	void handleDataPacket(QByteArray &payload, SparkleNode* node);
+	
+	void sendARPReply(SparkleNode* node);
 
 	RSAKeyPair &hostKeyPair;
 	Router &router;
