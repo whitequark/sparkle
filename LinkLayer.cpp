@@ -715,8 +715,10 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	if(reply->realIP != 0) { // i am behind NAT
 		Log::debug("link: external endpoint was assigned by NAT passthrough");
 		self = wrapNode(QHostAddress(reply->realIP), reply->realPort);
+		self->setBehindNAT(true);
 	} else {
 		self = wrapNode(QHostAddress(joinPing.addr), joinPing.port);
+		self->setBehindNAT(false);
 	}
 	self->setSparkleIP(QHostAddress(reply->sparkleIP));
 	self->setSparkleMAC(QByteArray((const char*) reply->sparkleMAC, 6));

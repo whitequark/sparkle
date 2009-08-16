@@ -35,6 +35,8 @@ public:
 	LinuxTAP(LinkLayer &linkLayer);
 	~LinuxTAP();
 
+	void bind();
+
 	bool createInterface(QString pattern);
 
 private slots:

@@ -223,17 +223,16 @@ int main(int argc, char *argv[]) {
 	UdpPacketTransport transport(bindAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
-	if(!noTap) {
 #ifdef Q_WS_X11
-		LinuxTAP tap(linkLayer);
+	LinuxTAP tap(linkLayer);
+	if(!noTap) {
+		tap.bind();
 		if(tap.createInterface("sparkle%d") == false) {
 			Log::fatal("cannot initialize TAP");
 			return 1;
 		}
-#endif
-	} else {
-		Log::debug("tap: no interface created");
 	}
+#endif
 
 	if(createNetwork) {
 		if(!linkLayer.createNetwork(localAddress, networkDivisor)) {

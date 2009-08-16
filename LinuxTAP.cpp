@@ -33,15 +33,17 @@
 
 LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : QObject(NULL), linkLayer(_linkLayer)
 {
-	connect(&linkLayer, SIGNAL(joined(SparkleNode*)), SLOT(joined(SparkleNode*)));
-	connect(&linkLayer, SIGNAL(tapPacketReady(QByteArray&)), SLOT(sendPacket(QByteArray&)));
-
 	tun = -1;
 	framebuf = new char[MTU];
 }
 
 LinuxTAP::~LinuxTAP() {
 	delete[] framebuf;
+}
+
+void LinuxTAP::bind() {
+	connect(&linkLayer, SIGNAL(joined(SparkleNode*)), SLOT(joined(SparkleNode*)));
+	connect(&linkLayer, SIGNAL(tapPacketReady(QByteArray&)), SLOT(sendPacket(QByteArray&)));
 }
 
 bool LinuxTAP::createInterface(QString pattern) {
