@@ -62,30 +62,33 @@ void BlowfishKey::setBytes(QByteArray raw) {
 }
 
 QByteArray BlowfishKey::encrypt(QByteArray data) const {
-	unsigned char chunk[keylen / 8];
+	unsigned char chunk[blocksize];
 
 	QByteArray output;
 
-	for(; data.size() > 0; data = data.right(data.size() - keylen / 8)) {
+	if(data.size() % blocksize != 0)
+		data.resize((data.size() / blocksize + 1) * blocksize);
+
+	for(; data.size() > 0; data = data.right(data.size() - blocksize)) {
 		cb_encrypt(key, chunk, (unsigned char *) data.data());
 		//BF_ecb_encrypt((unsigned char *) data.data(), chunk, &key, BF_ENCRYPT);
 
-		output += QByteArray((char *) chunk, keylen / 8);
+		output += QByteArray((char *) chunk, blocksize);
 	}
 
 	return output;
 }
 
 QByteArray BlowfishKey::decrypt(QByteArray data) const {
-	unsigned char chunk[keylen / 8];
+	unsigned char chunk[blocksize];
 
 	QByteArray output;
 
-	for(; data.size() > 0; data = data.right(data.size() - keylen / 8)) {
+	for(; data.size() > 0; data = data.right(data.size() - blocksize)) {
 		cb_decrypt(key, chunk, (unsigned char *) data.data());
 		//BF_ecb_encrypt((unsigned char *) data.data(), chunk, &key, BF_DECRYPT);
 
-		output += QByteArray((char *) chunk, keylen / 8);
+		output += QByteArray((char *) chunk, blocksize);
 	}
 
 	return output;
