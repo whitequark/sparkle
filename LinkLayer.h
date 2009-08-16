@@ -39,7 +39,7 @@ public:
 	LinkLayer(Router &router, PacketTransport &transport, RSAKeyPair &rsaKeyPair);
 
 	bool createNetwork(QHostAddress localAddress, quint8 networkDivisor);
-	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort);
+	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort, bool forceBehindNAT);
 
 	void processPacket(QByteArray packet);
 
@@ -281,6 +281,7 @@ private:
 	SparkleNode* joinMaster;
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
+	bool forceBehindNAT;
 };
 
 #endif

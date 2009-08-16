@@ -46,11 +46,13 @@ LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
 }
 
-bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort) {
+bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forceBehindNAT) {
 	Log::debug("link: joining via [%1]:%2") << remoteIP << remotePort;
 
 	if(!initTransport())
 		return false;
+	
+	this->forceBehindNAT = forceBehindNAT;
 	
 	joinStep = JoinVersionRequest;
 	sendProtocolVersionRequest(wrapNode(remoteIP, remotePort));
@@ -498,16 +500,23 @@ void LinkLayer::handleMasterNodeReply(QByteArray &payload, SparkleNode* node) {
 	const master_node_reply_t *reply = (const master_node_reply_t*) payload.constData();
 	
 	SparkleNode* master = wrapNode(QHostAddress(reply->addr), reply->port);
+	joinMaster = master;
 	
 	Log::debug("link: determined master node: [%1]:%2") << *master;
 	
-	joinStep = JoinAwaitingPings;
-	joinPing.addr = 0;
-	joinPingsEmitted = 4;
-	joinPingsArrived = 0;
-	joinMaster = master;
-	pingTimer->start();
-	sendPingRequest(node, master, 4);
+	if(!forceBehindNAT) {
+		joinStep = JoinAwaitingPings;
+		joinPing.addr = 0;
+		joinPingsEmitted = 4;
+		joinPingsArrived = 0;
+		pingTimer->start();
+		sendPingRequest(node, master, 4);
+	} else {
+		Log::debug("link: skipping NAT detection");
+		
+		joinStep = JoinRegistration;
+		sendRegisterRequest(master, true);
+	}
 }
 
 /* PingRequest */

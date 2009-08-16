@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
 	app.setApplicationName("sparkle");
 	
 	QString profile = "default", configDir;
-	bool createNetwork = false, noTap = false;
+	bool createNetwork = false, noTap = false, forceBehindNAT = false;
 	int networkDivisor = 10;
 	QHostAddress localAddress = QHostAddress::Any, remoteAddress, bindAddress = QHostAddress::Any;
 	quint16 localPort = 1801, remotePort = 1801;
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	{
-		QString createStr, joinStr, endpointStr, bindStr, keyLenStr, getPubkeyStr, noTapStr;
+		QString createStr, joinStr, endpointStr, bindStr, keyLenStr, getPubkeyStr, noTapStr, behindNatStr;
 
 		ArgumentParser parser(app.arguments());
 
@@ -88,6 +88,9 @@ int main(int argc, char *argv[]) {
 
 		parser.registerOption('b', "bind-to", ArgumentParser::RequiredArgument, &bindStr, NULL,
 			NULL, "\n\t\tbind to local interface with address IP (binds to all by default)", "IP");
+
+		parser.registerOption('N', "force-nat", ArgumentParser::NoArgument, &behindNatStr, NULL,
+			NULL, "skips any NAT checks with positive result", NULL);
 
 		parser.registerOption(QChar::Null, "generate-key", ArgumentParser::RequiredArgument,
 			&keyLenStr, NULL, NULL, "generate new RSA key pair with specified length", "BITS");
@@ -185,6 +188,9 @@ int main(int argc, char *argv[]) {
 		
 		if(!noTapStr.isNull())
 			noTap = true;
+		
+		if(!behindNatStr.isNull())
+			forceBehindNAT = true;
 	}
 
 	RSAKeyPair hostPair;
@@ -219,7 +225,7 @@ int main(int argc, char *argv[]) {
 		if(!linkLayer.createNetwork(localAddress, networkDivisor))
 			Log::fatal("cannot create network");
 	} else {
-		if(!linkLayer.joinNetwork(remoteAddress, remotePort))
+		if(!linkLayer.joinNetwork(remoteAddress, remotePort, forceBehindNAT))
 			Log::fatal("cannot join network");
 	}
 
