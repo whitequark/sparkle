@@ -118,7 +118,7 @@ bool ArgumentParser::parse() {
 			QString arg;
 
 			if(matching->arg == OptionalArgument || matching->arg == RequiredArgument) {
-				if((*(i + 1))[0] != '-') {
+				if((i != arguments.end()-1) && (*(i + 1))[0] != '-') {
 					i++;
 
 					arg = *i;
