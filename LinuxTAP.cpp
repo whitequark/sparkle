@@ -159,5 +159,6 @@ void LinuxTAP::getPacket() {
 }
 
 void LinuxTAP::sendPacket(QByteArray &data) {
-	write(tun, data.data(), data.size());
+	if(write(tun, data.data(), data.size()) != data.size())
+		Log::warn("tap: remote packet truncated");
 }

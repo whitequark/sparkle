@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 	app.setApplicationName("sparkle");
 
 	QString profile = "default", configDir;
-	bool createNetwork = false;
+	bool createNetwork = false, noTap = false;
 	QHostAddress localAddress = QHostAddress::Any, remoteAddress;
 	quint16 localPort = 1801, remotePort = 1801;
 
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	{
-		QString createStr, joinStr, bindStr, keyLenStr, getPubkeyStr;
+		QString createStr, joinStr, bindStr, keyLenStr, getPubkeyStr, noTapStr;
 
 		ArgumentParser parser(app.arguments());
 
@@ -88,6 +88,9 @@ int main(int argc, char *argv[]) {
 		parser.registerOption(QChar::Null, "get-pubkey", ArgumentParser::NoArgument,
 			&getPubkeyStr, NULL, NULL, "\tprint my public key", NULL);
 		
+		parser.registerOption(QChar::Null, "no-tap", ArgumentParser::NoArgument,
+			&noTapStr, NULL, NULL, "\tdo not create TAP interface (`headless' mode)", NULL);
+		
 		if(!parser.parse()) { // help was displayed
 			return 0;
 		}
@@ -103,7 +106,7 @@ int main(int argc, char *argv[]) {
 				Log::fatal("cannot read RSA keypair");
 				return 1;
 			} else {
-				printf(QString(keyPair.getPublicKey()).toLocal8Bit().constData());
+				printf("%s", QString(keyPair.getPublicKey()).toLocal8Bit().constData());
 				return 0;
 			}
 		}
@@ -171,6 +174,9 @@ int main(int argc, char *argv[]) {
 			Log::fatal("you need to specify local endpoint to create network");
 			return 1;
 		}
+		
+		if(!noTapStr.isNull())
+			noTap = true;
 	}
 
 	RSAKeyPair hostPair;
@@ -198,13 +204,17 @@ int main(int argc, char *argv[]) {
 	UdpPacketTransport transport(localAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
+	if(!noTap) {
 #ifdef Q_WS_X11
-	/*LinuxTAP tap(linkLayer);
-	if(tap.createInterface("sparkle%d") == false) {
-		Log::fatal("cannot initialize TAP");
-		return 1;
-	}*/
+		LinuxTAP tap(linkLayer);
+		if(tap.createInterface("sparkle%d") == false) {
+			Log::fatal("cannot initialize TAP");
+			return 1;
+		}
 #endif
+	} else {
+		Log::debug("tap: no interface created");
+	}
 
 	if(createNetwork) {
 		if(!linkLayer.createNetwork(localAddress)) {
