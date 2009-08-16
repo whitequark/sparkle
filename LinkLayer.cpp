@@ -363,37 +363,38 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 	const key_exchange_t *ke = (const key_exchange_t*) payload.constData();
 
 	QByteArray key = payload.mid(sizeof(key_exchange_t));
+	if(!ke->needOthersKey && !cookies.contains(ke->cookie)) {
+		cookies.remove(ke->cookie);
+		Log::warn("link: unexpected pubkey from [%1]:%2") << *node;
+		return;
+	}
+		
 	if(!node->setAuthKey(key)) {
 		Log::warn("link: received malformed public key from [%1]:%2") << *node;
+		return;
 	} else {
 		Log::debug("link: received public key for [%1]:%2") << *node;
+	}
+
+	if(ke->needOthersKey) {
+		sendPublicKeyExchange(node, NULL, false, ke->cookie);
+	} else {
+		SparkleNode* origNode = cookies[ke->cookie];
+		cookies.remove(ke->cookie);
 		
-		if(ke->needOthersKey) {
-			sendPublicKeyExchange(node, NULL, false, ke->cookie);
-		} else {
-			if(!cookies.contains(ke->cookie)) {
-				cookies.remove(ke->cookie);
-				Log::warn("link: unexpected pubkey from [%1]:%2") << *node;
-				return;
-			}
-			
-			SparkleNode* origNode = cookies[ke->cookie];
-			cookies.remove(ke->cookie);
-			
-			if(*origNode != *node) {
-				Log::info("link: node [%1]:%2 is apparently behind the same NAT, rewriting")
-					<< *origNode;
-				origNode->setRealIP(node->getRealIP());
-				origNode->setRealPort(node->getRealPort());
-				origNode->setAuthKey(key);
-				node = origNode;
-			}
-			
-			if(router.getSelfNode() != NULL && !router.getSelfNode()->isMaster())
-				sendIntroducePacket(node);
-			
-			sendSessionKeyExchange(node, true);
+		if(*origNode != *node) {
+			Log::info("link: node [%1]:%2 is apparently behind the same NAT, rewriting")
+				<< *origNode;
+			origNode->setRealIP(node->getRealIP());
+			origNode->setRealPort(node->getRealPort());
+			origNode->setAuthKey(key);
+			node = origNode;
 		}
+		
+		if(router.getSelfNode() != NULL && !router.getSelfNode()->isMaster())
+			sendIntroducePacket(node);
+		
+		sendSessionKeyExchange(node, true);
 	}
 }
 
@@ -650,7 +651,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	
 	node->configureByKey();
 	
-	if(router.masterCount() == 1)
+	if(router.getMasterCount() == 1)
 		node->setMaster(true);
 	else
 		node->setMaster(false);
