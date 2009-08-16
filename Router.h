@@ -42,6 +42,8 @@ public:
 	QList<SparkleNode*> getMasters() const;
 	size_t getMasterCount() const;
 
+	QList<SparkleNode*> getNodes() const;
+
 private:
 	SparkleNode* self;
 	QList<SparkleNode*> nodes;

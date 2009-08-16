@@ -652,19 +652,35 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(register_request_t), node, "RegisterRequest"))
 		return;
 	
+	if(!router.getSelfNode()->isMaster()) {
+		Log::warn("link: got RegisterRequest while not master");
+		return;
+	}
+	
 	const register_request_t* req = (const register_request_t*) payload.constData();
 	
 	node->configureByKey();
-	node->setMaster(false);
+	
+	if(router.masterCount() == 1)
+		node->setMaster(true);
+	else
+		node->setMaster(false);
 
 	router.addNode(node);
-
 	sendRegisterReply(node);
 	
-	QList<SparkleNode*> masters = router.getMasters();
-	foreach(SparkleNode* master, masters) {
-		if(*master != *node)
-			sendRoute(node, master);
+	if(node->isMaster()) {
+		QList<SparkleNode*> nodes = router.getNodes();
+		foreach(SparkleNode* oldNode, nodes) {
+			if(*node != *oldNode)
+				sendRoute(node, oldNode);
+		}
+	} else {
+		QList<SparkleNode*> masters = router.getMasters();
+		foreach(SparkleNode* master, masters) {
+			if(*master != *node)
+				sendRoute(node, master);
+		}
 	}
 }
 
@@ -734,6 +750,12 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	const route_t* route = (const route_t*) payload.constData();
 	
 	SparkleNode* target = wrapNode(QHostAddress(route->realIP), route->realPort);
+	if(target == router.getSelfNode()) {
+		Log::warn("link: attempt to add myself by Route packet from [%1]:%2")
+			<< node->getRealIP().toString() << node->getRealPort();
+		return;
+	}
+	
 	target->setSparkleIP(QHostAddress(route->sparkleIP));
 	target->setSparkleMAC(QByteArray((const char*) route->sparkleMAC, 6));
 	target->setMaster(route->isMaster);

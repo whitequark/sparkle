@@ -110,3 +110,7 @@ size_t Router::getMasterCount() const {
 	return count;
 }
 
+QList<SparkleNode*> Router::getNodes() const {
+	return nodes;
+}
+
