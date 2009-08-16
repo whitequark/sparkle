@@ -33,15 +33,17 @@
 
 LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : QObject(NULL), linkLayer(_linkLayer)
 {
-	connect(&linkLayer, SIGNAL(joined(SparkleNode*)), SLOT(joined(SparkleNode*)));
-	connect(&linkLayer, SIGNAL(tapPacketReady(QByteArray&)), SLOT(sendPacket(QByteArray&)));
-
 	tun = -1;
 	framebuf = new char[MTU];
 }
 
 LinuxTAP::~LinuxTAP() {
 	delete[] framebuf;
+}
+
+void LinuxTAP::bind() {
+	connect(&linkLayer, SIGNAL(joined(SparkleNode*)), SLOT(joined(SparkleNode*)));
+	connect(&linkLayer, SIGNAL(tapPacketReady(QByteArray&)), SLOT(sendPacket(QByteArray&)));
 }
 
 bool LinuxTAP::createInterface(QString pattern) {
@@ -78,19 +80,13 @@ bool LinuxTAP::createInterface(QString pattern) {
 
 void LinuxTAP::joined(SparkleNode* node) {
 
-	if(tun == -1) {
+	if(tun == -1)
 		Log::fatal("tap: joined to network before the device was created");
-		
-		return;
-	}
 
 	int fd = socket(PF_INET, SOCK_DGRAM, 0);
 
-	if(fd == -1) {
+	if(fd == -1)
 		Log::fatal("tap: socket: %1") << QString::fromLocal8Bit(strerror(errno));
-		
-		return;
-	}
 
 	struct ifreq ifr;
 
@@ -103,48 +99,28 @@ void LinuxTAP::joined(SparkleNode* node) {
 	sockaddr->sin_family = AF_INET;
 	sockaddr->sin_addr.s_addr = htonl(node->getSparkleIP().toIPv4Address());
 
-	if(ioctl(fd, SIOCSIFADDR, &ifr) == -1) {
+	if(ioctl(fd, SIOCSIFADDR, &ifr) == -1)
 		Log::fatal("tap: SIOCSIFADDR: %1") << QString::fromLocal8Bit(strerror(errno));
-
-		close(fd);
-		return;
-	}
 
 	sockaddr = (sockaddr_in *) &ifr.ifr_netmask;
 	sockaddr->sin_family = AF_INET;
 	sockaddr->sin_addr.s_addr = 0xff; // 255.255.255.0
 
-	if(ioctl(fd, SIOCSIFNETMASK, &ifr) == -1) {
+	if(ioctl(fd, SIOCSIFNETMASK, &ifr) == -1)
 		Log::fatal("tap: SIOCSIFNETMASK: %1") << QString::fromLocal8Bit(strerror(errno));
-
-		close(fd);
-		return;
-	}
 
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	memcpy(&ifr.ifr_hwaddr.sa_data, node->getSparkleMAC().constData(), 6);
-	if(ioctl(fd, SIOCSIFHWADDR, &ifr) == -1) {
+	if(ioctl(fd, SIOCSIFHWADDR, &ifr) == -1)
 		Log::fatal("tap: SIOCSIFHWADDR: %1") << QString::fromLocal8Bit(strerror(errno));
 
-		close(fd);
-		return;
-	}
-
-	if(ioctl(fd, SIOCGIFFLAGS, &ifr) == -1) {
+	if(ioctl(fd, SIOCGIFFLAGS, &ifr) == -1)
 		Log::fatal("tap: SIOCGIFFLAGS: %1") << QString::fromLocal8Bit(strerror(errno));
-
-		close(fd);
-		return;
-	}
 
 	ifr.ifr_flags |= IFF_UP;
 
-	if(ioctl(fd, SIOCSIFFLAGS, &ifr) == -1) {
+	if(ioctl(fd, SIOCSIFFLAGS, &ifr) == -1)
 		Log::fatal("tap: cannot bring interface up: %1") << QString::fromLocal8Bit(strerror(errno));
-
-		close(fd);
-		return;
-	}
 
 	close(fd);
 
@@ -160,5 +136,5 @@ void LinuxTAP::getPacket() {
 
 void LinuxTAP::sendPacket(QByteArray &data) {
 	if(write(tun, data.data(), data.size()) != data.size())
-		Log::debug("tap: packet truncated on write");
+		Log::warn("tap: remote packet truncated");
 }

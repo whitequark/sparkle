@@ -54,6 +54,10 @@ void SparkleNode::setRealPort(quint16 port) {
 	realPort = port;
 }
 
+void SparkleNode::setBehindNAT(bool behindNAT) {
+	this->behindNAT = behindNAT;
+}
+
 void SparkleNode::setHisSessionKey(const QByteArray &keyBytes) {
 	hisSessionKey.setBytes(keyBytes);
 	keysNegotiated = true;

@@ -41,9 +41,10 @@ SparkleNode* Router::getSelfNode() const {
 }
 
 void Router::addNode(SparkleNode* node) {
-	Log::debug("router: adding node [%1]:%2 <=> %3 (%4)") << node->getRealIP().toString()
+	Log::debug("router: adding node [%1]:%2 <=> %3 (%4, %5)") << node->getRealIP().toString()
 			<< node->getRealPort() << node->getSparkleIP().toString()
-			<< (node->isMaster() ? "master" : "slave");
+			<< (node->isMaster() ? "master" : "slave")
+			<< (node->isBehindNAT() ? "behind NAT" : "has white IP");
 	
 	nodes.append(node);
 }
@@ -99,14 +100,20 @@ QList<SparkleNode*> Router::getMasters() const {
 	return masters;
 }
 
-size_t Router::getMasterCount() const {
-	size_t count = 0;
+QList<SparkleNode*> Router::getOtherMasters() const {
+	Q_ASSERT(self != NULL && self->isMaster());
+	
+	QList<SparkleNode*> masters;
 	
 	foreach(SparkleNode *node, nodes) {
-		if(node->isMaster())
-			count++;
+		if(node->isMaster() && node != self)
+			masters.append(node);
 	}
 	
-	return count;
+	return masters;
+}
+
+QList<SparkleNode*> Router::getNodes() const {
+	return nodes;
 }
 

@@ -44,7 +44,7 @@ void Log::emitMessage(loglevel_t loglevel, QString message) {
 	
 	final += message;
 	final += "\n";
-		
+
 	if(loglevel >= Warning)	std::fprintf(stderr, "%s", qPrintable(final));
 	else			std::fprintf(stdout, "%s", qPrintable(final));
 	

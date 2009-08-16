@@ -22,6 +22,7 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <SparkleNode.h>
 
 class Log {
 	enum loglevel_t {
@@ -34,11 +35,10 @@ class Log {
 	
 	class Stream {
 	public:
-		Stream(QString _format, loglevel_t _loglevel) : format(_format), ref_count(1), loglevel(_loglevel), base(10) {}
+		Stream(QString _format, loglevel_t _loglevel) : format(_format), loglevel(_loglevel), base(10) {}
 	
 		QString format;
 		QStringList list;
-		uint ref_count;
 		loglevel_t loglevel;
 		uint base;
 	};
@@ -60,6 +60,10 @@ public:
 	inline Log& operator<<(const char* v)	{ stream->list.append(v); return *this; }
 	inline Log& operator<<(bool v)		{ stream->list.append(v ? "true" : "false"); return *this; }
 	inline Log& operator<<(const QString v) { stream->list.append(v); return *this; }
+
+	inline Log& operator<<(const QHostAddress v)	{ stream->list.append(v.toString()); return *this; }
+	
+	inline Log& operator<<(const SparkleNode &v)	{ return *this << v.getRealIP().toString() << v.getRealPort(); }
 
 	inline static Log debug(const char* format)	{ return Log(format, Debug);	}
 	inline static Log info(const char* format)	{ return Log(format, Info);	}
