@@ -129,9 +129,12 @@ bool ArgumentParser::parse() {
 					invalid = true;
 
 					continue;
+				} else {
+					arg = "set";
 				}
-			} else
+			} else {
 				arg = "set";
+			}
 
 			if(!invalid) {
 				if(matching->argument)
