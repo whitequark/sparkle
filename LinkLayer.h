@@ -38,7 +38,7 @@ class LinkLayer : public QObject
 public:
 	LinkLayer(Router &router, PacketTransport &transport, RSAKeyPair &rsaKeyPair);
 
-	bool createNetwork(QHostAddress localAddress);
+	bool createNetwork(QHostAddress localAddress, quint8 networkDivisor);
 	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort);
 
 	void processPacket(QByteArray packet);
@@ -55,7 +55,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 4,
+		ProtocolVersion	= 5,
 	};
 
 	enum packet_type_t {
@@ -128,6 +128,7 @@ private:
 	};
 
 	struct register_reply_t {
+		quint8  networkDivisor;
 		quint8	isMaster;
 		quint32 sparkleIP;
 		quint8  sparkleMAC[6];
@@ -267,6 +268,8 @@ private:
 	QList<SparkleNode*> nodeSpool;
 	QList<SparkleNode*> awaitingNegotiation;
 	QHash<quint32, SparkleNode*> cookies;
+
+	quint8 networkDivisor;
 
 	join_step_t joinStep;
 

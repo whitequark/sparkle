@@ -57,6 +57,7 @@ int main(int argc, char *argv[]) {
 
 	QString profile = "default", configDir;
 	bool createNetwork = false, noTap = false;
+	int networkDivisor = 10;
 	QHostAddress localAddress = QHostAddress::Any, remoteAddress;
 	quint16 localPort = 1801, remotePort = 1801;
 
@@ -73,8 +74,8 @@ int main(int argc, char *argv[]) {
 		parser.registerOption(QChar::Null, "profile", ArgumentParser::RequiredArgument, &profile, NULL,
 			NULL, "use specified profile", "PROFILE");
 
-		parser.registerOption('c', "create", ArgumentParser::NoArgument, &createStr, NULL,
-			NULL, "\tcreate new network", NULL);
+		parser.registerOption('c', "create", ArgumentParser::OptionalArgument, &createStr, NULL,
+			NULL, "create new network with divisor DIV", "DIV");
 
 		parser.registerOption('j', "join", ArgumentParser::RequiredArgument, &joinStr, NULL,
 			NULL, "\n\t\t\tjoin existing network, PORT defaults to 1801", "HOST[:PORT]");
@@ -117,12 +118,19 @@ int main(int argc, char *argv[]) {
 		}
 		
 		if(createStr.isNull() && joinStr.isNull()) {
-			Log::fatal("specify --create or --join option, not both");
+			Log::fatal("specify at least --create or --join option");
 			return 1;
 		}
 		
-		if(!createStr.isNull())
+		if(!createStr.isNull()) {
 			createNetwork = true;
+			if(createStr != "set")
+				networkDivisor = createStr.toInt();
+			if(networkDivisor < 1 || networkDivisor > 50) {
+				Log::fatal("impossible setting of network divisor");
+				return 1;
+			}
+		}
 		
 		if(!joinStr.isNull()) {
 			QStringList parts = joinStr.split(":");
@@ -217,7 +225,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(createNetwork) {
-		if(!linkLayer.createNetwork(localAddress)) {
+		if(!linkLayer.createNetwork(localAddress, networkDivisor)) {
 			Log::fatal("cannot create network");
 			return 1;
 		}

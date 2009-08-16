@@ -58,7 +58,7 @@ bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort) {
 	return true;
 }
 
-bool LinkLayer::createNetwork(QHostAddress localIP) {
+bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 	SparkleNode *self = new SparkleNode(localIP, transport.getPort());
 	Q_CHECK_PTR(self);
 	self->setMaster(true);
@@ -71,6 +71,9 @@ bool LinkLayer::createNetwork(QHostAddress localIP) {
 		return false;
 	
 	Log::debug("link: created network, my endpoint is [%1]:%2") << localIP.toString() << transport.getPort();
+	
+	this->networkDivisor = networkDivisor;
+	Log::debug("link: network divisor is 1/%1") << networkDivisor;
 	
 	joinStep = JoinFinished;
 	emit joined(self);
@@ -670,6 +673,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 void LinkLayer::sendRegisterReply(SparkleNode* node) {
 	register_reply_t reply;
 	reply.isMaster = node->isMaster();
+	reply.networkDivisor = networkDivisor;
 	reply.sparkleIP = node->getSparkleIP().toIPv4Address();
 	
 	Q_ASSERT(node->getSparkleMAC().length() == 6);
@@ -693,6 +697,9 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	self->setAuthKey(hostKeyPair);
 	self->setMaster(reply->isMaster);
 	router.setSelfNode(self);
+	
+	networkDivisor = reply->networkDivisor;
+	Log::debug("link: network divisor is %1") << networkDivisor;
 	
 	joinStep = JoinFinished;
 	emit joined(self);
