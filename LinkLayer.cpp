@@ -749,6 +749,7 @@ void LinkLayer::sendRoute(SparkleNode* node, SparkleNode* target)
 	route.realPort = target->getRealPort();
 	route.sparkleIP = target->getSparkleIP().toIPv4Address();
 	route.isMaster = target->isMaster();
+	route.isBehindNAT = target->isBehindNAT();
 
 	Q_ASSERT(node->getSparkleMAC().length() == 6);
 	memcpy(route.sparkleMAC, target->getSparkleMAC().constData(), 6);
@@ -776,6 +777,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	target->setSparkleIP(QHostAddress(route->sparkleIP));
 	target->setSparkleMAC(QByteArray((const char*) route->sparkleMAC, 6));
 	target->setMaster(route->isMaster);
+	target->setBehindNAT(route->isBehindNAT);
 	
 	router.addNode(target);
 }
