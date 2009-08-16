@@ -85,12 +85,14 @@ bool RSAKeyPair::readFromFile(QString filename) {
 		return false;
 	}
 
-	QByteArray data = QByteArray::fromBase64(keyFile.readAll());
+	QByteArray rawdata = keyFile.readAll();
 
 	keyFile.close();
 
-	if(data.size() == 0)
-		Log::fatal("Your private key in wrong format, re-generate it\n");
+	if(rawdata.left(10) == "-----BEGIN")
+		Log::fatal("Your private key in wrong format, re-generate it");
+
+	QByteArray data = QByteArray::fromBase64(rawdata);
 
 	QDataStream stream(&data, QIODevice::ReadOnly);
 

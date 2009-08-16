@@ -46,7 +46,6 @@ void BlowfishKey::generate() {
 	rawKey.resize(32);
 	random_bytes((unsigned char *) rawKey.data(), rawKey.size());
 
-//	BF_set_key(&key, rawKey.size(), (unsigned char *) rawKey.data());
 	cb_setkey(key, (unsigned char *) rawKey.data(), rawKey.size());
 }
 
@@ -57,7 +56,6 @@ QByteArray BlowfishKey::getBytes() const {
 void BlowfishKey::setBytes(QByteArray raw) {
 	rawKey = raw;
 
-	//BF_set_key(&key, rawKey.size(), (unsigned char *) rawKey.data());
 	cb_setkey(key, (unsigned char *) rawKey.data(), rawKey.size());
 }
 
@@ -71,7 +69,6 @@ QByteArray BlowfishKey::encrypt(QByteArray data) const {
 
 	for(; data.size() > 0; data = data.right(data.size() - blocksize)) {
 		cb_encrypt(key, chunk, (unsigned char *) data.data());
-		//BF_ecb_encrypt((unsigned char *) data.data(), chunk, &key, BF_ENCRYPT);
 
 		output += QByteArray((char *) chunk, blocksize);
 	}
@@ -86,7 +83,6 @@ QByteArray BlowfishKey::decrypt(QByteArray data) const {
 
 	for(; data.size() > 0; data = data.right(data.size() - blocksize)) {
 		cb_decrypt(key, chunk, (unsigned char *) data.data());
-		//BF_ecb_encrypt((unsigned char *) data.data(), chunk, &key, BF_DECRYPT);
 
 		output += QByteArray((char *) chunk, blocksize);
 	}
