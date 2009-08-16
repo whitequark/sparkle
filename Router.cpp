@@ -99,15 +99,17 @@ QList<SparkleNode*> Router::getMasters() const {
 	return masters;
 }
 
-size_t Router::getMasterCount() const {
-	size_t count = 0;
+QList<SparkleNode*> Router::getOtherMasters() const {
+	Q_ASSERT(self != NULL && self->isMaster());
+	
+	QList<SparkleNode*> masters;
 	
 	foreach(SparkleNode *node, nodes) {
-		if(node->isMaster())
-			count++;
+		if(node->isMaster() && node != self)
+			masters.append(node);
 	}
 	
-	return count;
+	return masters;
 }
 
 QList<SparkleNode*> Router::getNodes() const {

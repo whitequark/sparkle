@@ -371,6 +371,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 		
 	if(!node->setAuthKey(key)) {
 		Log::warn("link: received malformed public key from [%1]:%2") << *node;
+		awaitingNegotiation.removeOne(node);
 		return;
 	} else {
 		Log::debug("link: received public key for [%1]:%2") << *node;
@@ -651,27 +652,24 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	
 	node->configureByKey();
 	
-	if(router.getMasterCount() == 1)
+	if(router.getMasters().count() == 1)
 		node->setMaster(true);
 	else
 		node->setMaster(false);
 
-	router.addNode(node);
 	sendRegisterReply(node);
 	
-	if(node->isMaster()) {
-		QList<SparkleNode*> nodes = router.getNodes();
-		foreach(SparkleNode* oldNode, nodes) {
-			if(*node != *oldNode)
-				sendRoute(node, oldNode);
-		}
-	} else {
-		QList<SparkleNode*> masters = router.getMasters();
-		foreach(SparkleNode* master, masters) {
-			if(*master != *node)
-				sendRoute(node, master);
-		}
-	}
+	QList<SparkleNode*> updates;
+	if(node->isMaster())	updates = router.getNodes();
+	else			updates = router.getMasters();
+
+	foreach(SparkleNode* update, updates)
+		sendRoute(node, update);
+
+	foreach(SparkleNode* master, router.getOtherMasters())
+		sendRoute(master, node);
+
+	router.addNode(node);
 }
 
 /* RegisterRequest */
@@ -731,7 +729,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_t), node, "Route"))
 		return;
 
-	if(!node->isMaster() && router.getMasters().count() > 0) {
+	if(!node->isMaster() && router.getOtherMasters().count() > 0) {
 		Log::warn("link: Route packet from unauthoritative source [%1]:%2") << *node;
 		return;
 	}

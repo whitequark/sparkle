@@ -39,9 +39,9 @@ public:
 	SparkleNode* searchSparkleNode(QHostAddress sparkleIP) const;
 	
 	SparkleNode* selectMaster() const;
-	QList<SparkleNode*> getMasters() const;
-	size_t getMasterCount() const;
 
+	QList<SparkleNode*> getMasters() const;
+	QList<SparkleNode*> getOtherMasters() const;
 	QList<SparkleNode*> getNodes() const;
 
 private:
