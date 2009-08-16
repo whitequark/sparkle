@@ -55,7 +55,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 5,
+		ProtocolVersion	= 6,
 	};
 
 	enum packet_type_t {
@@ -124,61 +124,65 @@ private:
 	};
 
 	struct register_request_t {
-		/* empty now */
+		quint8		isBehindNAT;
 	};
 
 	struct register_reply_t {
-		quint8  networkDivisor;
-		quint8	isMaster;
-		quint32 sparkleIP;
-		quint8  sparkleMAC[6];
+		quint8		networkDivisor;
+		quint8		isMaster;
+		quint32		sparkleIP;
+		quint8		sparkleMAC[6];
+		/* filled only when NAT is detected */
+		quint32		realIP;
+		quint16		realPort;
 	};
 
 	struct route_t {
-		quint32	sparkleIP;
-		quint8	sparkleMAC[6];
-		quint32	realIP;
-		quint16	realPort;
-		quint8	isMaster;
+		quint32		sparkleIP;
+		quint8		sparkleMAC[6];
+		quint32		realIP;
+		quint16		realPort;
+		quint8		isMaster;
+		quint8		isBehindNAT;
 	};
 
 	struct route_request_t {
-		quint32 sparkleIP;
+		quint32		sparkleIP;
 	};
 
 	struct route_missing_t {
-		quint32 sparkleIP;
+		quint32		sparkleIP;
 	};
 
 	struct ethernet_header_t {
-		quint8	dest[6];
-		quint8	src[6];
-		quint16	type;
+		quint8		dest[6];
+		quint8		src[6];
+		quint16		type;
 	} __attribute__((packed));
 
 	struct arp_packet_t {
-		quint16	htype;
-		quint16 ptype;
-		quint8	hlen;
-		quint8	plen;
-		quint16	oper;
-		quint8	sha[6];
-		quint32	spa;
-		quint8	tha[6];
-		quint32	tpa;
+		quint16		htype;
+		quint16		ptype;
+		quint8		hlen;
+		quint8		plen;
+		quint16		oper;
+		quint8		sha[6];
+		quint32		spa;
+		quint8		tha[6];
+		quint32		tpa;
 	} __attribute__((packed));
 
 	struct ipv4_header_t {
-		quint8  version;
-		quint8  diffserv;
-		quint16 size;
-		quint16 id;
-		quint16 fragments;
-		quint8  ttl;
-		quint8  protocol;
-		quint16 checksum;
-		quint32 src;
-		quint32 dest;
+		quint8		version;
+		quint8		diffserv;
+		quint16		size;
+		quint16		id;
+		quint16		fragments;
+		quint8 		ttl;
+		quint8 		protocol;
+		quint16		checksum;
+		quint32		src;
+		quint32		dest;
 	} __attribute__((packed));
 
 	enum join_step_t {
@@ -242,7 +246,7 @@ private:
 	void handlePing(QByteArray &payload, SparkleNode* node);
 	void joinGotPinged();
 
-	void sendRegisterRequest(SparkleNode* node);
+	void sendRegisterRequest(SparkleNode* node, bool isBehindNAT);
 	void handleRegisterRequest(QByteArray &payload, SparkleNode* node);
 
 	void sendRegisterReply(SparkleNode* node);

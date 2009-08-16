@@ -610,11 +610,15 @@ void LinkLayer::handlePing(QByteArray &payload, SparkleNode* node) {
 
 void LinkLayer::pingTimeout() {
 	if(joinPingsArrived == 0) {
-		Log::fatal("link: no pings arrived");
-		return;
+		Log::debug("link: no pings arrived, NAT is detected");
+		
+		joinStep = JoinRegistration;
+		
+		Log::debug("link: registering on [%1]:%2") << *joinMaster;
+		sendRegisterRequest(joinMaster, true);
+	} else {
+		joinGotPinged();
 	}
-	
-	joinGotPinged();
 }
 
 void LinkLayer::joinGotPinged() {
@@ -628,13 +632,14 @@ void LinkLayer::joinGotPinged() {
 				<< QHostAddress(joinPing.addr) << joinPing.port;
 	
 	Log::debug("link: registering on [%1]:%2") << *joinMaster;
-	sendRegisterRequest(joinMaster);
+	sendRegisterRequest(joinMaster, false);
 }
 
 /* RegisterRequest */
 
-void LinkLayer::sendRegisterRequest(SparkleNode* node) {
+void LinkLayer::sendRegisterRequest(SparkleNode* node, bool isBehindNAT) {
 	register_request_t req;
+	req.isBehindNAT = isBehindNAT;
 	
 	sendEncryptedPacket(RegisterRequest, QByteArray((const char*) &req, sizeof(register_request_t)), node);
 }
@@ -651,11 +656,16 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	const register_request_t* req = (const register_request_t*) payload.constData();
 	
 	node->configureByKey();
+	node->setBehindNAT(req->isBehindNAT);
 	
-	if(router.getMasters().count() == 1)
-		node->setMaster(true);
-	else
+	if(!node->isBehindNAT()) {
+		if(router.getMasters().count() == 1)
+			node->setMaster(true);
+		else
+			node->setMaster(false);
+	} else {
 		node->setMaster(false);
+	}
 
 	sendRegisterReply(node);
 	
@@ -672,13 +682,19 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	router.addNode(node);
 }
 
-/* RegisterRequest */
+/* RegisterReply */
 
 void LinkLayer::sendRegisterReply(SparkleNode* node) {
 	register_reply_t reply;
 	reply.isMaster = node->isMaster();
 	reply.networkDivisor = networkDivisor;
 	reply.sparkleIP = node->getSparkleIP().toIPv4Address();
+	if(node->isBehindNAT()) {
+		reply.realIP = node->getRealIP().toIPv4Address();
+		reply.realPort = node->getRealPort();
+	} else {
+		reply.realIP = reply.realPort = 0;
+	}
 	
 	Q_ASSERT(node->getSparkleMAC().length() == 6);
 	memcpy(reply.sparkleMAC, node->getSparkleMAC().constData(), 6);
@@ -695,7 +711,13 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	
 	const register_reply_t* reply = (const register_reply_t*) payload.constData();
 
-	SparkleNode* self = wrapNode(QHostAddress(joinPing.addr), joinPing.port);
+	SparkleNode* self;
+	if(reply->realIP != 0) { // i am behind NAT
+		Log::debug("link: external endpoint was assigned by NAT passthrough");
+		self = wrapNode(QHostAddress(reply->realIP), reply->realPort);
+	} else {
+		self = wrapNode(QHostAddress(joinPing.addr), joinPing.port);
+	}
 	self->setSparkleIP(QHostAddress(reply->sparkleIP));
 	self->setSparkleMAC(QByteArray((const char*) reply->sparkleMAC, 6));
 	self->setAuthKey(hostKeyPair);

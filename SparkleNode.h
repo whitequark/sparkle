@@ -45,6 +45,9 @@ public:
 	QByteArray getSparkleMAC() const	{ return sparkleMAC; }
 	
 	QString getPrettySparkleMAC() const;
+	
+	bool isBehindNAT() const		{ return behindNAT; }
+	void setBehindNAT(bool behindNAT);
 
 	void setSparkleIP(const QHostAddress& ip);
 	void setSparkleMAC(const QByteArray& mac);
@@ -79,7 +82,7 @@ private:
 	QHostAddress sparkleIP;
 	QByteArray sparkleMAC;
 	
-	bool master;
+	bool master, behindNAT;
 
 	RSAKeyPair authKey;
 	bool authKeyPresent;
