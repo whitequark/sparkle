@@ -50,7 +50,7 @@ void Log::emitMessage(loglevel_t loglevel, QString message) {
 	
 	if(loglevel == Fatal) {
 		std::fprintf(stderr, "Fatal error encountered, exiting.\n");
-		abort();
+		exit(1);
 	}
 }
 

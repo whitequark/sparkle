@@ -34,3 +34,10 @@ unix {
 	SOURCES += LinuxTAP.cpp
 	HEADERS += LinuxTAP.h
 }
+
+win32 {
+	QMAKE_LIBS += -lws2_32
+	
+	CONFIG -= windows
+	CONFIG += console
+}
