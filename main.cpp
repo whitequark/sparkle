@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 	QString profile = "default", configDir;
 	bool createNetwork = false, noTap = false;
 	int networkDivisor = 10;
-	QHostAddress localAddress = QHostAddress::Any, remoteAddress;
+	QHostAddress localAddress = QHostAddress::Any, remoteAddress, bindAddress = QHostAddress::Any;
 	quint16 localPort = 1801, remotePort = 1801;
 
 	int keyLength = 1024;
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	{
-		QString createStr, joinStr, bindStr, keyLenStr, getPubkeyStr, noTapStr;
+		QString createStr, joinStr, endpointStr, bindStr, keyLenStr, getPubkeyStr, noTapStr;
 
 		ArgumentParser parser(app.arguments());
 
@@ -75,13 +75,16 @@ int main(int argc, char *argv[]) {
 			NULL, "use specified profile", "PROFILE");
 
 		parser.registerOption('c', "create", ArgumentParser::OptionalArgument, &createStr, NULL,
-			NULL, "create new network with divisor DIV", "DIV");
+			NULL, "create new network with divisor DIV (10 by default)", "DIV");
 
 		parser.registerOption('j', "join", ArgumentParser::RequiredArgument, &joinStr, NULL,
 			NULL, "\n\t\t\tjoin existing network, PORT defaults to 1801", "HOST[:PORT]");
 
-		parser.registerOption('b', "bind", ArgumentParser::RequiredArgument, &bindStr, NULL,
-			NULL, "\n\t\t\tbind to local UDP endpoint HOST:PORT, defaults to *:1801", "HOST[:PORT]");
+		parser.registerOption('e', "endpoint", ArgumentParser::RequiredArgument, &endpointStr, NULL,
+			NULL, "\n\t\tuse HOST:PORT as local endpoint, defaults to *:1801", "HOST[:PORT]");
+
+		parser.registerOption('b', "bind-to", ArgumentParser::RequiredArgument, &bindStr, NULL,
+			NULL, "\n\t\tbind to local interface with address IP (binds to all by default)", "IP");
 
 		parser.registerOption(QChar::Null, "generate-key", ArgumentParser::RequiredArgument,
 			&keyLenStr, NULL, NULL, "generate new RSA key pair with specified length", "BITS");
@@ -151,8 +154,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		
-		if(!bindStr.isNull()) {
-			QStringList parts = bindStr.split(":");
+		if(!endpointStr.isNull()) {
+			QStringList parts = endpointStr.split(":");
 
 			if(parts[0] == "*") {
 				localAddress = QHostAddress::Any;
@@ -169,6 +172,14 @@ int main(int argc, char *argv[]) {
 				localPort = parts[1].toInt();
 			} else {
 				Log::fatal("invalid endpoint %1") << joinStr;
+				return 1;
+			}
+		}
+		
+		if(!bindStr.isNull()) {
+			bindAddress = checkoutAddress(bindStr);
+			if(bindAddress.isNull()) {
+				Log::fatal("invalid address %1") << bindStr;
 				return 1;
 			}
 		}
@@ -209,7 +220,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	Router router;
-	UdpPacketTransport transport(localAddress, localPort);
+	UdpPacketTransport transport(bindAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
 	if(!noTap) {
