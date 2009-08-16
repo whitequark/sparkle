@@ -63,26 +63,24 @@ int main(int argc, char *argv[]) {
 	int keyLength = 1024;
 	bool generateNewKeypair = false;
 	
-	bool bindToEverything;
-
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	{
-		QString createStr, joinStr, portStr, keyLenStr, getPubkeyStr, bindEverythingStr;
+		QString createStr, joinStr, bindStr, keyLenStr, getPubkeyStr;
 
 		ArgumentParser parser(app.arguments());
 
 		parser.registerOption(QChar::Null, "profile", ArgumentParser::RequiredArgument, &profile, NULL,
 			NULL, "use specified profile", "PROFILE");
 
-		parser.registerOption('c', "create", ArgumentParser::RequiredArgument, &createStr, NULL,
-			NULL, "create new network using HOST as external address of this node", "HOST");
+		parser.registerOption('c', "create", ArgumentParser::NoArgument, &createStr, NULL,
+			NULL, "\tcreate new network", NULL);
 
 		parser.registerOption('j', "join", ArgumentParser::RequiredArgument, &joinStr, NULL,
-			NULL, "join existing network (PORT defaults to 1801 if not specified)", "HOST:PORT");
+			NULL, "\n\t\t\tjoin existing network, PORT defaults to 1801", "HOST[:PORT]");
 
-		parser.registerOption('p', "port", ArgumentParser::RequiredArgument, &portStr, NULL,
-			NULL, "listen at specified local UDP port PORT (defaults to 1801)", "PORT");
+		parser.registerOption('b', "bind", ArgumentParser::RequiredArgument, &bindStr, NULL,
+			NULL, "\n\t\t\tbind to local UDP endpoint HOST:PORT, defaults to *:1801", "HOST[:PORT]");
 
 		parser.registerOption(QChar::Null, "generate-key", ArgumentParser::RequiredArgument,
 			&keyLenStr, NULL, NULL, "generate new RSA key pair with specified length", "BITS");
@@ -90,9 +88,6 @@ int main(int argc, char *argv[]) {
 		parser.registerOption(QChar::Null, "get-pubkey", ArgumentParser::NoArgument,
 			&getPubkeyStr, NULL, NULL, "\tprint my public key", NULL);
 		
-		parser.registerOption(QChar::Null, "bind-to-everything", ArgumentParser::NoArgument,
-			&bindEverythingStr, NULL, NULL, "bind to all interfaces (valid for network creation)", NULL);
-
 		if(!parser.parse()) { // help was displayed
 			return 0;
 		}
@@ -119,18 +114,12 @@ int main(int argc, char *argv[]) {
 		}
 		
 		if(createStr.isNull() && joinStr.isNull()) {
-			Log::fatal("specify --create or --join option");
+			Log::fatal("specify --create or --join option, not both");
 			return 1;
 		}
 		
-		if(!createStr.isNull()) {
-			localAddress = checkoutAddress(createStr);
-			if(localAddress.isNull()) {
-				Log::fatal("invalid external address %1") << createStr;
-				return 1;
-			}
+		if(!createStr.isNull())
 			createNetwork = true;
-		}
 		
 		if(!joinStr.isNull()) {
 			QStringList parts = joinStr.split(":");
@@ -142,10 +131,33 @@ int main(int argc, char *argv[]) {
 			}
 			
 			if(parts.size() == 1) {
+				/* already assigned */
 			} else if(parts.size() == 2) {
 				remotePort = parts[1].toInt();
 			} else {
 				Log::fatal("invalid node address %1") << joinStr;
+				return 1;
+			}
+		}
+		
+		if(!bindStr.isNull()) {
+			QStringList parts = bindStr.split(":");
+
+			if(parts[0] == "*") {
+				localAddress = QHostAddress::Any;
+			} else {
+				localAddress = checkoutAddress(parts[0]);
+				if(localAddress.isNull()) {
+					Log::fatal("invalid address %1") << parts[0];
+					return 1;
+				}
+			}
+		
+			if(parts.size() == 1) {
+			} else if(parts.size() == 2) {
+				localPort = parts[1].toInt();
+			} else {
+				Log::fatal("invalid endpoint %1") << joinStr;
 				return 1;
 			}
 		}
@@ -155,11 +167,10 @@ int main(int argc, char *argv[]) {
 			keyLength = keyLenStr.toInt();
 		}
 		
-		if(!portStr.isNull()) {
-			localPort = portStr.toInt();
+		if(createNetwork && localAddress == QHostAddress::Any) {
+			Log::fatal("you need to specify local endpoint to create network");
+			return 1;
 		}
-		
-		bindToEverything = !bindEverythingStr.isNull();
 	}
 
 	RSAKeyPair hostPair;
@@ -183,20 +194,16 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
-	QHostAddress bindAddress;
-	if(bindToEverything)	bindAddress = QHostAddress::Any;
-	else			bindAddress = localAddress;
-	
 	Router router;
-	UdpPacketTransport transport(bindAddress, localPort);
+	UdpPacketTransport transport(localAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
 #ifdef Q_WS_X11
-	LinuxTAP tap(linkLayer);
+	/*LinuxTAP tap(linkLayer);
 	if(tap.createInterface("sparkle%d") == false) {
 		Log::fatal("cannot initialize TAP");
 		return 1;
-	}
+	}*/
 #endif
 
 	if(createNetwork) {
