@@ -16,11 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <signal.h>
+
 #include <QtDebug>
 #include <openssl/rand.h>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QSocketNotifier>
 
 #include "RSAKeyPair.h"
 #include "ArgumentParser.h"
@@ -54,7 +57,7 @@ QHostAddress checkoutAddress(QString strAddr) {
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
 	app.setApplicationName("sparkle");
-
+	
 	QString profile = "default", configDir;
 	bool createNetwork = false, noTap = false;
 	int networkDivisor = 10;
@@ -108,22 +111,17 @@ int main(int argc, char *argv[]) {
 	
 			if(!keyPair.readFromFile(configDir + "/rsa_key")) {
 				Log::fatal("cannot read RSA keypair");
-				return 1;
 			} else {
 				printf("%s", QString(keyPair.getPublicKey()).toLocal8Bit().constData());
 				return 0;
 			}
 		}
 
-		if(!createStr.isNull() && !joinStr.isNull()) {
+		if(!createStr.isNull() && !joinStr.isNull())
 			Log::fatal("options --create and --join cannot be specified simultaneously");
-			return 1;
-		}
 		
-		if(createStr.isNull() && joinStr.isNull()) {
+		if(createStr.isNull() && joinStr.isNull())
 			Log::fatal("specify at least --create or --join option");
-			return 1;
-		}
 		
 		if(!createStr.isNull()) {
 			createNetwork = true;
@@ -131,7 +129,6 @@ int main(int argc, char *argv[]) {
 				networkDivisor = createStr.toInt();
 			if(networkDivisor < 1 || networkDivisor > 50) {
 				Log::fatal("impossible setting of network divisor");
-				return 1;
 			}
 		}
 		
@@ -141,7 +138,6 @@ int main(int argc, char *argv[]) {
 			remoteAddress = checkoutAddress(parts[0]);
 			if(remoteAddress.isNull()) {
 				Log::fatal("invalid node address %1") << parts[0];
-				return 1;
 			}
 			
 			if(parts.size() == 1) {
@@ -150,7 +146,6 @@ int main(int argc, char *argv[]) {
 				remotePort = parts[1].toInt();
 			} else {
 				Log::fatal("invalid node address %1") << joinStr;
-				return 1;
 			}
 		}
 		
@@ -163,7 +158,6 @@ int main(int argc, char *argv[]) {
 				localAddress = checkoutAddress(parts[0]);
 				if(localAddress.isNull()) {
 					Log::fatal("invalid address %1") << parts[0];
-					return 1;
 				}
 			}
 		
@@ -172,16 +166,13 @@ int main(int argc, char *argv[]) {
 				localPort = parts[1].toInt();
 			} else {
 				Log::fatal("invalid endpoint %1") << joinStr;
-				return 1;
 			}
 		}
 		
 		if(!bindStr.isNull()) {
 			bindAddress = checkoutAddress(bindStr);
-			if(bindAddress.isNull()) {
+			if(bindAddress.isNull())
 				Log::fatal("invalid address %1") << bindStr;
-				return 1;
-			}
 		}
 		
 		if(!keyLenStr.isNull()) {
@@ -189,10 +180,8 @@ int main(int argc, char *argv[]) {
 			keyLength = keyLenStr.toInt();
 		}
 		
-		if(createNetwork && localAddress == QHostAddress::Any) {
+		if(createNetwork && localAddress == QHostAddress::Any)
 			Log::fatal("you need to specify local endpoint to create network");
-			return 1;
-		}
 		
 		if(!noTapStr.isNull())
 			noTap = true;
@@ -203,20 +192,14 @@ int main(int argc, char *argv[]) {
 	if(!QFile::exists(configDir + "/rsa_key") || generateNewKeypair) {
 		Log::debug("generating new RSA key pair (%1 bits)") << keyLength;
 
-		if(!hostPair.generate(keyLength)) {
+		if(!hostPair.generate(keyLength))
 			Log::fatal("cannot generate new keypair");
-			return 1;
-		}
 
-		if(!hostPair.writeToFile(configDir + "/rsa_key")) {
+		if(!hostPair.writeToFile(configDir + "/rsa_key"))
 			Log::fatal("cannot write new keypair");
-			return 1;
-		}
 	} else {
-		if(!hostPair.readFromFile(configDir + "/rsa_key")) {
+		if(!hostPair.readFromFile(configDir + "/rsa_key"))
 			Log::fatal("cannot read RSA keypair");
-			return 1;
-		}
 	}
 	
 	Router router;
@@ -227,23 +210,17 @@ int main(int argc, char *argv[]) {
 	LinuxTAP tap(linkLayer);
 	if(!noTap) {
 		tap.bind();
-		if(tap.createInterface("sparkle%d") == false) {
+		if(tap.createInterface("sparkle%d") == false)
 			Log::fatal("cannot initialize TAP");
-			return 1;
-		}
 	}
 #endif
 
 	if(createNetwork) {
-		if(!linkLayer.createNetwork(localAddress, networkDivisor)) {
+		if(!linkLayer.createNetwork(localAddress, networkDivisor))
 			Log::fatal("cannot create network");
-			return 1;
-		}
 	} else {
-		if(!linkLayer.joinNetwork(remoteAddress, remotePort)) {
+		if(!linkLayer.joinNetwork(remoteAddress, remotePort))
 			Log::fatal("cannot join network");
-			return 1;
-		}
 	}
 
 	return app.exec();

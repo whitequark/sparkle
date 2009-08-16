@@ -83,13 +83,12 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 
 bool LinkLayer::initTransport() {
 	if(!transport.beginReceiving()) {
-		Log::fatal("link: cannot initiate transport (port is already bound?)");
+		Log::error("link: cannot initiate transport (port is already bound?)");
 		return false;
+	} else {
+		Log::debug("link: transport initiated");
+		return true;
 	}
-	
-	Log::debug("link: transport initiated");
-	
-	return true;
 }
 
 bool LinkLayer::isMaster() {
@@ -326,10 +325,8 @@ void LinkLayer::handleProtocolVersionReply(QByteArray &payload, SparkleNode* nod
 	const protocol_version_reply_t *ver = (const protocol_version_reply_t *) payload.data();
 	Log::debug("link: remote protocol version: %1") << ver->version;
 	
-	if(ver->version != ProtocolVersion) {
+	if(ver->version != ProtocolVersion)
 		Log::fatal("link: protocol version mismatch: got %1, expected %2") << ver->version << ProtocolVersion;
-		return;
-	}
 	
 	joinStep = JoinMasterNodeRequest;
 	sendMasterNodeRequest(node);
@@ -475,10 +472,8 @@ void LinkLayer::handleMasterNodeRequest(QByteArray &payload, SparkleNode* node) 
 	// scatter load over the whole network
 	SparkleNode* master = router.selectMaster();
 	
-	if(master == NULL) {
+	if(master == NULL)
 		Log::fatal("link: cannot choose master, this is probably a bug");
-		return;
-	}
 	
 	sendMasterNodeReply(node, master);
 }
@@ -601,7 +596,6 @@ void LinkLayer::handlePing(QByteArray &payload, SparkleNode* node) {
 		joinPing = *ping;
 	} else if(joinPing.addr != ping->addr || joinPing.port != ping->port) {
 		Log::fatal("link: got nonidentical pings");
-		return;
 	}
 	
 	if(joinPingsArrived == joinPingsEmitted)
