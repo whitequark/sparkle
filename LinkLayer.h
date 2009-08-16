@@ -55,7 +55,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 6,
+		ProtocolVersion	= 7,
 	};
 
 	enum packet_type_t {
