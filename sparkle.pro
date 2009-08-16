@@ -2,7 +2,8 @@ TEMPLATE = app
 TARGET = sparkgap
 DEPENDPATH += .
 INCLUDEPATH += .
-QMAKE_LIBS += -lssl
+CONFIG += release
+CONFIG -= debug
 QT -= gui
 QT += network
 
@@ -25,7 +26,9 @@ SOURCES += main.cpp \
 	BlowfishKey.cpp \
 	UdpPacketTransport.cpp \
 	SHA1Digest.cpp \
-	Router.cpp
+	Router.cpp \
+	crypto/sha1.c crypto/rsa.c crypto/bignum.c crypto/havege.c crypto/timing.c \
+	crypto/blowfish.c random.cpp
 
 unix { 
 	SOURCES += LinuxTAP.cpp

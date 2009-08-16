@@ -19,56 +19,59 @@
 #include "RSAKeyPair.h"
 
 #include <QFile>
-#include <openssl/pem.h>
+#include "crypto/rsa.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include "random.h"
+#include "Log.h"
 
 RSAKeyPair::RSAKeyPair(QObject *parent) : QObject(parent) {
-	key = RSA_new();
+	rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);
 }
 
 RSAKeyPair::~RSAKeyPair() {
-	RSA_free(key);
+	mpi_free(&key.N);
+	mpi_free(&key.E);
+	mpi_free(&key.D);
+	mpi_free(&key.P);
+	mpi_free(&key.Q);
+	mpi_free(&key.DP);
+	mpi_free(&key.DQ);
+	mpi_free(&key.QP);
+	mpi_free(&key.RN);
+	mpi_free(&key.RP);
+	mpi_free(&key.RQ);
 }
 
 bool RSAKeyPair::generate(int bits) {
-	RSA *newKey = RSA_generate_key(bits, 65537, NULL, NULL);
-
-	if(newKey != NULL) {
-		RSA_free(key);
-		key = newKey;
-
-		return true;
-	} else {
-		return false;
-	}
+	return rsa_gen_key(&key, bits, 65537) == 0;
 }
 
 bool RSAKeyPair::writeToFile(QString filename) const {
-	BIO *mem = BIO_new(BIO_s_mem());
+	QByteArray rawKey;
 
-	if(mem == NULL) {
-		return false;
-	}
+	QDataStream stream(&rawKey, QIODevice::WriteOnly);
 
-	if(PEM_write_bio_RSAPrivateKey(mem, key, NULL, NULL, 0, NULL, NULL) == 0) {
-		BIO_free(mem);
-
-		return false;
-	}
-	
-	char *pointer;
-	long len = BIO_get_mem_data(mem, &pointer);
-
-	QByteArray data(pointer, len);
-
-	BIO_free(mem);
+	stream << key.ver;
+	stream << key.len;
+	stream << key.N;
+	stream << key.E;
+	stream << key.D;
+	stream << key.P;
+	stream << key.Q;
+	stream << key.DP;
+	stream << key.DQ;
+	stream << key.QP;
+	stream << key.RN;
+	stream << key.RP;
+	stream << key.RQ;
 
 	QFile keyFile(filename);
 	if(!keyFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
 		return false;
 	}
 
-	keyFile.write(data);
+	keyFile.write(rawKey.toBase64());
 
 	keyFile.close();
 
@@ -77,91 +80,79 @@ bool RSAKeyPair::writeToFile(QString filename) const {
 
 bool RSAKeyPair::readFromFile(QString filename) {
 	QFile keyFile(filename);
+
 	if(!keyFile.open(QIODevice::ReadOnly)) {
 		return false;
 	}
 
-	QByteArray data = keyFile.readAll();
+	QByteArray rawdata = keyFile.readAll();
 
 	keyFile.close();
 
-	BIO *mem = BIO_new_mem_buf(data.data(), data.size());
+	if(rawdata.left(10) == "-----BEGIN")
+		Log::fatal("Your private key in wrong format, re-generate it");
 
-	if(mem == NULL)
-		return false;
+	QByteArray data = QByteArray::fromBase64(rawdata);
 
-	RSA *newKey = PEM_read_bio_RSAPrivateKey(mem, NULL, NULL, NULL);
+	QDataStream stream(&data, QIODevice::ReadOnly);
 
-	BIO_free(mem);
+	stream >> key.ver;
+	stream >> key.len;
+	stream >> key.N;
+	stream >> key.E;
+	stream >> key.D;
+	stream >> key.P;
+	stream >> key.Q;
+	stream >> key.DP;
+	stream >> key.DQ;
+	stream >> key.QP;
+	stream >> key.RN;
+	stream >> key.RP;
+	stream >> key.RQ;
 
-	if(newKey) {
-		RSA_free(key);
-
-		key = newKey;
-
-		return true;
-	} else
-		return false;
-
+	return true;
 }
 
 QByteArray RSAKeyPair::getPublicKey() const {
-	BIO *mem = BIO_new(BIO_s_mem());
+	QByteArray rawKey;
 
-	if(mem == NULL)
-		return QByteArray();
+	QDataStream stream(&rawKey, QIODevice::WriteOnly);
 
-	if(PEM_write_bio_RSAPublicKey(mem, key) == 0) {
-		BIO_free(mem);
+	stream << key.ver;
+	stream << key.len;
+	stream << key.N;
+	stream << key.E;
+	stream << key.RN;
 
-		return QByteArray();
-	}
-
-	char *pointer;
-	long len = BIO_get_mem_data(mem, &pointer);
-
-	QByteArray data(pointer, len);
-
-	BIO_free(mem);
-
-	return data;
+	return rawKey;
 }
 
 bool RSAKeyPair::setPublicKey(QByteArray data) {
-	BIO *mem = BIO_new_mem_buf(data.data(), data.size());
+	QDataStream stream(&data, QIODevice::ReadOnly);
 
-	if(mem == NULL)
-		return false;
+	stream >> key.ver;
+	stream >> key.len;
+	stream >> key.N;
+	stream >> key.E;
+	stream >> key.RN;
 
-	RSA *newKey = PEM_read_bio_RSAPublicKey(mem, NULL, NULL, NULL);
-
-	BIO_free(mem);
-
-	if(newKey) {
-		RSA_free(key);
-
-		key = newKey;
-
-		return true;
-	} else {
-		return false;
-	}
+	return true;
 }
 
 QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
 	QByteArray output;
 
-	int rsize = RSA_size(key);
+	int rsize = key.len;
 
-	int flen = rsize - 41;
+	int flen = rsize - 11;
 	unsigned char chunk[rsize];
 
 	for(; plaintext.size() > 0; ) {
 		int dlen = qMin<int>(flen, plaintext.length());
 
-		int enc = RSA_public_encrypt(dlen, (unsigned char *) plaintext.data(), chunk, key, RSA_PKCS1_OAEP_PADDING);
+		rsa_pkcs1_encrypt(&key, RSA_PUBLIC, dlen, (unsigned char *) plaintext.data(), chunk);
 
-		output += QByteArray((char *) chunk, enc);
+		output += QByteArray((char *) chunk, rsize);
 
 		plaintext = plaintext.right(plaintext.size() - dlen);
 	}
@@ -172,16 +163,16 @@ QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
 QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
 	QByteArray output;
 
-	int rsize = RSA_size(key);
+	int rsize = key.len;
 
-	int flen = rsize - 41;
-
-	unsigned char chunk[flen];
+	unsigned char chunk[rsize];
 
 	for(; cryptotext.size() > 0; ) {
 		int dlen = qMin<int>(rsize, cryptotext.size());
 
-		int dec = RSA_private_decrypt(dlen, (unsigned char *) cryptotext.data(), chunk, key, RSA_PKCS1_OAEP_PADDING);
+		int dec;
+
+		rsa_pkcs1_decrypt(&key, RSA_PRIVATE, &dec, (unsigned char *) cryptotext.data(), chunk, dlen);
 
 		output += QByteArray((char *) chunk, dec);
 
@@ -189,4 +180,26 @@ QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
 	}
 
 	return output;
+}
+
+QDataStream & operator<< (QDataStream& stream, const mpi &data) {
+	stream << ((qint32) data.s);
+	stream << ((qint32) data.n);
+
+	for(int i = 0; i < data.n; i++)
+		stream << ((quint32) data.p[i]);
+
+	return stream;
+}
+
+QDataStream & operator >> (QDataStream& stream, mpi &data) {
+	stream >> (qint32 &) data.s;
+	stream >> (qint32 &) data.n;
+
+	data.p = (t_int *) malloc(sizeof(t_int) * data.n);
+
+	for(int i = 0; i < data.n; i++)
+		stream >> ((quint32 &) data.p[i]);
+
+	return stream;
 }

@@ -650,17 +650,17 @@ void LinkLayer::sendRegisterRequest(SparkleNode* node, bool isBehindNAT) {
 void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(register_request_t), node, "RegisterRequest"))
 		return;
-	
+
 	if(!router.getSelfNode()->isMaster()) {
 		Log::warn("link: got RegisterRequest while not master");
 		return;
 	}
-	
+
 	const register_request_t* req = (const register_request_t*) payload.constData();
-	
+
 	node->configureByKey();
 	node->setBehindNAT(req->isBehindNAT);
-	
+
 	if(!node->isBehindNAT()) {
 		if(router.getMasters().count() == 1)
 			node->setMaster(true);

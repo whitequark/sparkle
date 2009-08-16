@@ -19,8 +19,8 @@
 #ifndef __BLOWFISH__H__
 #define __BLOWFISH__H__
 
-#include <openssl/blowfish.h>
 #include <QObject>
+#include <stdint.h>
 
 class BlowfishKey: public QObject
 {
@@ -38,8 +38,13 @@ public:
 	QByteArray decrypt(QByteArray data) const;
 
 private:
-	BF_KEY key;
+	void *key;
 	QByteArray rawKey;
+
+	size_t keylen, blocksize, contextsize;
+	int (*cb_setkey)(void *c, const uint8_t *key, unsigned keylen);
+	void (*cb_encrypt)(void *c, uint8_t *outbuf, const uint8_t *inbuf);
+	void (*cb_decrypt)(void *c, uint8_t *outbuf, const uint8_t *inbuf);
 };
 
 #endif
