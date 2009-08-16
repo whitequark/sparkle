@@ -21,7 +21,11 @@
 #include <QHostInfo>
 #include <QTimer>
 #include <QtGlobal>
+#ifdef QT_WS_WIN
+#include <winsock.h>
+#else
 #include <arpa/inet.h>
+#endif
 
 #include "LinkLayer.h"
 #include "SparkleNode.h"

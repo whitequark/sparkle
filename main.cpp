@@ -19,7 +19,6 @@
 #include <signal.h>
 
 #include <QtDebug>
-#include <openssl/rand.h>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
