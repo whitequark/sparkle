@@ -87,6 +87,14 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 	return true;
 }
 
+void LinkLayer::exitNetwork() {
+	Log::info("link: sending exit notification");
+	
+	/* */
+	
+	Log::info("link: ready for shutdown");
+}
+
 bool LinkLayer::initTransport() {
 	if(!transport.beginReceiving()) {
 		Log::error("link: cannot initiate transport (port is already bound?)");

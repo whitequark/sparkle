@@ -211,6 +211,8 @@ int main(int argc, char *argv[]) {
 	UdpPacketTransport transport(bindAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
+	QObject::connect(&app, SIGNAL(aboutToQuit()), &linkLayer, SLOT(exitNetwork()));
+
 #ifdef Q_WS_X11
 	LinuxTAP tap(linkLayer);
 	if(!noTap) {

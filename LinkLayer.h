@@ -43,6 +43,9 @@ public:
 
 	void processPacket(QByteArray packet);
 
+public slots:
+	void exitNetwork();
+
 signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
 	void tapPacketReady(QByteArray &packet);
