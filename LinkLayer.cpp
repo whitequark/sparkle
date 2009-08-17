@@ -830,7 +830,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_t), node, "Route"))
 		return;
 
-	if(!node->isMaster() && router.getOtherMasters().count() > 0) {
+	if(!node->isMaster() && router.getMasters().count() > 0) {
 		Log::warn("link: Route packet from unauthoritative source [%1]:%2") << *node;
 		return;
 	}
