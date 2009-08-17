@@ -745,13 +745,15 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	sendRegisterReply(node);
 	
 	QList<SparkleNode*> updates;
-	if(node->isMaster())	updates = router.getNodes();
-	else			updates = router.getMasters();
+	if(node->isMaster())	updates = router.getOtherNodes();
+	else			updates = router.getOtherMasters();
 
 	foreach(SparkleNode* update, updates) {
 		sendRoute(node, update);
 		sendRoute(update, node);
 	}
+	
+	sendRoute(node, self);
 
 	router.updateNode(node);
 }
