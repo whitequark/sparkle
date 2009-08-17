@@ -21,7 +21,8 @@
 #include "Log.h"
 
 SparkleNode::SparkleNode(QHostAddress _realIP, quint16 _realPort)
-		 : QObject(NULL), realIP(_realIP), realPort(_realPort), authKeyPresent(false) {
+		 : QObject(NULL), realIP(_realIP), realPort(_realPort), authKeyPresent(false),
+		 	keysNegotiated(false) {
 	mySessionKey.generate();
 }
 

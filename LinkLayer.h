@@ -55,7 +55,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 7,
+		ProtocolVersion	= 8,
 	};
 
 	enum packet_type_t {
@@ -84,6 +84,8 @@ private:
 
 		RouteRequest			= 19,
 		RouteMissing			= 20,
+		
+		RoleUpdate			= 21,
 
 		DataPacket			= 30,
 	};
@@ -152,6 +154,10 @@ private:
 
 	struct route_missing_t {
 		quint32		sparkleIP;
+	};
+	
+	struct role_update_t {
+		quint8		isMasterNow;
 	};
 
 	struct ethernet_header_t {
@@ -260,6 +266,9 @@ private:
 
 	void sendRouteMissing(SparkleNode* node, QHostAddress addr);
 	void handleRouteMissing(QByteArray &payload, SparkleNode* node);
+
+	void sendRoleUpdate(SparkleNode* node, bool isMasterNow);
+	void handleRoleUpdate(QByteArray &payload, SparkleNode* node);
 
 	void handleDataPacket(QByteArray &payload, SparkleNode* node);
 	

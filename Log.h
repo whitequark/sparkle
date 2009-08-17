@@ -55,6 +55,8 @@ public:
 	inline Log& operator<<(uint v)  { stream->list.append(QString::number(v, stream->base)); return *this; }
 	inline Log& operator<<(long v)  { stream->list.append(QString::number(v, stream->base)); return *this; }
 	inline Log& operator<<(ulong v) { stream->list.append(QString::number(v, stream->base)); return *this; }
+
+	inline Log& operator<<(double v)	{ stream->list.append(QString::number(v, 'g', 4)); return *this; }
 	
 	inline Log& operator<<(char v)		{ stream->list.append(QString(v)); return *this; }
 	inline Log& operator<<(const char* v)	{ stream->list.append(v); return *this; }

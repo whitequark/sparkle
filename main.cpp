@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 			NULL, "create new network with divisor DIV (10 by default)", "DIV");
 
 		parser.registerOption('j', "join", ArgumentParser::RequiredArgument, &joinStr, NULL,
-			NULL, "\n\t\t\tjoin existing network, PORT defaults to 1801", "HOST[:PORT]");
+			NULL, "\n\t\tjoin existing network, PORT defaults to 1801", "HOST[:PORT]");
 
 		parser.registerOption('e', "endpoint", ArgumentParser::RequiredArgument, &endpointStr, NULL,
 			NULL, "\n\t\tuse HOST:PORT as local endpoint, defaults to *:1801", "HOST[:PORT]");

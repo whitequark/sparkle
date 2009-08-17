@@ -114,7 +114,7 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
 	
-	Log::debug("link: added [%1]:%2 to node spool") << host << port;
+	//Log::debug("link: added [%1]:%2 to node spool") << host << port;
 	
 	return node;
 }
@@ -125,6 +125,11 @@ void LinkLayer::sendPacket(packet_type_t type, QByteArray data, SparkleNode* nod
 	hdr.type = type;
 
 	data.prepend(QByteArray((const char *) &hdr, sizeof(packet_header_t)));
+
+	if(node == router.getSelfNode()) {
+		Log::error("link: attempting to send packet to myself, dropping");
+		return;
+	}
 
 	emit networkPacketReady(data, node->getRealIP(), node->getRealPort());
 }
@@ -449,7 +454,7 @@ void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(introduce_packet_t), node, "IntroducePacket"))
 		return;
 	
-	if(node->getSparkleMAC().length() > 0) {
+	if(node->getSparkleMAC().length() > 0 || router.getNodes().contains(node)) {
 		Log::warn("link: node [%2]:%3 is already introduced as %1") << node->getSparkleIP() << *node;
 		return;
 	}
@@ -460,7 +465,7 @@ void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
 	node->setSparkleMAC(QByteArray((const char*) intr->sparkleMAC, 6));
 	node->setMaster(false);
 	
-	router.addNode(node);
+	router.updateNode(node);
 
 	Log::debug("link: node [%1]:%2 introduced itself as %3") << *node << node->getSparkleIP();
 }
@@ -666,10 +671,18 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	node->setBehindNAT(req->isBehindNAT);
 
 	if(!node->isBehindNAT()) {
-		if(router.getMasters().count() == 1)
+		if(router.getMasters().count() == 1) {
 			node->setMaster(true);
-		else
-			node->setMaster(false);
+		} else {
+			double ik = 1. / networkDivisor;
+			double rk = ((double) router.getMasters().count()) / (router.getNodes().count() + 1);
+			if(rk < ik) {
+				Log::info("link: insufficient masters (I %1; R %2), adding one") << ik << rk;
+				node->setMaster(true);
+			} else {
+				node->setMaster(false);
+			}
+		}
 	} else {
 		node->setMaster(false);
 	}
@@ -686,7 +699,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	foreach(SparkleNode* master, router.getOtherMasters())
 		sendRoute(master, node);
 
-	router.addNode(node);
+	router.updateNode(node);
 }
 
 /* RegisterReply */
@@ -734,7 +747,7 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	router.setSelfNode(self);
 	
 	networkDivisor = reply->networkDivisor;
-	Log::debug("link: network divisor is %1") << networkDivisor;
+	Log::debug("link: network divisor is 1/%1") << networkDivisor;
 	
 	joinStep = JoinFinished;
 	emit joined(self);
@@ -779,7 +792,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	target->setMaster(route->isMaster);
 	target->setBehindNAT(route->isBehindNAT);
 	
-	router.addNode(target);
+	router.updateNode(target);
 }
 
 /* RouteRequest */
@@ -829,6 +842,32 @@ void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
 	QHostAddress host(req->sparkleIP);
 	
 	Log::info("link: no route to %1") << host;
+}
+
+/* RoleUpdate */
+
+void LinkLayer::sendRoleUpdate(SparkleNode* node, bool isMasterNow) {
+	role_update_t update;
+	update.isMasterNow = isMasterNow;
+	
+	sendEncryptedPacket(RoleUpdate, QByteArray((const char*) &update, sizeof(role_update_t)), node);
+}
+
+void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, sizeof(role_update_t), node, "RoleUpdate"))
+		return;
+	
+	if(!node->isMaster()) {
+		Log::warn("link: RoleUpdate packet was received from slave [%1]:%2, dropping") << *node;
+		return;
+	}
+
+	const role_update_t* update = (const role_update_t*) payload.constData();
+
+	Log::info("link: switching to %3 role caused by [%1]:%2") << node
+		<< (update->isMasterNow ? "Master" : "Slave");
+	
+	router.getSelfNode()->setMaster(update->isMasterNow);
 }
 
 /* Data */

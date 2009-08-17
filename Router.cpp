@@ -29,24 +29,28 @@ Router::Router() : QObject(NULL), self(NULL)
 void Router::setSelfNode(SparkleNode* node) {
 	Q_ASSERT(self != NULL);
 	
-	Log::debug("router: My MAC is %1 and IP is %2") << node->getPrettySparkleMAC()
-					<< node->getSparkleIP().toString();
+	Log::info("router: My MAC is %1 and IP is %2, I am %3") << node->getPrettySparkleMAC()
+		<< node->getSparkleIP().toString() << (node->isMaster() ? "master" : "slave");
 	
 	self = node;
-	addNode(self);
+	updateNode(self);
 }
 
 SparkleNode* Router::getSelfNode() const {
 	return self;
 }
 
-void Router::addNode(SparkleNode* node) {
-	Log::debug("router: adding node [%1]:%2 <=> %3 (%4, %5)") << node->getRealIP().toString()
+void Router::updateNode(SparkleNode* node) {
+	bool newNode = !nodes.contains(node);
+
+	if(newNode)	
+		nodes.append(node);
+	
+	Log::debug("router: %6 node [%1]:%2 <=> %3 (%4, %5)") << node->getRealIP().toString()
 			<< node->getRealPort() << node->getSparkleIP().toString()
 			<< (node->isMaster() ? "master" : "slave")
-			<< (node->isBehindNAT() ? "behind NAT" : "has white IP");
-	
-	nodes.append(node);
+			<< (node->isBehindNAT() ? "behind NAT" : "has white IP")
+			<< (newNode ? "adding" : "updating");
 }
 
 SparkleNode* Router::searchSparkleNode(QHostAddress sparkleIP) const {

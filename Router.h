@@ -33,7 +33,7 @@ public:
 	void setSelfNode(SparkleNode* node);
 	SparkleNode* getSelfNode() const;
 	
-	void addNode(SparkleNode* node);
+	void updateNode(SparkleNode* node);
 	
 	SparkleNode* searchNode(QHostAddress realIP, quint16 realPort) const;
 	SparkleNode* searchSparkleNode(QHostAddress sparkleIP) const;
