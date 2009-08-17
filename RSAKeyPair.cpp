@@ -26,7 +26,6 @@
 #include "Log.h"
 
 RSAKeyPair::RSAKeyPair(QObject *parent) : QObject(parent) {
-	memset(&key, 0, sizeof(key));
 	rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);
 }
 
