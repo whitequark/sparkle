@@ -58,6 +58,12 @@ int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
 	app.setApplicationName("sparkle");
 
+#ifdef Q_WS_X11
+	SignalHandler* sighandler = SignalHandler::getInstance();
+	QObject::connect(sighandler, SIGNAL(sigint()), &app, SLOT(quit()));
+	QObject::connect(sighandler, SIGNAL(sigterm()), &app, SLOT(quit()));
+#endif
+
 	QString profile = "default", configDir;
 	bool createNetwork = false, noTap = false, forceBehindNAT = false;
 	int networkDivisor = 10;
@@ -212,13 +218,7 @@ int main(int argc, char *argv[]) {
 	UdpPacketTransport transport(bindAddress, localPort);
 	LinkLayer linkLayer(router, transport, hostPair);
 
-#ifdef Q_WS_X11
-	SignalHandler* sighandler = SignalHandler::getInstance();
-	QObject::connect(sighandler, SIGNAL(sigint()), &linkLayer, SLOT(exitNetwork()));
-	QObject::connect(sighandler, SIGNAL(sigterm()), &linkLayer, SLOT(exitNetwork()));
-#endif
-
-	QObject::connect(&linkLayer, SIGNAL(readyForShutdown()), &app, SLOT(quit()));
+	QObject::connect(&app, SIGNAL(aboutToQuit()), &linkLayer, SLOT(exitNetwork()));
 
 #ifdef Q_WS_X11
 	LinuxTAP tap(linkLayer);
