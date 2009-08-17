@@ -55,6 +55,19 @@ QHostAddress checkoutAddress(QString strAddr) {
 }
 
 int main(int argc, char *argv[]) {
+#ifdef Q_WS_X11
+	bool daemonize = false;
+	
+	for(int i = 1; i < argc; i++)
+		if(!strcmp(argv[i], "-D") || !strcmp(argv[i], "--daemonize"))
+			daemonize = true;
+
+	if(daemonize) {
+		if(fork() > 0)
+			exit(0);
+	}
+#endif
+	
 	QCoreApplication app(argc, argv);
 	app.setApplicationName("sparkle");
 
@@ -70,7 +83,8 @@ int main(int argc, char *argv[]) {
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	{
-		QString createStr, joinStr, endpointStr, bindStr, keyLenStr, getPubkeyStr, noTapStr, behindNatStr;
+		QString createStr, joinStr, endpointStr, bindStr, keyLenStr, getPubkeyStr,
+			noTapStr, behindNatStr, daemonizeStr;
 
 		ArgumentParser parser(app.arguments());
 
@@ -91,6 +105,11 @@ int main(int argc, char *argv[]) {
 
 		parser.registerOption('N', "force-nat", ArgumentParser::NoArgument, &behindNatStr, NULL,
 			NULL, "skips any NAT checks with positive result", NULL);
+		
+#ifdef Q_WS_X11
+		parser.registerOption('D', "daemonize", ArgumentParser::NoArgument, &daemonizeStr, NULL,
+			NULL, "daemonize", NULL);
+#endif
 
 		parser.registerOption(QChar::Null, "generate-key", ArgumentParser::RequiredArgument,
 			&keyLenStr, NULL, NULL, "generate new RSA key pair with specified length", "BITS");
