@@ -50,6 +50,7 @@ signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
 	void tapPacketReady(QByteArray &packet);
 	void joined(SparkleNode* node);
+	void readyForShutdown();
 
 private slots:
 	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
@@ -308,7 +309,7 @@ private:
 	SparkleNode* joinMaster;
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
-	bool forceBehindNAT;
+	bool forceBehindNAT, preparingForShutdown;
 };
 
 #endif

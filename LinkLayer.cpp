@@ -35,7 +35,8 @@
 #include "Log.h"
 
 LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
-		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport)
+		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport),
+			preparingForShutdown(false)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
@@ -90,14 +91,23 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 void LinkLayer::exitNetwork() {
 	if(joinStep != JoinFinished) {
 		Log::debug("link: join isn't finished, skipping finalization");
+		emit readyForShutdown();
 		return;
 	}	
 	
-	if(router.getSelfNode()->isMaster() && router.getMasters().count() == 1) {
-		Log::debug("link: i'm the last master... so let network's death be painless");
+	if(router.getSelfNode()->isMaster()) {
+		Log::debug("link: sending invalidations");
+		foreach(SparkleNode* node, router.getOtherNodes())	
+			sendRouteInvalidate(node, router.getSelfNode());
+		
+		if(awaitingNegotiation.count() == 0)
+			emit readyForShutdown();
+		else
+			preparingForShutdown = true;
 	} else {
 		Log::debug("link: sending exit notification");
 		sendExitNotification(router.selectMaster());
+		emit readyForShutdown();
 	}
 }
 
@@ -184,6 +194,9 @@ void LinkLayer::negotiationTimeout(SparkleNode* node) {
 	
 	node->flushQueue();
 	awaitingNegotiation.removeOne(node);
+	
+	if(awaitingNegotiation.count() == 0 && preparingForShutdown)
+		emit readyForShutdown();
 }
 
 
@@ -476,6 +489,9 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 
 		while(!node->isQueueEmpty())
 			encryptAndSend(node->popQueue(), node);
+		
+		if(awaitingNegotiation.count() == 0 && preparingForShutdown)
+			emit readyForShutdown();
 	}
 }
 
