@@ -50,15 +50,17 @@ signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
 	void tapPacketReady(QByteArray &packet);
 	void joined(SparkleNode* node);
+	void readyForShutdown();
 
 private slots:
 	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
 	
 	void pingTimeout();
+	void negotiationTimeout(SparkleNode* node);
 
 private:
 	enum {
-		ProtocolVersion	= 8,
+		ProtocolVersion	= 9,
 	};
 
 	enum packet_type_t {
@@ -86,9 +88,12 @@ private:
 		Route				= 18,
 
 		RouteRequest			= 19,
-		RouteMissing			= 20,
+		RouteInvalidate			= 21,
+		RouteMissing			= 22,
 		
-		RoleUpdate			= 21,
+		RoleUpdate			= 23,
+		
+		ExitNotification		= 24,
 
 		DataPacket			= 30,
 	};
@@ -155,6 +160,11 @@ private:
 		quint32		sparkleIP;
 	};
 
+	struct route_invalidate_t {
+		quint32		realIP;
+		quint16		realPort;
+	};
+	
 	struct route_missing_t {
 		quint32		sparkleIP;
 	};
@@ -270,8 +280,14 @@ private:
 	void sendRouteMissing(SparkleNode* node, QHostAddress addr);
 	void handleRouteMissing(QByteArray &payload, SparkleNode* node);
 
+	void sendRouteInvalidate(SparkleNode* node, SparkleNode* target);
+	void handleRouteInvalidate(QByteArray &payload, SparkleNode* node);
+
 	void sendRoleUpdate(SparkleNode* node, bool isMasterNow);
 	void handleRoleUpdate(QByteArray &payload, SparkleNode* node);
+
+	void sendExitNotification(SparkleNode* node);
+	void handleExitNotification(QByteArray &payload, SparkleNode* node);
 
 	void handleDataPacket(QByteArray &payload, SparkleNode* node);
 	
@@ -293,7 +309,7 @@ private:
 	SparkleNode* joinMaster;
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
-	bool forceBehindNAT;
+	bool forceBehindNAT, preparingForShutdown;
 };
 
 #endif

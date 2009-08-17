@@ -24,6 +24,10 @@ SparkleNode::SparkleNode(QHostAddress _realIP, quint16 _realPort)
 		 : QObject(NULL), realIP(_realIP), realPort(_realPort), authKeyPresent(false),
 		 	keysNegotiated(false) {
 	mySessionKey.generate();
+	
+	negotiationTimer.setSingleShot(true);
+	negotiationTimer.setInterval(5000);
+	connect(&negotiationTimer, SIGNAL(timeout()), SLOT(negotiationTimeout()));
 }
 
 bool SparkleNode::operator==(const SparkleNode& another) const {
@@ -124,5 +128,21 @@ void SparkleNode::pushQueue(QByteArray data) {
 
 QByteArray SparkleNode::popQueue() {
 	return queue.takeFirst();
+}
+
+void SparkleNode::flushQueue() {
+	queue.clear();
+}
+
+void SparkleNode::negotiationStart() {
+	negotiationTimer.start();
+}
+
+void SparkleNode::negotiationFinished() {
+	negotiationTimer.stop();
+}
+
+void SparkleNode::negotiationTimeout() {
+	emit negotiationTimedOut(this);
 }
 

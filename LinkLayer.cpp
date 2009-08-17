@@ -35,7 +35,8 @@
 #include "Log.h"
 
 LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
-		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport)
+		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport),
+			preparingForShutdown(false)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
@@ -88,11 +89,25 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 }
 
 void LinkLayer::exitNetwork() {
-	Log::info("link: sending exit notification");
+	if(joinStep != JoinFinished) {
+		Log::debug("link: join isn't finished, skipping finalization");
+		return;
+	}	
 	
-	/* */
-	
-	Log::info("link: ready for shutdown");
+	if(router.getSelfNode()->isMaster()) {
+		Log::debug("link: sending invalidations");
+		foreach(SparkleNode* node, router.getOtherNodes())	
+			sendRouteInvalidate(node, router.getSelfNode());
+		
+		if(awaitingNegotiation.count() == 0)
+			emit readyForShutdown();
+		else
+			preparingForShutdown = true;
+	} else {
+		Log::debug("link: sending exit notification");
+		sendExitNotification(router.selectMaster());
+		emit readyForShutdown();
+	}
 }
 
 bool LinkLayer::initTransport() {
@@ -121,6 +136,8 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 	SparkleNode* node = new SparkleNode(host, port);
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
+	
+	connect(node, SIGNAL(negotiationTimedOut(SparkleNode*)), SLOT(negotiationTimeout(SparkleNode*)));
 	
 	//Log::debug("link: added [%1]:%2 to node spool") << host << port;
 	
@@ -156,6 +173,7 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 		} else {
 			Log::debug("link: initiating negotiation with [%1]:%2") << *node;
 			
+			node->negotiationStart();
 			awaitingNegotiation.append(node);
 			sendPublicKeyExchange(node, &hostKeyPair, true);
 		}
@@ -169,6 +187,17 @@ void LinkLayer::encryptAndSend(QByteArray data, SparkleNode *node) {
 	
 	sendPacket(EncryptedPacket, node->getMySessionKey()->encrypt(data), node);
 }
+
+void LinkLayer::negotiationTimeout(SparkleNode* node) {
+	Log::warn("link: negotiation timeout for [%1]:%2, dropping queue") << *node;
+	
+	node->flushQueue();
+	awaitingNegotiation.removeOne(node);
+	
+	if(awaitingNegotiation.count() == 0 && preparingForShutdown)
+		emit readyForShutdown();
+}
+
 
 void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) {
 	const packet_header_t *hdr = (packet_header_t *) data.constData();
@@ -276,6 +305,18 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 		
 		case RouteMissing:
 			handleRouteMissing(decPayload, node);
+			return;
+		
+		case RouteInvalidate:
+			handleRouteInvalidate(decPayload, node);
+			return;
+		
+		case RoleUpdate:
+			handleRoleUpdate(decPayload, node);
+			return;
+		
+		case ExitNotification:
+			handleExitNotification(decPayload, node);
 			return;
 		
 		case DataPacket:
@@ -442,9 +483,14 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 	if(ke->needOthersKey) {
 		sendSessionKeyExchange(node, false);
 	} else {
+		node->negotiationFinished();
 		awaitingNegotiation.removeOne(node);
+
 		while(!node->isQueueEmpty())
 			encryptAndSend(node->popQueue(), node);
+		
+		if(awaitingNegotiation.count() == 0 && preparingForShutdown)
+			emit readyForShutdown();
 	}
 }
 
@@ -701,11 +747,10 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	if(node->isMaster())	updates = router.getNodes();
 	else			updates = router.getMasters();
 
-	foreach(SparkleNode* update, updates)
+	foreach(SparkleNode* update, updates) {
 		sendRoute(node, update);
-
-	foreach(SparkleNode* master, router.getOtherMasters())
-		sendRoute(master, node);
+		sendRoute(update, node);
+	}
 
 	router.updateNode(node);
 }
@@ -795,6 +840,8 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 		return;
 	}
 	
+	Log::debug("link: Route received from [%1]:%2") << *node;
+	
 	target->setSparkleIP(QHostAddress(route->sparkleIP));
 	target->setSparkleMAC(QByteArray((const char*) route->sparkleMAC, 6));
 	target->setMaster(route->isMaster);
@@ -852,6 +899,29 @@ void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
 	Log::info("link: no route to %1") << host;
 }
 
+/* RouteInvalidate */
+
+void LinkLayer::sendRouteInvalidate(SparkleNode* node, SparkleNode* target) {
+	route_invalidate_t inv;
+	inv.realIP = target->getRealIP().toIPv4Address();
+	inv.realPort = target->getRealPort();
+	
+	sendEncryptedPacket(RouteInvalidate, QByteArray((const char*) &inv, sizeof(route_invalidate_t)), node);
+}
+
+void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, sizeof(route_invalidate_t), node, "RouteInvalidate"))
+		return;
+	
+	const route_invalidate_t* inv = (const route_invalidate_t*) payload.constData();
+	SparkleNode* target = wrapNode(QHostAddress(inv->realIP), inv->realPort);
+	
+	Log::debug("link: invalidating route %5 @ [%1]:%2 because of command from [%3]:%4")
+			<< *target << *node << node->getSparkleIP();
+	
+	router.removeNode(target);
+}
+
 /* RoleUpdate */
 
 void LinkLayer::sendRoleUpdate(SparkleNode* node, bool isMasterNow) {
@@ -876,6 +946,27 @@ void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
 		<< (update->isMasterNow ? "Master" : "Slave");
 	
 	router.getSelfNode()->setMaster(update->isMasterNow);
+}
+
+/* ExitNotification */
+
+void LinkLayer::sendExitNotification(SparkleNode* node) {
+	sendEncryptedPacket(ExitNotification, QByteArray(), node);
+}
+
+void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, 0, node, "ExitNotification"))
+		return;
+	
+	if(!router.getSelfNode()->isMaster()) {
+		Log::warn("link: ExitNotification was received from [%1]:%2, but I am slave") << *node;
+		return;
+	}
+
+	router.removeNode(node);
+
+	foreach(SparkleNode* target, router.getOtherNodes())	
+		sendRouteInvalidate(target, node);
 }
 
 /* Data */

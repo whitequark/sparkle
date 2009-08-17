@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QHostAddress>
+#include <QTimer>
 
 #include "RSAKeyPair.h"
 #include "BlowfishKey.h"
@@ -74,6 +75,17 @@ public:
 	bool isQueueEmpty();
 	void pushQueue(QByteArray data);
 	QByteArray popQueue();
+	void flushQueue();
+
+public slots:
+	void negotiationStart();
+	void negotiationFinished();
+
+signals:
+	void negotiationTimedOut(SparkleNode*);
+
+private slots:
+	void negotiationTimeout();
 
 private:
 	QHostAddress realIP;
@@ -90,6 +102,8 @@ private:
 	bool keysNegotiated;
 
 	QList<QByteArray> queue;
+	
+	QTimer negotiationTimer;
 };
 
 #endif

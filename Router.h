@@ -34,6 +34,7 @@ public:
 	SparkleNode* getSelfNode() const;
 	
 	void updateNode(SparkleNode* node);
+	void removeNode(SparkleNode* node);
 	
 	SparkleNode* searchNode(QHostAddress realIP, quint16 realPort) const;
 	SparkleNode* searchSparkleNode(QHostAddress sparkleIP) const;
@@ -43,6 +44,7 @@ public:
 	QList<SparkleNode*> getMasters() const;
 	QList<SparkleNode*> getOtherMasters() const;
 	QList<SparkleNode*> getNodes() const;
+	QList<SparkleNode*> getOtherNodes() const;
 
 private:
 	SparkleNode* self;

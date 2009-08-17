@@ -46,11 +46,28 @@ void Router::updateNode(SparkleNode* node) {
 	if(newNode)	
 		nodes.append(node);
 	
-	Log::debug("router: %6 node [%1]:%2 <=> %3 (%4, %5)") << node->getRealIP().toString()
-			<< node->getRealPort() << node->getSparkleIP().toString()
+	Log::debug("router: %6 node %3 @ [%1]:%2 (%4, %5)") << *node << node->getSparkleIP()
 			<< (node->isMaster() ? "master" : "slave")
 			<< (node->isBehindNAT() ? "behind NAT" : "has white IP")
 			<< (newNode ? "adding" : "updating");
+}
+
+void Router::removeNode(SparkleNode* node) {
+	if(self == node) {
+		Log::error("router: attempting to remove myself");
+		return;
+	}
+	
+	if(nodes.contains(node)) {
+		nodes.removeOne(node);
+		Log::debug("router: removing node %3 @ [%1]:%2") << *node << node->getSparkleIP();
+		
+		if(nodes.count() == 1) {
+			Log::fatal("router: you are the One, last node!");
+		}
+	} else {
+		Log::warn("router: attempt to remove missing node [%1]:%2") << *node;
+	}
 }
 
 SparkleNode* Router::searchSparkleNode(QHostAddress sparkleIP) const {
@@ -119,5 +136,16 @@ QList<SparkleNode*> Router::getOtherMasters() const {
 
 QList<SparkleNode*> Router::getNodes() const {
 	return nodes;
+}
+
+QList<SparkleNode*> Router::getOtherNodes() const {
+	QList<SparkleNode*> selNodes;
+	
+	foreach(SparkleNode *node, nodes) {
+		if(node != self)
+			selNodes.append(node);
+	}
+	
+	return selNodes;
 }
 
