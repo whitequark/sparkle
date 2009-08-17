@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 			if(!keyPair.readFromFile(configDir + "/rsa_key")) {
 				Log::fatal("cannot read RSA keypair");
 			} else {
-				printf("%s", QString(keyPair.getPublicKey()).toLocal8Bit().constData());
+				printf("%s\n", QString(keyPair.getPublicKey().toBase64()).toLocal8Bit().constData());
 				return 0;
 			}
 		}
