@@ -31,17 +31,9 @@ RSAKeyPair::RSAKeyPair(QObject *parent) : QObject(parent) {
 }
 
 RSAKeyPair::~RSAKeyPair() {
-	mpi_free(&key.N);
-	mpi_free(&key.E);
-	mpi_free(&key.D);
-	mpi_free(&key.P);
-	mpi_free(&key.Q);
-	mpi_free(&key.DP);
-	mpi_free(&key.DQ);
-	mpi_free(&key.QP);
-	mpi_free(&key.RN);
-	mpi_free(&key.RP);
-	mpi_free(&key.RQ);
+	mpi_free(&key.N, &key.E, &key.D, &key.P, 
+		&key.Q, &key.DP, &key.DQ, &key.QP, 
+		&key.RN, &key.RP, &key.RQ, NULL);
 }
 
 bool RSAKeyPair::generate(int bits) {
