@@ -63,7 +63,9 @@ void Router::removeNode(SparkleNode* node) {
 		Log::debug("router: removing node %3 @ [%1]:%2") << *node << node->getSparkleIP();
 		
 		if(nodes.count() == 1) {
-			Log::fatal("router: you are the One, last node!");
+			Log::info("router: you are the One, last node!");
+			if(!self->isMaster())
+				Log::fatal("router: being the last slave is useless");
 		}
 	} else {
 		Log::warn("router: attempt to remove missing node [%1]:%2") << *node;
