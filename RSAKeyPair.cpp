@@ -26,6 +26,7 @@
 #include "Log.h"
 
 RSAKeyPair::RSAKeyPair(QObject *parent) : QObject(parent) {
+	memset(&key, 0, sizeof(key));
 	rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);
 }
 
@@ -90,7 +91,7 @@ bool RSAKeyPair::readFromFile(QString filename) {
 	keyFile.close();
 
 	if(rawdata.left(10) == "-----BEGIN")
-		Log::fatal("Your private key in wrong format, re-generate it");
+		Log::fatal("Your private key is in wrong format, re-generate it");
 
 	QByteArray data = QByteArray::fromBase64(rawdata);
 

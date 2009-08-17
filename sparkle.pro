@@ -2,8 +2,8 @@ TEMPLATE = app
 TARGET = sparkgap
 DEPENDPATH += .
 INCLUDEPATH += .
-CONFIG += release
-CONFIG -= debug
+CONFIG -= release
+CONFIG += debug
 QT -= gui
 QT += network
 
@@ -31,8 +31,8 @@ SOURCES += main.cpp \
 	crypto/blowfish.c random.cpp
 
 unix { 
-	SOURCES += LinuxTAP.cpp
-	HEADERS += LinuxTAP.h
+	SOURCES += LinuxTAP.cpp SignalHandler.cpp
+	HEADERS += LinuxTAP.h SignalHandler.h
 }
 
 win32 {

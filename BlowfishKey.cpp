@@ -31,7 +31,7 @@ blowfish_get_info(int algo, size_t *keylen, size_t *blocksize, size_t *contextsi
 BlowfishKey::BlowfishKey(QObject *parent) : QObject(parent)
 {
 	if(blowfish_get_info(4, &keylen, &blocksize, &contextsize, &cb_setkey, &cb_encrypt, &cb_decrypt) == NULL)
-		Log::fatal("blowfish_get_info failed\n");
+		Log::fatal("blowfish_get_info failed");
 
 	keylen = 256;
 

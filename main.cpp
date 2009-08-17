@@ -33,6 +33,7 @@
 
 #ifdef Q_WS_X11
 #include "LinuxTAP.h"
+#include "SignalHandler.h"
 #endif
 
 QHostAddress checkoutAddress(QString strAddr) {
@@ -56,6 +57,12 @@ QHostAddress checkoutAddress(QString strAddr) {
 int main(int argc, char *argv[]) {
 	QCoreApplication app(argc, argv);
 	app.setApplicationName("sparkle");
+
+#ifdef Q_WS_X11
+	SignalHandler* sighandler = SignalHandler::getInstance();
+	QObject::connect(sighandler, SIGNAL(sigint()), &app, SLOT(quit()));
+	QObject::connect(sighandler, SIGNAL(sigterm()), &app, SLOT(quit()));
+#endif
 	
 	QString profile = "default", configDir;
 	bool createNetwork = false, noTap = false, forceBehindNAT = false;

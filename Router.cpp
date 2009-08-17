@@ -27,7 +27,7 @@ Router::Router() : QObject(NULL), self(NULL)
 }
 
 void Router::setSelfNode(SparkleNode* node) {
-	Q_ASSERT(self != NULL);
+	Q_ASSERT(self == NULL);
 	
 	Log::info("router: My MAC is %1 and IP is %2, I am %3") << node->getPrettySparkleMAC()
 		<< node->getSparkleIP().toString() << (node->isMaster() ? "master" : "slave");
