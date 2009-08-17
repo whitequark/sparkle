@@ -753,7 +753,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 		sendRoute(update, node);
 	}
 	
-	sendRoute(node, self);
+	sendRoute(node, router.getSelfNode());
 
 	router.updateNode(node);
 }
