@@ -26,10 +26,12 @@ SignalHandler* SignalHandler::instance;
 
 void handle_sigint(int) {
 	write(SignalHandler::getInstance()->write_fd, "I", 1);
+	signal(SIGINT, SIG_DFL);
 }
 
 void handle_sigterm(int) {
 	write(SignalHandler::getInstance()->write_fd, "T", 1);
+	signal(SIGINT, SIG_DFL);
 }
 
 SignalHandler::SignalHandler() {
