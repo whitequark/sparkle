@@ -288,6 +288,7 @@ private:
 
 	void sendExitNotification(SparkleNode* node);
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);
+	void reincarnateSomeone();
 
 	void handleDataPacket(QByteArray &payload, SparkleNode* node);
 	

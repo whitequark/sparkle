@@ -95,20 +95,18 @@ void LinkLayer::exitNetwork() {
 		return;
 	}	
 	
-	if(router.getSelfNode()->isMaster()) {
-		Log::debug("link: sending invalidations");
-		foreach(SparkleNode* node, router.getOtherNodes())	
-			sendRouteInvalidate(node, router.getSelfNode());
-		
-		if(awaitingNegotiation.count() == 0)
-			emit readyForShutdown();
-		else
-			preparingForShutdown = true;
+	if(router.getSelfNode()->isMaster() && router.getMasters().count() == 1) {
+		Log::debug("link: i'm the last master");
+		reincarnateSomeone();
 	} else {
 		Log::debug("link: sending exit notification");
 		sendExitNotification(router.selectMaster());
-		emit readyForShutdown();
 	}
+
+	if(awaitingNegotiation.count() > 0)
+		preparingForShutdown = true;
+	else
+		emit readyForShutdown();
 }
 
 bool LinkLayer::initTransport() {
@@ -923,6 +921,8 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 			<< *target << *node << node->getSparkleIP();
 	
 	router.removeNode(target);
+	nodeSpool.removeOne(target);
+	delete target;
 }
 
 /* RoleUpdate */
@@ -971,27 +971,39 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 	foreach(SparkleNode* target, router.getOtherNodes())	
 		sendRouteInvalidate(target, node);
 
+	nodeSpool.removeOne(node);
+	delete node;
+
 	double ik = 1. / networkDivisor;
-	double rk = ((double) router.getMasters().count()) / (router.getNodes().count() - 1);
-	if(rk < ik) {
-		Log::debug("link: insufficient masters (I %1; R %2), reincarnating slave") << ik << rk;
+	double rk = ((double) router.getMasters().count()) / (router.getNodes().count());
+	if(rk < ik || router.getMasters().count() == 1) {
+		Log::debug("link: insufficient masters (I %1; R %2)") << ik << rk;
 		
-		SparkleNode* target = router.selectWhiteSlave();
-		Log::debug("link: %1 @ [%2]:%3 is selected as target") << target->getSparkleIP() << *target;
-		
-		target->setMaster(true);
-		
-		router.updateNode(target);
-		
-		foreach(SparkleNode* node, router.getOtherNodes()) {
-			if(!node->isMaster() && node != target) {
-				sendRoute(node, target);
-				sendRoute(target, node);
-			}
-		}
-		
-		sendRoleUpdate(target, true);
+		reincarnateSomeone();
 	}
+}
+
+void LinkLayer::reincarnateSomeone() {
+	if(router.getNodes().count() == 1) {
+		Log::warn("link: there're no nodes to reincarnate");
+		return;
+	}
+
+	SparkleNode* target = router.selectWhiteSlave();
+	Log::debug("link: %1 @ [%2]:%3 is selected as target") << target->getSparkleIP() << *target;
+	
+	target->setMaster(true);
+	
+	router.updateNode(target);
+	
+	foreach(SparkleNode* node, router.getOtherNodes()) {
+		if(!node->isMaster() && node != target) {
+			sendRoute(node, target);
+			sendRoute(target, node);
+		}
+	}
+	
+	sendRoleUpdate(target, true);
 }
 
 /* Data */
