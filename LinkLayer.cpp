@@ -44,7 +44,7 @@ LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_
 	
 	pingTimer = new QTimer(this);
 	pingTimer->setSingleShot(true);
-	pingTimer->setInterval(5000); // FIXME
+	pingTimer->setInterval(5000);
 	connect(pingTimer, SIGNAL(timeout()), SLOT(pingTimeout()));
 	
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
@@ -716,7 +716,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 			double ik = 1. / networkDivisor;
 			double rk = ((double) router.getMasters().count()) / (router.getNodes().count() + 1);
 			if(rk < ik) {
-				Log::info("link: insufficient masters (I %1; R %2), adding one") << ik << rk;
+				Log::debug("link: insufficient masters (I %1; R %2), adding one") << ik << rk;
 				node->setMaster(true);
 			} else {
 				node->setMaster(false);
@@ -929,7 +929,7 @@ void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
 
 	const role_update_t* update = (const role_update_t*) payload.constData();
 
-	Log::info("link: switching to %3 role caused by [%1]:%2") << node
+	Log::info("link: switching to %3 role caused by [%1]:%2") << *node
 		<< (update->isMasterNow ? "Master" : "Slave");
 	
 	router.getSelfNode()->setMaster(update->isMasterNow);
@@ -954,6 +954,28 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 
 	foreach(SparkleNode* target, router.getOtherNodes())	
 		sendRouteInvalidate(target, node);
+
+	double ik = 1. / networkDivisor;
+	double rk = ((double) router.getMasters().count()) / (router.getNodes().count() - 1);
+	if(rk < ik) {
+		Log::debug("link: insufficient masters (I %1; R %2), reincarnating slave") << ik << rk;
+		
+		SparkleNode* target = router.selectWhiteSlave();
+		Log::debug("link: %1 @ [%2]:%3 is selected as target") << target->getSparkleIP() << *target;
+		
+		target->setMaster(true);
+		
+		router.updateNode(target);
+		
+		foreach(SparkleNode* node, router.getOtherNodes()) {
+			if(!node->isMaster() && node != target) {
+				sendRoute(node, target);
+				sendRoute(target, node);
+			}
+		}
+		
+		sendRoleUpdate(target, true);
+	}
 }
 
 /* Data */

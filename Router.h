@@ -40,6 +40,7 @@ public:
 	SparkleNode* searchSparkleNode(QHostAddress sparkleIP) const;
 	
 	SparkleNode* selectMaster() const;
+	SparkleNode* selectWhiteSlave() const;
 
 	QList<SparkleNode*> getMasters() const;
 	QList<SparkleNode*> getOtherMasters() const;

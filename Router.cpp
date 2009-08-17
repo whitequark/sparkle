@@ -112,6 +112,19 @@ SparkleNode* Router::selectMaster() const {
 	return masters[qrand() % masters.size()];
 }
 
+SparkleNode* Router::selectWhiteSlave() const {
+	Q_ASSERT(self != NULL && self->isMaster());
+	
+	QList<SparkleNode*> nodes = getNodes();
+	
+	foreach(SparkleNode* node, nodes) {
+		if(node->isMaster() || node->isBehindNAT() || node == self)
+			nodes.removeOne(node);
+	}
+
+	return nodes[qrand() % nodes.size()];
+}
+
 QList<SparkleNode*> Router::getMasters() const {
 	QList<SparkleNode*> masters;
 	
