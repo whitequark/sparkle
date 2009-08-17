@@ -742,8 +742,6 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 		node->setMaster(false);
 	}
 
-	sendRegisterReply(node);
-	
 	QList<SparkleNode*> updates;
 	if(node->isMaster())	updates = router.getOtherNodes();
 	else			updates = router.getOtherMasters();
@@ -756,6 +754,8 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	sendRoute(node, router.getSelfNode());
 
 	router.updateNode(node);
+
+	sendRegisterReply(node);
 }
 
 /* RegisterReply */
@@ -830,7 +830,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_t), node, "Route"))
 		return;
 
-	if(!node->isMaster() && !(router.getMasters().count() == 1 && router.getSelfNode()->isMaster())) {
+	if(!node->isMaster() && router.getSelfNode() != NULL) {
 		Log::warn("link: Route packet from unauthoritative source [%1]:%2") << *node;
 		return;
 	}
