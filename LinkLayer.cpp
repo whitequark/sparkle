@@ -91,6 +91,7 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 void LinkLayer::exitNetwork() {
 	if(joinStep != JoinFinished) {
 		Log::debug("link: join isn't finished, skipping finalization");
+		emit readyForShutdown();
 		return;
 	}	
 	
