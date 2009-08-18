@@ -48,6 +48,11 @@ LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_
 	pingTimer->setInterval(5000);
 	connect(pingTimer, SIGNAL(timeout()), SLOT(pingTimeout()));
 	
+	joinTimer = new QTimer(this);
+	joinTimer->setSingleShot(true);
+	joinTimer->setInterval(5000);
+	connect(joinTimer, SIGNAL(timeout()), SLOT(joinTimeout()));
+	
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
 }
 
@@ -61,8 +66,14 @@ bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forc
 	
 	joinStep = JoinVersionRequest;
 	sendProtocolVersionRequest(wrapNode(remoteIP, remotePort));
+	
+	joinTimer->start();
 
 	return true;
+}
+
+void LinkLayer::joinTimeout() {
+	Log::fatal("link: join timeout");
 }
 
 bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
@@ -389,6 +400,8 @@ void LinkLayer::handleProtocolVersionReply(QByteArray &payload, SparkleNode* nod
 	
 	joinStep = JoinMasterNodeRequest;
 	sendMasterNodeRequest(node);
+	
+	joinTimer->start();
 }
 
 /* PublicKeyExchange */
@@ -579,6 +592,8 @@ void LinkLayer::handleMasterNodeReply(QByteArray &payload, SparkleNode* node) {
 		joinStep = JoinRegistration;
 		sendRegisterRequest(master, true);
 	}
+	
+	joinTimer->start();
 }
 
 /* PingRequest */
@@ -698,6 +713,8 @@ void LinkLayer::joinGotPinged() {
 	
 	Log::debug("link: registering on [%1]:%2") << *joinMaster;
 	sendRegisterRequest(joinMaster, false);
+	
+	joinTimer->start();
 }
 
 /* RegisterRequest */
@@ -802,6 +819,8 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	
 	networkDivisor = reply->networkDivisor;
 	Log::debug("link: network divisor is 1/%1") << networkDivisor;
+	
+	joinTimer->stop();
 	
 	joinStep = JoinFinished;
 	emit joined(self);

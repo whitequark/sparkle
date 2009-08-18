@@ -57,6 +57,7 @@ private slots:
 	
 	void pingTimeout();
 	void negotiationTimeout(SparkleNode* node);
+	void joinTimeout();
 
 private:
 	enum {
@@ -306,7 +307,7 @@ private:
 
 	join_step_t joinStep;
 
-	QTimer* pingTimer;
+	QTimer *pingTimer, *joinTimer;
 	SparkleNode* joinMaster;
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
