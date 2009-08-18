@@ -235,6 +235,8 @@ int main(int argc, char *argv[]) {
 	SignalHandler* sighandler = SignalHandler::getInstance();
 	QObject::connect(sighandler, SIGNAL(sigint()), &linkLayer, SLOT(exitNetwork()));
 	QObject::connect(sighandler, SIGNAL(sigterm()), &linkLayer, SLOT(exitNetwork()));
+	if(!daemonize)
+		QObject::connect(sighandler, SIGNAL(sighup()), &linkLayer, SLOT(exitNetwork()));
 #endif
 
 	QObject::connect(&linkLayer, SIGNAL(readyForShutdown()), &app, SLOT(quit()));

@@ -28,6 +28,7 @@ class SignalHandler : public QObject {
 
 	friend void handle_sigint(int);
 	friend void handle_sigterm(int);
+	friend void handle_sighup(int);
 
 public:
 	static SignalHandler* getInstance();
@@ -35,6 +36,7 @@ public:
 signals:
 	void sigint();
 	void sigterm();
+	void sighup();
 
 private slots:
 	void signalled(int sock);

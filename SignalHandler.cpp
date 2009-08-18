@@ -34,6 +34,10 @@ void handle_sigterm(int) {
 	signal(SIGINT, SIG_DFL);
 }
 
+void handle_sighup(int) {
+	write(SignalHandler::getInstance()->write_fd, "H", 1);
+}
+
 SignalHandler::SignalHandler() {
 	int fd[2];
 	pipe(fd);
@@ -45,6 +49,7 @@ SignalHandler::SignalHandler() {
 	
 	signal(SIGINT, &handle_sigint);
 	signal(SIGTERM, &handle_sigterm);
+	signal(SIGHUP, &handle_sighup);
 }
 
 void SignalHandler::signalled(int sock) {
@@ -54,6 +59,7 @@ void SignalHandler::signalled(int sock) {
 	switch(signal) {
 		case 'I': emit sigint();  break;
 		case 'T': emit sigterm(); break;
+		case 'H': emit sighup();  break;
 	}
 }
 
