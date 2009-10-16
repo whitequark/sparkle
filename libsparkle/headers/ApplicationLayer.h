@@ -1,6 +1,6 @@
 /*
  * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
- * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
+ * Copyright (C) 2009 Sergey Gridassov
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,42 +16,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __LINUX_TAP_H__
-#define __LINUX_TAP_H__
-
-#include <sys/socket.h>
-#include <linux/if.h>
-#include <QObject>
+#ifndef __APPLICATION_LAYER_H__
+#define __APPLICATION_LAYER_H__
 
 class LinkLayer;
-class QSocketNotifier;
 class SparkleNode;
 
-class LinuxTAP : public QObject
-{
-	Q_OBJECT
-
+class ApplicationLayer {
 public:
-	LinuxTAP(LinkLayer &linkLayer);
-	~LinuxTAP();
-
-	void bind();
-
-	bool createInterface(QString pattern);
-
-private slots:
-	void joined(SparkleNode* node);
-	void getPacket();
-	void sendPacket(QByteArray& packet);
-
-private:
-	LinkLayer &linkLayer;
-	QSocketNotifier *notify;
-
-	int tun;
-
-	char device[IFNAMSIZ];
-	char *framebuf;
+	virtual void handleDataPacket(QByteArray &packet, SparkleNode *node) = 0;
+	virtual void attachLinkLayer(LinkLayer *link) = 0;
 };
+
 
 #endif

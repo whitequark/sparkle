@@ -33,15 +33,14 @@
 #include "SHA1Digest.h"
 #include "Router.h"
 #include "Log.h"
+#include "ApplicationLayer.h"
 
-LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
+LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair, ApplicationLayer *_app)
 		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport),
-			preparingForShutdown(false)
+		preparingForShutdown(false), app(_app)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
-	connect(this, SIGNAL(networkPacketReady(QByteArray&, QHostAddress, quint16)),
-		&transport, SLOT(sendPacket(QByteArray&, QHostAddress, quint16)));
 	
 	pingTimer = new QTimer(this);
 	pingTimer->setSingleShot(true);
@@ -54,6 +53,8 @@ LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_
 	connect(joinTimer, SIGNAL(timeout()), SLOT(joinTimeout()));
 	
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
+
+	app->attachLinkLayer(this);
 }
 
 bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forceBehindNAT) {
@@ -166,7 +167,7 @@ void LinkLayer::sendPacket(packet_type_t type, QByteArray data, SparkleNode* nod
 		return;
 	}
 
-	emit networkPacketReady(data, node->getRealIP(), node->getRealPort());
+	transport.sendPacket(data, node->getRealIP(), node->getRealPort());
 }
 
 void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, SparkleNode *node) {
@@ -330,7 +331,7 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 			return;
 		
 		case DataPacket:
-			handleDataPacket(decPayload, node);
+			app->handleDataPacket(decPayload, node);
 			return;
 		
 		default: {
@@ -1024,7 +1025,7 @@ void LinkLayer::reincarnateSomeone() {
 	
 	sendRoleUpdate(target, true);
 }
-
+#if 0
 /* Data */
 
 void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
@@ -1066,9 +1067,9 @@ void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
 	
 	emit tapPacketReady(packet);
 }
-
+#endif
 /* ======= END ======= */
-
+#if 0
 void LinkLayer::processPacket(QByteArray packet) {
 	const ethernet_header_t* eth = (const ethernet_header_t*) packet.constData();
 	SparkleNode* self = router.getSelfNode();
@@ -1167,5 +1168,10 @@ void LinkLayer::sendARPReply(SparkleNode* node) {
 	arp->tpa = htonl(self->getSparkleIP().toIPv4Address());
 	
 	emit tapPacketReady(packet);
+}
+#endif
+
+void LinkLayer::sendDataToNode(QByteArray packet, SparkleNode *node) {
+	sendEncryptedPacket(DataPacket, packet, node);
 }
 

@@ -30,25 +30,27 @@ class QTimer;
 class SparkleNode;
 class PacketTransport;
 class Router;
+class ApplicationLayer;
 
 class LinkLayer : public QObject
 {
 	Q_OBJECT
 
 public:
-	LinkLayer(Router &router, PacketTransport &transport, RSAKeyPair &rsaKeyPair);
+	LinkLayer(Router &router, PacketTransport &transport, RSAKeyPair &rsaKeyPair, ApplicationLayer *app);
 
 	bool createNetwork(QHostAddress localAddress, quint8 networkDivisor);
 	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort, bool forceBehindNAT);
 
-	void processPacket(QByteArray packet);
+	void sendDataToNode(QByteArray packet, SparkleNode *node);
+
+	void sendRouteRequest(QHostAddress addr);
 
 public slots:
 	void exitNetwork();
 
 signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
-	void tapPacketReady(QByteArray &packet);
 	void joined(SparkleNode* node);
 	void readyForShutdown();
 
@@ -174,37 +176,6 @@ private:
 		quint8		isMasterNow;
 	};
 
-	struct ethernet_header_t {
-		quint8		dest[6];
-		quint8		src[6];
-		quint16		type;
-	} __attribute__((packed));
-
-	struct arp_packet_t {
-		quint16		htype;
-		quint16		ptype;
-		quint8		hlen;
-		quint8		plen;
-		quint16		oper;
-		quint8		sha[6];
-		quint32		spa;
-		quint8		tha[6];
-		quint32		tpa;
-	} __attribute__((packed));
-
-	struct ipv4_header_t {
-		quint8		version;
-		quint8		diffserv;
-		quint16		size;
-		quint16		id;
-		quint16		fragments;
-		quint8 		ttl;
-		quint8 		protocol;
-		quint16		checksum;
-		quint32		src;
-		quint32		dest;
-	} __attribute__((packed));
-
 	enum join_step_t {
 		JoinVersionRequest,
 		JoinMasterNodeRequest,
@@ -275,7 +246,6 @@ private:
 	void sendRoute(SparkleNode* node, SparkleNode* target);
 	void handleRoute(QByteArray &payload, SparkleNode* node);
 
-	void sendRouteRequest(QHostAddress addr);
 	void handleRouteRequest(QByteArray &payload, SparkleNode* node);
 
 	void sendRouteMissing(SparkleNode* node, QHostAddress addr);
@@ -290,10 +260,6 @@ private:
 	void sendExitNotification(SparkleNode* node);
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);
 	void reincarnateSomeone();
-
-	void handleDataPacket(QByteArray &payload, SparkleNode* node);
-	
-	void sendARPReply(SparkleNode* node);
 
 	RSAKeyPair &hostKeyPair;
 	Router &router;
@@ -312,6 +278,8 @@ private:
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
 	bool forceBehindNAT, preparingForShutdown;
+
+	ApplicationLayer *app;
 };
 
 #endif

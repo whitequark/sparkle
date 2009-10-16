@@ -31,7 +31,7 @@
 
 #define MTU 1518
 
-LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : QObject(NULL), linkLayer(_linkLayer)
+LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : linkLayer(_linkLayer)
 {
 	tun = -1;
 	framebuf = new char[MTU];
@@ -39,11 +39,6 @@ LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : QObject(NULL), linkLayer(_linkLayer)
 
 LinuxTAP::~LinuxTAP() {
 	delete[] framebuf;
-}
-
-void LinuxTAP::bind() {
-	connect(&linkLayer, SIGNAL(joined(SparkleNode*)), SLOT(joined(SparkleNode*)));
-	connect(&linkLayer, SIGNAL(tapPacketReady(QByteArray&)), SLOT(sendPacket(QByteArray&)));
 }
 
 bool LinuxTAP::createInterface(QString pattern) {
@@ -79,7 +74,6 @@ bool LinuxTAP::createInterface(QString pattern) {
 }
 
 void LinuxTAP::joined(SparkleNode* node) {
-
 	if(tun == -1)
 		Log::fatal("tap: joined to network before the device was created");
 
@@ -131,10 +125,11 @@ void LinuxTAP::joined(SparkleNode* node) {
 
 void LinuxTAP::getPacket() {
 	int len = read(tun, framebuf, MTU);
-	linkLayer.processPacket(QByteArray((char *) framebuf, len));
+
+	emit havePacket(QByteArray((char *) framebuf, len));
 }
 
-void LinuxTAP::sendPacket(QByteArray &data) {
+void LinuxTAP::sendPacket(QByteArray data) {
 	if(write(tun, data.data(), data.size()) != data.size())
 		Log::warn("tap: remote packet truncated");
 }

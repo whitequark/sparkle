@@ -31,6 +31,8 @@
 #include "Log.h"
 #include "Router.h"
 
+#include "EthernetApplicationLayer.h"
+
 #ifdef Q_WS_X11
 #include "LinuxTAP.h"
 #include "SignalHandler.h"
@@ -229,7 +231,10 @@ int main(int argc, char *argv[]) {
 	
 	Router router;
 	UdpPacketTransport transport(bindAddress, localPort);
-	LinkLayer linkLayer(router, transport, hostPair);
+
+	EthernetApplicationLayer ethernetApp(router);
+
+	LinkLayer linkLayer(router, transport, hostPair, &ethernetApp);
 
 #ifdef Q_WS_X11
 	SignalHandler* sighandler = SignalHandler::getInstance();
@@ -241,14 +246,19 @@ int main(int argc, char *argv[]) {
 
 	QObject::connect(&linkLayer, SIGNAL(readyForShutdown()), &app, SLOT(quit()));
 
-#ifdef Q_WS_X11
-	LinuxTAP tap(linkLayer);
 	if(!noTap) {
-		tap.bind();
-		if(tap.createInterface("sparkle%d") == false)
+
+#ifdef Q_WS_X11
+
+		LinuxTAP *tap = new LinuxTAP(linkLayer);
+
+		if(tap->createInterface("sparkle%d") == false)
 			Log::fatal("cannot initialize TAP");
-	}
+
+		ethernetApp.attachTap(tap);
 #endif
+	}
+	
 
 	if(createNetwork) {
 		if(!linkLayer.createNetwork(localAddress, networkDivisor))
