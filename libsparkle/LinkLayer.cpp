@@ -21,7 +21,7 @@
 #include <QHostInfo>
 #include <QTimer>
 #include <QtGlobal>
-#ifdef Q_WS_WIN
+#ifdef Q_OS_WIN32
 #include <winsock.h>
 #else
 #include <arpa/inet.h>
