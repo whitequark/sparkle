@@ -33,8 +33,11 @@
 
 #include "EthernetApplicationLayer.h"
 
-#ifdef Q_WS_X11
+#ifdef Q_OS_LINUX
 #include "LinuxTAP.h"
+#endif
+
+#ifdef Q_OS_UNIX
 #include "SignalHandler.h"
 #endif
 
@@ -57,7 +60,7 @@ QHostAddress checkoutAddress(QString strAddr) {
 }
 
 int main(int argc, char *argv[]) {
-#ifdef Q_WS_X11
+#ifdef Q_OS_UNIX
 	bool daemonize = false;
 	
 	for(int i = 1; i < argc; i++)
@@ -108,7 +111,7 @@ int main(int argc, char *argv[]) {
 		parser.registerOption('N', "force-nat", ArgumentParser::NoArgument, &behindNatStr, NULL,
 			NULL, "skips any NAT checks with positive result", NULL);
 		
-#ifdef Q_WS_X11
+#ifdef Q_OS_UNIX
 		parser.registerOption('D', "daemonize", ArgumentParser::NoArgument, &daemonizeStr, NULL,
 			NULL, "daemonize", NULL);
 #endif
@@ -236,7 +239,7 @@ int main(int argc, char *argv[]) {
 
 	LinkLayer linkLayer(router, transport, hostPair, &ethernetApp);
 
-#ifdef Q_WS_X11
+#ifdef Q_OS_UNIX
 	SignalHandler* sighandler = SignalHandler::getInstance();
 	QObject::connect(sighandler, SIGNAL(sigint()), &linkLayer, SLOT(exitNetwork()));
 	QObject::connect(sighandler, SIGNAL(sigterm()), &linkLayer, SLOT(exitNetwork()));
@@ -247,8 +250,7 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&linkLayer, SIGNAL(readyForShutdown()), &app, SLOT(quit()));
 
 	if(!noTap) {
-
-#ifdef Q_WS_X11
+#ifdef Q_OS_LINUX
 
 		LinuxTAP *tap = new LinuxTAP(linkLayer);
 
