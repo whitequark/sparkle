@@ -57,8 +57,6 @@ DebugConsole::~DebugConsole() {
 
 #ifdef Q_OS_UNIX
 void DebugConsole::pipeReadable() {
-	qDebug() << "readable";
-
 	char buf[256];
 
 	int readed = read(outputPipe[0], buf, sizeof(buf) - 1);
