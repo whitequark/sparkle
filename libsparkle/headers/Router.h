@@ -47,6 +47,7 @@ public:
 	QList<SparkleNode*> getNodes() const;
 	QList<SparkleNode*> getOtherNodes() const;
 
+	void clear();
 private:
 	SparkleNode* self;
 	QList<SparkleNode*> nodes;

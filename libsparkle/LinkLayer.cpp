@@ -37,7 +37,7 @@
 
 LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair, ApplicationLayer *_app)
 		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport),
-		preparingForShutdown(false), app(_app)
+		preparingForShutdown(false), transportInitiated(false), app(_app)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
@@ -74,7 +74,11 @@ bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forc
 }
 
 void LinkLayer::joinTimeout() {
-	Log::fatal("link: join timeout");
+	Log::error("link: join timeout");
+
+	revertJoin();
+
+	emit joinFailed();
 }
 
 bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
@@ -122,11 +126,17 @@ void LinkLayer::exitNetwork() {
 }
 
 bool LinkLayer::initTransport() {
+	if(transportInitiated)
+		return true;
+
 	if(!transport.beginReceiving()) {
 		Log::error("link: cannot initiate transport (port is already bound?)");
 		return false;
 	} else {
 		Log::debug("link: transport initiated");
+
+		transportInitiated = true;
+
 		return true;
 	}
 }
@@ -396,8 +406,13 @@ void LinkLayer::handleProtocolVersionReply(QByteArray &payload, SparkleNode* nod
 	const protocol_version_reply_t *ver = (const protocol_version_reply_t *) payload.data();
 	Log::debug("link: remote protocol version: %1") << ver->version;
 	
-	if(ver->version != ProtocolVersion)
-		Log::fatal("link: protocol version mismatch: got %1, expected %2") << ver->version << ProtocolVersion;
+	if(ver->version != ProtocolVersion) {
+		Log::error("link: protocol version mismatch: got %1, expected %2") << ver->version << ProtocolVersion;
+
+		revertJoin();
+
+		emit joinFailed();
+	}
 	
 	joinStep = JoinMasterNodeRequest;
 	sendMasterNodeRequest(node);
@@ -682,7 +697,11 @@ void LinkLayer::handlePing(QByteArray &payload, SparkleNode* node) {
 	if(joinPing.addr == 0) {
 		joinPing = *ping;
 	} else if(joinPing.addr != ping->addr || joinPing.port != ping->port) {
-		Log::fatal("link: got nonidentical pings");
+		Log::error("link: got nonidentical pings");
+
+		revertJoin();
+
+		emit joinFailed();
 	}
 	
 	if(joinPingsArrived == joinPingsEmitted)
@@ -1025,153 +1044,21 @@ void LinkLayer::reincarnateSomeone() {
 	
 	sendRoleUpdate(target, true);
 }
-#if 0
-/* Data */
 
-void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
-	if(!checkPacketSize(packet, sizeof(ethernet_header_t) + sizeof(ipv4_header_t),
-				node, "Data", PacketSizeGreater))
-		return;
-	
-	const ethernet_header_t* eth = (const ethernet_header_t*) packet.constData();
-	SparkleNode* self = router.getSelfNode();
-
-	if(memcmp(eth->src, node->getSparkleMAC().constData(), 6) != 0) {
-		Log::warn("link: remote [%1] packet with malformed source MAC") << node->getSparkleIP();
-		return;
-	}
-
-	if(memcmp(eth->dest, self->getSparkleMAC().constData(), 6) != 0) {
-		Log::warn("link: remote [%1] packet with malformed destination MAC") << node->getSparkleIP();
-		return;
-	}
-	
-	if(ntohs(eth->type) != 0x0800) { // IP
-		Log::warn("link: remote [%1] non-IP (%2) packet") << node->getSparkleIP()
-			<< QString::number(ntohs(eth->type), 16).rightJustified(4, '0');
-		return;
-	}
-
-	QByteArray payload = packet.right(packet.size() - sizeof(ethernet_header_t));
-	const ipv4_header_t* ip = (const ipv4_header_t*) payload.constData();
-
-	if(ntohl(ip->src) != node->getSparkleIP().toIPv4Address()) {
-		Log::warn("link: received IPv4 packet with malformed source address");
-		return;
-	}
-
-	if(ntohl(ip->dest) != self->getSparkleIP().toIPv4Address()) {
-		Log::warn("link: received IPv4 packet with malformed destination address");
-		return;
-	}
-	
-	emit tapPacketReady(packet);
-}
-#endif
 /* ======= END ======= */
-#if 0
-void LinkLayer::processPacket(QByteArray packet) {
-	const ethernet_header_t* eth = (const ethernet_header_t*) packet.constData();
-	SparkleNode* self = router.getSelfNode();
-
-	if(memcmp(eth->src, self->getSparkleMAC().constData(), 6) != 0) {
-		Log::warn("link: local packet from unknown source MAC");
-		return;
-	}
-	
-	QByteArray payload = packet.right(packet.size() - sizeof(ethernet_header_t));
-	switch(ntohs(eth->type)) {
-		case 0x0806: { // ARP
-			if(memcmp(eth->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) != 0) {
-				Log::warn("link: non-broadcasted local ARP packet");
-				return;
-			}
-			
-			const arp_packet_t* arp = (const arp_packet_t*) payload.constData();
-			if(!(ntohs(arp->htype) == 1 /* ethernet */ && ntohs(arp->ptype) == 0x0800 /* ipv4 */ &&
-				arp->hlen == 6 && arp->plen == 4 &&
-					ntohl(arp->spa) == self->getSparkleIP().toIPv4Address() &&
-					!memcmp(arp->sha, eth->src, 6))) {
-				Log::warn("link: invalid local arp packet received");
-				return;
-			}
-			
-			if(ntohs(arp->oper) == 1 /* request */) {
-				QHostAddress dest(ntohl(arp->tpa));
-				SparkleNode* resolved = router.searchSparkleNode(dest);
-				if(resolved == NULL) {
-					if(!self->isMaster())
-						sendRouteRequest(dest);
-					else
-						Log::info("link: no route to %1") << dest;
-				} else {
-					sendARPReply(resolved);
-				}
-			} else {
-				Log::info("link: ARP packet with unexpected OPER=%1 received") << ntohs(arp->oper);
-				return;
-			}
-			
-			break;
-		}
-		
-		case 0x0800: { // IPv4
-			const ipv4_header_t* ip = (const ipv4_header_t*) payload.constData();
-			if(ntohl(ip->src) != self->getSparkleIP().toIPv4Address()) {
-				Log::warn("link: received local IPv4 packet with malformed source address");
-				return;
-			}
-			
-			QHostAddress dest(ntohl(ip->dest));
-			SparkleNode* resolved = router.searchSparkleNode(dest);
-			if(resolved != NULL) {
-				sendEncryptedPacket(DataPacket, packet, resolved);
-			} else if(htonl(ip->dest) == 0x0effffff) { // ignore broadcasta
-				/* do nothing */
-			} else if(htonl(ip->dest) >> 24 != 0xE0) { // avoid link-local
-				Log::info("link: received local IPv4 packet for unknown destination [%1]")
-						<< dest;
-			}
-			break;
-		}
-		
-		case 0x86dd: { // IPv6
-			/* Silently ignore. There're no IPv6 addresses assigned to iface anyway */
-			break;
-		}
-		
-		default: {
-			Log::warn("link: received local packet of unknown type %1")
-					<< QString::number(ntohs(eth->type), 16).rightJustified(4, '0');
-		}
-	}
-}
-
-void LinkLayer::sendARPReply(SparkleNode* node) {
-	QByteArray packet(sizeof(ethernet_header_t) + sizeof(arp_packet_t), 0);
-	SparkleNode* self = router.getSelfNode();
-	
-	ethernet_header_t* eth = (ethernet_header_t*) packet.data();
-	memcpy(eth->dest, self->getSparkleMAC().constData(), 6);
-	memcpy(eth->src, node->getSparkleMAC().constData(), 6);
-	eth->type = htons(0x0806); // ARP
-	
-	arp_packet_t* arp = (arp_packet_t*) (packet.data() + sizeof(ethernet_header_t));
-	arp->htype = htons(1); // ethernet
-	arp->ptype = htons(0x0800); // IPv4
-	arp->hlen = 6;
-	arp->plen = 4;
-	arp->oper = htons(2); // reply
-	memcpy(arp->sha, eth->src, 6);
-	arp->spa = htonl(node->getSparkleIP().toIPv4Address());
-	memcpy(arp->tha, eth->dest, 6);
-	arp->tpa = htonl(self->getSparkleIP().toIPv4Address());
-	
-	emit tapPacketReady(packet);
-}
-#endif
 
 void LinkLayer::sendDataToNode(QByteArray packet, SparkleNode *node) {
 	sendEncryptedPacket(DataPacket, packet, node);
 }
+
+void LinkLayer::revertJoin() {
+	foreach(SparkleNode *node, nodeSpool)
+		delete node;
+
+	router.clear();
+	nodeSpool.clear();
+	awaitingNegotiation.clear();
+	cookies.clear();
+}
+
 

@@ -164,3 +164,8 @@ QList<SparkleNode*> Router::getOtherNodes() const {
 	return selNodes;
 }
 
+void Router::clear() {
+	nodes.clear();
+	self = NULL;
+}
+

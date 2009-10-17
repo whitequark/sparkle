@@ -248,6 +248,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 	QObject::connect(&linkLayer, SIGNAL(readyForShutdown()), &app, SLOT(quit()));
+	QObject::connect(&linkLayer, SIGNAL(joinFailed()), &linkLayer, SLOT(exitNetwork()));
 
 	if(!noTap) {
 #ifdef Q_OS_LINUX

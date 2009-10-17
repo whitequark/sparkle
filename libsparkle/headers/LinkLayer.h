@@ -53,6 +53,7 @@ signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
 	void joined(SparkleNode* node);
 	void readyForShutdown();
+	void joinFailed();
 
 private slots:
 	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
@@ -261,6 +262,8 @@ private:
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);
 	void reincarnateSomeone();
 
+	void revertJoin();
+
 	RSAKeyPair &hostKeyPair;
 	Router &router;
 	PacketTransport& transport;
@@ -277,7 +280,7 @@ private:
 	SparkleNode* joinMaster;
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
-	bool forceBehindNAT, preparingForShutdown;
+	bool forceBehindNAT, preparingForShutdown, transportInitiated;
 
 	ApplicationLayer *app;
 };
