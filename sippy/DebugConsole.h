@@ -31,12 +31,16 @@ public:
 	virtual ~DebugConsole();
 
 private slots:
+#ifdef Q_OS_UNIX
 	void pipeReadable();
+#endif
 
 private:
+#ifdef Q_OS_UNIX
 	int outputPipe[2];
 
 	QSocketNotifier *pipeNotify;
+#endif
 };
 
 #endif

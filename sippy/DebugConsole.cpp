@@ -17,7 +17,10 @@
  */
 
 #include <QtDebug>
+
+#ifdef Q_OS_UNIX
 #include <QSocketNotifier>
+#endif
 
 #include "DebugConsole.h"
 
@@ -26,34 +29,36 @@ DebugConsole::DebugConsole(QWidget *parent) : QDialog(parent) {
 
 	debugOutput->setFontFamily("Monospace");
 
+#ifdef Q_OS_UNIX
 	pipe(outputPipe);
-
-//	stdout = fdopen(outputPipe[1], "a");
-//	stderr = stdout;
-
 	FILE *tmp = fdopen(outputPipe[1], "a");
 
 	if(tmp == NULL)
 		perror("fdopen");
 
-	setlinebuf(tmp);
-
+	setvbuf(tmp, (char *) NULL, _IOLBF, 0);
 	pipeNotify = new QSocketNotifier(outputPipe[0], QSocketNotifier::Read, this);
 	connect(pipeNotify, SIGNAL(activated(int)), SLOT(pipeReadable()));
-
+		
 	fclose(stdout);
 	fclose(stderr);
 
 	stdout = tmp;
 	stderr = tmp;
+#endif
 }
 
 DebugConsole::~DebugConsole() {
+#ifdef Q_OS_UNIX
 	::close(outputPipe[0]);
 	::close(outputPipe[1]);
+#endif
 }
 
+#ifdef Q_OS_UNIX
 void DebugConsole::pipeReadable() {
+	qDebug() << "readable";
+
 	char buf[256];
 
 	int readed = read(outputPipe[0], buf, sizeof(buf) - 1);
@@ -74,4 +79,4 @@ void DebugConsole::pipeReadable() {
 
 	debugOutput->setPlainText(text);
 }
-
+#endif

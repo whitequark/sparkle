@@ -7,8 +7,8 @@ TARGET = sippy
 DEPENDPATH += . ../libsparkle/headers
 INCLUDEPATH += . ../libsparkle/headers
 
-CONFIG -= release
-CONFIG += debug
+CONFIG -= debug
+CONFIG += release
 
 QT += network
 
@@ -22,10 +22,14 @@ SOURCES += main.cpp ConfigurationStorage.cpp DebugConsole.cpp \
 FORMS += SippyWindow.ui DebugConsole.ui
 
 QMAKE_LIBS += -lsparkle
-QMAKE_LFLAGS += -L../libsparkle
+
+win32 {
+	QMAKE_LFLAGS += -L../libsparkle/release
+} else {
+	QMAKE_LFLAGS += -L../libsparkle
+}
 
 unix { 
 	SOURCES += SignalHandler.cpp
 	HEADERS += SignalHandler.h
 }
-

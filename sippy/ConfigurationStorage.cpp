@@ -22,6 +22,9 @@
 
 ConfigurationStorage::ConfigurationStorage(QObject *parent) : QObject(parent) {
 	settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "Sparkle Team", "Sippy", this);
+	
+	settings->setValue("magic", 0xDEADBEEF);
+	settings->sync();
 }
 
 ConfigurationStorage::~ConfigurationStorage() {

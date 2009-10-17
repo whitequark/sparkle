@@ -21,7 +21,12 @@
 #include "EthernetApplicationLayer.h"
 #include "TapInterface.h"
 
+#ifndef Q_OS_WIN
 #include <arpa/inet.h>
+#else
+#include <wininet.h>
+#endif
+
 #include <LinkLayer.h>
 #include <Log.h>
 #include <Router.h>

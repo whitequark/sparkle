@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 	RSAKeyPair hostPair;
 	
 	QString keyName = ConfigurationStorage::instance()->getKeyName();
-
+	
 	if(!QFile::exists(keyName)) {
 		if(!hostPair.generate(1024))
 			Log::fatal("cannot generate new keypair");

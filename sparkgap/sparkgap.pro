@@ -3,8 +3,8 @@ TARGET = sparkgap
 DEPENDPATH += . ../libsparkle/headers
 INCLUDEPATH += . ../libsparkle/headers
 
-CONFIG -= release
-CONFIG += debug
+CONFIG -= debug
+CONFIG += release
 
 QT -= gui
 QT += network
@@ -14,7 +14,12 @@ HEADERS += ArgumentParser.h EthernetApplicationLayer.h TapInterface.h
 SOURCES += main.cpp ArgumentParser.cpp EthernetApplicationLayer.cpp
 
 QMAKE_LIBS += -lsparkle
-QMAKE_LFLAGS += -L../libsparkle
+
+win32 {
+	QMAKE_LFLAGS += -L../libsparkle/release
+} else {
+	QMAKE_LFLAGS += -L../libsparkle
+}
 
 unix { 
 	SOURCES += LinuxTAP.cpp SignalHandler.cpp
