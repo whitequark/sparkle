@@ -9,22 +9,29 @@
 #include "ExtendedLogin.h"
 #include "SippyWindow.h"
 #include "DebugConsole.h"
+#include "ConfigurationStorage.h"
+
+#ifdef Q_OS_UNIX
+#include "SignalHandler.h"
+#endif
 
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);
 
 	RSAKeyPair hostPair;
 	
-//	if(!QFile::exists(configDir + "/rsa_key")) {
-		if(!hostPair.generate(256))
+	QString keyName = ConfigurationStorage::instance()->getKeyName();
+
+	if(!QFile::exists(keyName)) {
+		if(!hostPair.generate(1024))
 			Log::fatal("cannot generate new keypair");
 
-//		if(!hostPair.writeToFile(configDir + "/rsa_key"))
-//			Log::fatal("cannot write new keypair");
-//	} else {
-//		if(!hostPair.readFromFile(configDir + "/rsa_key"))
-//			Log::fatal("cannot read RSA keypair");
-//	}
+		if(!hostPair.writeToFile(keyName))
+			Log::fatal("cannot write new keypair");
+	} else {
+		if(!hostPair.readFromFile(keyName))
+			Log::fatal("cannot read RSA keypair");
+	}
 
 	DebugConsole *cons = new DebugConsole();
 	cons->show();
@@ -39,6 +46,13 @@ int main(int argc, char *argv[]) {
 	LinkLayer linkLayer(router, transport, hostPair, sippyApp);
 
 	ExtendedLogin *ext = new ExtendedLogin(&linkLayer);
+
+#ifdef Q_OS_UNIX
+	SignalHandler *sighandler = SignalHandler::getInstance();
+	QObject::connect(sighandler, SIGNAL(sigint()), ext, SLOT(signaled()));
+	QObject::connect(sighandler, SIGNAL(sigterm()), ext, SLOT(signaled()));
+	QObject::connect(sighandler, SIGNAL(sighup()), ext, SLOT(signaled()));
+#endif
 
 	win->setExtendedLogin(ext);
 

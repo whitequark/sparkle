@@ -46,6 +46,10 @@ void ExtendedLogin::sippyClosed() {
 	link->exitNetwork();
 }
 
+void ExtendedLogin::signaled() {
+	sippyClosed();
+}
+
 void ExtendedLogin::linkShutDown() {
 	qApp->quit();
 }

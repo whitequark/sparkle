@@ -16,12 +16,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <QTimer>
+
+#include "ConfigurationStorage.h"
+
 #include "ExtendedLogin.h"
 #include "SippyWindow.h"
 
 SippyWindow::SippyWindow(QWidget *parent) : QMainWindow(parent) {
 	setupUi(this);
 
+	ConfigurationStorage *cfg = ConfigurationStorage::instance();
+
+	createNetwork->setChecked(cfg->createNetwork());
+	option->setText(cfg->host());
+	behindNat->setChecked(cfg->behindNat());
+	autoLogin->setChecked(cfg->autoLogin());
+
+	if(autoLogin->isChecked())
+		QTimer::singleShot(0, this, SLOT(on_login_clicked()));
 }
 
 SippyWindow::~SippyWindow() {
@@ -42,6 +55,13 @@ void SippyWindow::on_createNetwork_toggled(bool checked) {
 
 void SippyWindow::on_login_clicked() {
 	stackedWidget->setCurrentWidget(loginSplashPage);
+
+	ConfigurationStorage *cfg = ConfigurationStorage::instance();
+
+	cfg->setCreateNetwork(createNetwork->isChecked());
+	cfg->setHost(option->text());
+	cfg->setBehindNat(behindNat->isChecked());
+	cfg->setAutoLogin(autoLogin->isChecked());
 
 	extendedLogin->login(createNetwork->isChecked(), option->text(), behindNat->isChecked());
 

@@ -13,13 +13,19 @@ CONFIG += debug
 QT += network
 
 # Input
-HEADERS += DebugConsole.h ExtendedLogin.h SippyApplicationLayer.h \
-	SippyWindow.h
+HEADERS += ConfigurationStorage.h DebugConsole.h ExtendedLogin.h \
+	SippyApplicationLayer.h SippyWindow.h Singleton.h
 
-SOURCES += main.cpp DebugConsole.cpp ExtendedLogin.cpp \
-	SippyApplicationLayer.cpp SippyWindow.cpp
+SOURCES += main.cpp ConfigurationStorage.cpp DebugConsole.cpp \
+	ExtendedLogin.cpp SippyApplicationLayer.cpp SippyWindow.cpp
 
 FORMS += SippyWindow.ui DebugConsole.ui
 
 QMAKE_LIBS += -lsparkle
 QMAKE_LFLAGS += -L../libsparkle
+
+unix { 
+	SOURCES += SignalHandler.cpp
+	HEADERS += SignalHandler.h
+}
+

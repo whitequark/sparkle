@@ -16,46 +16,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __EXTENDED_LOGIN__H__
-#define __EXTENDED_LOGIN__H__
+#ifndef __CONFIGURATION_STORAGE__H__
+#define __CONFIGURATION_STORAGE__H__
 
 #include <QObject>
 
-#include <QHostInfo>
+#include "Singleton.h"
 
-class LinkLayer;
+class QSettings;
 
-class ExtendedLogin: public QObject {
+class ConfigurationStorage: public QObject, public Singleton<ConfigurationStorage> {
 	Q_OBJECT
+public:
+	ConfigurationStorage(QObject *parent = 0);
+	virtual ~ConfigurationStorage();
 
 public:
-	ExtendedLogin(LinkLayer *link, QObject *parent = 0);
-	virtual ~ExtendedLogin();
+	QString getKeyName();
 
-public slots:
-	void login(bool create, QString host, bool behindNat);
-	void signaled();
+	bool createNetwork();
+	void setCreateNetwork(bool create);
 
-private slots:
-	void sippyClosed();
-	void linkShutDown();
-	void linkJoinFailed();
-	void linkJoined();
+	QString host();
+	void setHost(QString host);
 
-	void hostnameResolved(QHostInfo info);
+	bool behindNat();
+	void setBehindNat(bool behind);
 
-signals:
-	void loggedIn();
-	void loginFailed(QString message);
-
+	bool autoLogin();
+	void setAutoLogin(bool login);
 private:
-	void doRealLogin(QHostAddress address);
-
-private:
-	LinkLayer *link;
-
-	bool isClosed, behindNat, createNetwork;
-	QString enteredHost;
+	QSettings *settings;
 };
 
 #endif
