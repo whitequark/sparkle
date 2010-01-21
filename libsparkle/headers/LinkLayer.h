@@ -103,12 +103,12 @@ private:
 	};
 
 	struct packet_header_t {
-		uint16_t	type;
-		uint16_t	length;
+		quint16	type;
+		quint16	length;
 	};
 
 	struct protocol_version_reply_t {
-		uint32_t	version;
+		quint32	version;
 	};
 	
 	struct key_exchange_t {
