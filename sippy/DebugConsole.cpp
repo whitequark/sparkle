@@ -17,6 +17,7 @@
  */
 
 #include <QtDebug>
+#include <QScrollBar>
 
 #ifdef Q_OS_UNIX
 #include <QSocketNotifier>
@@ -39,7 +40,7 @@ DebugConsole::DebugConsole(QWidget *parent) : QDialog(parent) {
 	setvbuf(tmp, (char *) NULL, _IOLBF, 0);
 	pipeNotify = new QSocketNotifier(outputPipe[0], QSocketNotifier::Read, this);
 	connect(pipeNotify, SIGNAL(activated(int)), SLOT(pipeReadable()));
-		
+
 	fclose(stdout);
 	fclose(stderr);
 
@@ -76,5 +77,7 @@ void DebugConsole::pipeReadable() {
 	text += QString::fromLocal8Bit(buf);
 
 	debugOutput->setPlainText(text);
+	QScrollBar* vertScroll = debugOutput->verticalScrollBar();
+	vertScroll->setValue(vertScroll->maximum());
 }
 #endif

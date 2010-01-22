@@ -1,6 +1,6 @@
 /*
  * Sippy - zero-configuration fully distributed self-organizing encrypting IM
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +17,17 @@
  */
 
 #include <QSettings>
-
+#include <QApplication>
+#include <QStringList>
 #include "ConfigurationStorage.h"
 
 ConfigurationStorage::ConfigurationStorage(QObject *parent) : QObject(parent) {
-	settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "Sparkle Team", "Sippy", this);
-	
-	settings->setValue("magic", 0xDEADBEEF);
+	QString scope = "default";
+	if(QApplication::arguments().count() > 1)
+		scope = QApplication::arguments()[1];
+
+	settings = new QSettings(QSettings::IniFormat, QSettings::UserScope, "sparkle", QString("sippy-%1").arg(scope), this);
+	settings->setValue("sippy/version", "1");
 	settings->sync();
 }
 
@@ -39,12 +43,20 @@ void ConfigurationStorage::setCreateNetwork(bool create) {
 	settings->setValue("network/create", create);
 }
 
-QString ConfigurationStorage::host() {
-	return settings->value("network/host", "").toString();
+QString ConfigurationStorage::address() {
+	return settings->value("network/address", "").toString();
 }
 
-void ConfigurationStorage::setHost(QString host) {
-	settings->setValue("network/host", host);
+void ConfigurationStorage::setAddress(QString address) {
+	settings->setValue("network/address", address);
+}
+
+quint16 ConfigurationStorage::port() {
+	return settings->value("network/port", "1801").toInt();
+}
+
+void ConfigurationStorage::setPort(quint16 port) {
+	settings->setValue("network/port", port);
 }
 
 bool ConfigurationStorage::behindNat() {
@@ -56,11 +68,11 @@ void ConfigurationStorage::setBehindNat(bool behind) {
 }
 
 bool ConfigurationStorage::autoLogin() {
-	return settings->value("network/auto_login", false).toBool();
+	return settings->value("sippy/auto_login", false).toBool();
 }
 
 void ConfigurationStorage::setAutoLogin(bool login) {
-	settings->setValue("network/auto_login", login);
+	settings->setValue("sippy/auto_login", login);
 }
 
 QString ConfigurationStorage::getKeyName() {

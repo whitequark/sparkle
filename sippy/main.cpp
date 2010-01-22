@@ -1,3 +1,21 @@
+/*
+ * Sippy - zero-configuration fully distributed self-organizing encrypting IM
+ * Copyright (C) 2009 Peter Zotov
+ *
+ * Ths program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <QApplication>
 #include <QFile>
 
@@ -5,59 +23,47 @@
 #include <Router.h>
 #include <UdpPacketTransport.h>
 
-#include "SippyApplicationLayer.h"
-#include "ExtendedLogin.h"
-#include "SippyWindow.h"
 #include "DebugConsole.h"
 #include "ConfigurationStorage.h"
+#include "SippyApplicationLayer.h"
 
-#ifdef Q_OS_UNIX
-#include "SignalHandler.h"
-#endif
+#include "Sippy.h"
 
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);
+	ConfigurationStorage *config = ConfigurationStorage::instance();
 
 	RSAKeyPair hostPair;
-	
-	QString keyName = ConfigurationStorage::instance()->getKeyName();
-	
+
+	QString keyName = config->getKeyName();
+
 	if(!QFile::exists(keyName)) {
 		if(!hostPair.generate(1024))
-			Log::fatal("cannot generate new keypair");
+			Log::fatal("cannot generate new RSA keypair");
 
 		if(!hostPair.writeToFile(keyName))
-			Log::fatal("cannot write new keypair");
+			Log::fatal("cannot write new RSA keypair");
 	} else {
 		if(!hostPair.readFromFile(keyName))
 			Log::fatal("cannot read RSA keypair");
 	}
 
-	DebugConsole *cons = new DebugConsole();
-	cons->show();
+	DebugConsole *console = new DebugConsole();
 
-	SippyWindow *win = new SippyWindow();
+	Log::debug("port: %1") << config->port();;
 
 	Router router;
-	UdpPacketTransport transport(QHostAddress::Any, 1851);
+	UdpPacketTransport transport(QHostAddress::Any, config->port());
 
-	SippyApplicationLayer *sippyApp = new SippyApplicationLayer(router);
+	SippyApplicationLayer *appLayer = new SippyApplicationLayer(router);
 
-	LinkLayer linkLayer(router, transport, hostPair, sippyApp);
+	LinkLayer linkLayer(router, transport, hostPair, appLayer);
 
-	ExtendedLogin *ext = new ExtendedLogin(&linkLayer);
+	appLayer->attachLinkLayer(&linkLayer);
 
-#ifdef Q_OS_UNIX
-	SignalHandler *sighandler = SignalHandler::getInstance();
-	QObject::connect(sighandler, SIGNAL(sigint()), ext, SLOT(signaled()));
-	QObject::connect(sighandler, SIGNAL(sigterm()), ext, SLOT(signaled()));
-	QObject::connect(sighandler, SIGNAL(sighup()), ext, SLOT(signaled()));
-#endif
+	Sippy* sippy = new Sippy(config, console, &linkLayer, appLayer);
 
-	win->setExtendedLogin(ext);
-
-	win->show();
+	sippy->show();
 
 	return app.exec();
 }
-

@@ -15,21 +15,34 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTabWidget" name="debugTabs">
-     <widget class="QWidget" name="outputTab">
-      <attribute name="title">
-       <string>Output</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <widget class="QTextBrowser" name="debugOutput"/>
-       </item>
-      </layout>
-     </widget>
+    <widget class="QTextBrowser" name="debugOutput"/>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttons">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close</set>
+     </property>
     </widget>
    </item>
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>buttons</sender>
+   <signal>clicked(QAbstractButton*)</signal>
+   <receiver>DebugConsole</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>526</x>
+     <y>307</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>454</x>
+     <y>291</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

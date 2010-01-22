@@ -1,6 +1,8 @@
 *.o
 *.a
 moc_*
+ui_*
 sparkgap
+sippy
 Makefile
-sparkle.pro.user
+*.pro.user

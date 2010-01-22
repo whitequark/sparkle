@@ -1,6 +1,6 @@
 /*
  * Sippy - zero-configuration fully distributed self-organizing encrypting IM
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,34 +16,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SIPPY_WINDOW__H__
-#define __SIPPY_WINDOW__H__
+#ifndef CONNECTDIALOG_H
+#define CONNECTDIALOG_H
 
-#include "ui_SippyWindow.h"
+#include <QDialog>
+#include "ui_ConnectDialog.h"
 
-class ExtendedLogin;
+class ConfigurationStorage;
 
-class SippyWindow : public QMainWindow, private Ui_SippyWindow {
+class ConnectDialog : public QDialog, private Ui_ConnectDialog {
 	Q_OBJECT
-
 public:
-	SippyWindow(QWidget *parent = 0);
-	virtual ~SippyWindow();
+	ConnectDialog(ConfigurationStorage* config, QWidget *parent);
 
-	void setExtendedLogin(ExtendedLogin *ext);
+public slots:
+	virtual void accept();
 
 private slots:
-	void on_loginToNetwork_toggled(bool checked);
-	void on_createNetwork_toggled(bool checked);
-	void on_login_clicked();
-
-	void onLoggedIn();
-	void onLoginFailed(QString msg);
+	void checkOptions();
 
 private:
-	ExtendedLogin *extendedLogin;
+	ConnectDialog();
+
+	ConfigurationStorage* config;
 };
 
-#endif
-
-
+#endif // CONNECTDIALOG_H

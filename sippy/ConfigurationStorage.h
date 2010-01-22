@@ -37,8 +37,11 @@ public:
 	bool createNetwork();
 	void setCreateNetwork(bool create);
 
-	QString host();
-	void setHost(QString host);
+	QString address();
+	void setAddress(QString address);
+
+	quint16 port();
+	void setPort(quint16 port);
 
 	bool behindNat();
 	void setBehindNat(bool behind);

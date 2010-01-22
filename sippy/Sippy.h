@@ -1,6 +1,6 @@
 /*
  * Sippy - zero-configuration fully distributed self-organizing encrypting IM
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2009 Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,47 +16,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __EXTENDED_LOGIN__H__
-#define __EXTENDED_LOGIN__H__
+#ifndef ROSTER_H
+#define ROSTER_H
 
-#include <QObject>
-
+#include <QMainWindow>
 #include <QHostInfo>
+#include "ui_Roster.h"
+#include "ConnectDialog.h"
 
 class LinkLayer;
+class SippyApplicationLayer;
+class ConfigurationStorage;
+class DebugConsole;
 
-class ExtendedLogin: public QObject {
+class Sippy : public QMainWindow, private Ui_Roster {
 	Q_OBJECT
 
+	typedef enum { Connected, Disconnected, Connecting } ConnectState;
+
 public:
-	ExtendedLogin(LinkLayer *link, QObject *parent = 0);
-	virtual ~ExtendedLogin();
+	Sippy(ConfigurationStorage* config, DebugConsole* console, LinkLayer* linkLayer, SippyApplicationLayer* appLayer);
 
 public slots:
-	void login(bool create, QString host, bool behindNat);
-	void signaled();
+	void connectToNetwork();
+	void disconnectFromNetwork();
 
 private slots:
-	void sippyClosed();
-	void linkShutDown();
-	void linkJoinFailed();
-	void linkJoined();
-
-	void hostnameResolved(QHostInfo info);
-
-signals:
-	void loggedIn();
-	void loginFailed(QString message);
+	void lookupFinished(QHostInfo host);
+	void joined();
+	void joinFailed();
+	void leaved();
 
 private:
-	void doRealLogin(QHostAddress address);
+	Sippy();
 
-private:
-	LinkLayer *link;
+	void connectStateChanged(ConnectState state);
 
-	bool isClosed, behindNat, createNetwork;
-	QString enteredHost;
+	ConfigurationStorage* config;
+	DebugConsole* console;
+	LinkLayer* linkLayer;
+	SippyApplicationLayer* appLayer;
+
+	ConnectDialog connectDialog;
 };
 
-#endif
-
+#endif // ROSTER_H
