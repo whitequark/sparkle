@@ -36,22 +36,21 @@
 #include "ApplicationLayer.h"
 
 LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair, ApplicationLayer *_app)
-		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport),
-		preparingForShutdown(false), transportInitiated(false), app(_app)
+		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport), preparingForShutdown(false), transportInitiated(false), app(_app)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
-	
+
 	pingTimer = new QTimer(this);
 	pingTimer->setSingleShot(true);
 	pingTimer->setInterval(5000);
 	connect(pingTimer, SIGNAL(timeout()), SLOT(pingTimeout()));
-	
+
 	joinTimer = new QTimer(this);
 	joinTimer->setSingleShot(true);
 	joinTimer->setInterval(5000);
 	connect(joinTimer, SIGNAL(timeout()), SLOT(joinTimeout()));
-	
+
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
 
 	app->attachLinkLayer(this);
@@ -62,12 +61,12 @@ bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forc
 
 	if(!initTransport())
 		return false;
-	
+
 	this->forceBehindNAT = forceBehindNAT;
-	
+
 	joinStep = JoinVersionRequest;
 	sendProtocolVersionRequest(wrapNode(remoteIP, remotePort));
-	
+
 	joinTimer->start();
 
 	return true;
@@ -76,7 +75,7 @@ bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forc
 void LinkLayer::joinTimeout() {
 	Log::error("link: join timeout");
 
-	revertJoin();
+	cleanup();
 
 	emit joinFailed();
 }
@@ -87,19 +86,21 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 	self->setMaster(true);
 	self->setAuthKey(hostKeyPair);
 	self->configureByKey();
-	
+
 	router.setSelfNode(self);
-	
-	if(!initTransport())
+
+	if(!initTransport()) {
+		cleanup();
 		return false;
-	
+	}
+
 	Log::debug("link: created network, my endpoint is [%1]:%2") << localIP << transport.getPort();
-	
+
 	this->networkDivisor = networkDivisor;
 	Log::debug("link: network divisor is 1/%1") << networkDivisor;
-	
+
 	joinStep = JoinFinished;
-	emit joined(self);
+	emit joinedNetwork(self);
 
 	return true;
 }
@@ -107,10 +108,13 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 void LinkLayer::exitNetwork() {
 	if(joinStep != JoinFinished) {
 		Log::debug("link: join isn't finished, skipping finalization");
-		emit readyForShutdown();
+
+		cleanup();
+		emit leavedNetwork();
+
 		return;
-	}	
-	
+	}
+
 	if(router.getSelfNode()->isMaster() && router.getMasters().count() == 1) {
 		Log::debug("link: i'm the last master");
 		reincarnateSomeone();
@@ -119,10 +123,12 @@ void LinkLayer::exitNetwork() {
 		sendExitNotification(router.selectMaster());
 	}
 
-	if(awaitingNegotiation.count() > 0)
+	if(awaitingNegotiation.count() > 0) {
 		preparingForShutdown = true;
-	else
-		emit readyForShutdown();
+	} else {
+		cleanup();
+		emit leavedNetwork();
+	}
 }
 
 bool LinkLayer::initTransport() {
@@ -149,19 +155,19 @@ bool LinkLayer::isMaster() {
 }
 
 SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
-	foreach(SparkleNode* node, nodeSpool) {	
+	foreach(SparkleNode* node, nodeSpool) {
 		if(node->getRealIP() == host && node->getRealPort() == port)
 			return node;
 	}
-	
+
 	SparkleNode* node = new SparkleNode(host, port);
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
-	
+
 	connect(node, SIGNAL(negotiationTimedOut(SparkleNode*)), SLOT(negotiationTimeout(SparkleNode*)));
-	
+
 	//Log::debug("link: added [%1]:%2 to node spool") << host << port;
-	
+
 	return node;
 }
 
@@ -186,14 +192,14 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 	hdr.type = type;
 
 	data.prepend(QByteArray((const char *) &hdr, sizeof(packet_header_t)));
-	
+
 	if(!node->areKeysNegotiated()) {
 		node->pushQueue(data);
 		if(awaitingNegotiation.contains(node)) {
 			Log::warn("link: [%1]:%2 still awaiting negotiation") << *node;
 		} else {
 			Log::debug("link: initiating negotiation with [%1]:%2") << *node;
-			
+
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
 			sendPublicKeyExchange(node, &hostKeyPair, true);
@@ -205,18 +211,20 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 
 void LinkLayer::encryptAndSend(QByteArray data, SparkleNode *node) {
 	Q_ASSERT(node->areKeysNegotiated());
-	
+
 	sendPacket(EncryptedPacket, node->getMySessionKey()->encrypt(data), node);
 }
 
 void LinkLayer::negotiationTimeout(SparkleNode* node) {
 	Log::warn("link: negotiation timeout for [%1]:%2, dropping queue") << *node;
-	
+
 	node->flushQueue();
 	awaitingNegotiation.removeOne(node);
-	
-	if(awaitingNegotiation.count() == 0 && preparingForShutdown)
-		emit readyForShutdown();
+
+	if(awaitingNegotiation.count() == 0 && preparingForShutdown) {
+		cleanup();
+		emit leavedNetwork();
+	}
 }
 
 
@@ -231,7 +239,7 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 	QByteArray payload = data.right(data.size() - sizeof(packet_header_t));
 	SparkleNode* node = wrapNode(host, port);
 
-	switch((packet_type_t) hdr->type) {		
+	switch((packet_type_t) hdr->type) {
 		case ProtocolVersionRequest:
 			handleProtocolVersionRequest(payload, node);
 			return;
@@ -239,22 +247,22 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 		case ProtocolVersionReply:
 			handleProtocolVersionReply(payload, node);
 			return;
-		
+
 		case PublicKeyExchange:
 			handlePublicKeyExchange(payload, node);
 			return;
-		
+
 		case SessionKeyExchange:
 			handleSessionKeyExchange(payload, node);
 			return;
-		
+
 		case Ping:
 			handlePing(payload, node);
 			return;
-		
+
 		case EncryptedPacket:
 			break; // will be handled later
-		
+
 		default: {
 			Log::warn("link: packet of unknown type %1 from [%2]:%3") <<
 					hdr->type << host << port;
@@ -262,20 +270,20 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 		}
 	}
 
-	// at this point we have encrypted packet in payload.	
+	// at this point we have encrypted packet in payload.
 	if(!node->areKeysNegotiated()) {
 		Log::warn("link: no keys for encrypted packet from [%1]:%2") <<
 				host << port;
 		return;
 	}
-	
+
 	// don't call handlePacket again to prevent receiving of unencrypted packet
 	//   of types that imply encryption
-	
+
 	QByteArray decData = node->getHisSessionKey()->decrypt(payload);
 	const packet_header_t *decHdr = (packet_header_t *) decData.constData();
 
-	if((size_t) decData.size() < sizeof(packet_header_t) || 
+	if((size_t) decData.size() < sizeof(packet_header_t) ||
 			decHdr->length < sizeof(packet_header_t) ||
 			decHdr->length > decData.size()) {
 		Log::warn("link: malformed encrypted payload from [%1]:%2") << host << port;
@@ -285,65 +293,65 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 	// Blowfish requires 64-bit chunks, here we truncate alignment zeroes at end
 	if(decData.size() > decHdr->length && decData.size() < decHdr->length + 8)
 		decData.resize(decHdr->length);
-	
+
 	QByteArray decPayload = decData.right(decData.size() - sizeof(packet_header_t));
 	switch((packet_type_t) decHdr->type) {
 		case IntroducePacket:
 			handleIntroducePacket(decPayload, node);
 			return;
-			
+
 		case MasterNodeRequest:
 			handleMasterNodeRequest(decPayload, node);
 			return;
-		
+
 		case MasterNodeReply:
 			handleMasterNodeReply(decPayload, node);
 			return;
-		
+
 		case PingRequest:
 			handlePingRequest(decPayload, node);
 			return;
-		
+
 		case PingInitiate:
 			handlePingInitiate(decPayload, node);
 			return;
-		
+
 		case RegisterRequest:
 			handleRegisterRequest(decPayload, node);
 			return;
-		
+
 		case RegisterReply:
 			handleRegisterReply(decPayload, node);
 			return;
-		
+
 		case Route:
 			handleRoute(decPayload, node);
 			return;
-		
+
 		case RouteRequest:
 			handleRouteRequest(decPayload, node);
 			return;
-		
+
 		case RouteMissing:
 			handleRouteMissing(decPayload, node);
 			return;
-		
+
 		case RouteInvalidate:
 			handleRouteInvalidate(decPayload, node);
 			return;
-		
+
 		case RoleUpdate:
 			handleRoleUpdate(decPayload, node);
 			return;
-		
+
 		case ExitNotification:
 			handleExitNotification(decPayload, node);
 			return;
-		
+
 		case DataPacket:
 			app->handleDataPacket(decPayload, node);
 			return;
-		
+
 		default: {
 			Log::warn("link: encrypted packet of unknown type %1 from [%2]:%3") <<
 					decHdr->type << host << port;
@@ -359,7 +367,7 @@ bool LinkLayer::checkPacketSize(QByteArray& payload, quint16 requiredSize,
 		Log::warn("link: malformed %3 packet from [%1]:%2") << *node << packetName;
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -368,7 +376,7 @@ bool LinkLayer::checkPacketExpection(SparkleNode* node, const char* packetName, 
 		Log::warn("link: unexpected %3 packet from [%1]:%2") << *node << packetName;
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -405,18 +413,17 @@ void LinkLayer::handleProtocolVersionReply(QByteArray &payload, SparkleNode* nod
 
 	const protocol_version_reply_t *ver = (const protocol_version_reply_t *) payload.data();
 	Log::debug("link: remote protocol version: %1") << ver->version;
-	
+
 	if(ver->version != ProtocolVersion) {
 		Log::error("link: protocol version mismatch: got %1, expected %2") << ver->version << ProtocolVersion;
 
-		revertJoin();
-
+		cleanup();
 		emit joinFailed();
 	}
-	
+
 	joinStep = JoinMasterNodeRequest;
 	sendMasterNodeRequest(node);
-	
+
 	joinTimer->start();
 }
 
@@ -425,19 +432,19 @@ void LinkLayer::handleProtocolVersionReply(QByteArray &payload, SparkleNode* nod
 void LinkLayer::sendPublicKeyExchange(SparkleNode* node, const RSAKeyPair* key, bool needHisKey, quint32 cookie) {
 	key_exchange_t ke;
 	ke.needOthersKey = needHisKey;
-	
+
 	if(needHisKey) {
 		ke.cookie = qrand();
 		cookies[ke.cookie] = node;
 	} else {
 		ke.cookie = cookie;
 	}
-	
+
 	QByteArray request;
 	if(key)	request.append(key->getPublicKey());
 	else 	request.append(router.getSelfNode()->getAuthKey()->getPublicKey());
 	request.prepend(QByteArray((const char*) &ke, sizeof(ke)));
-	
+
 	sendPacket(PublicKeyExchange, request, node);
 }
 
@@ -453,7 +460,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 		Log::warn("link: unexpected pubkey from [%1]:%2") << *node;
 		return;
 	}
-		
+
 	if(!node->setAuthKey(key)) {
 		Log::warn("link: received malformed public key from [%1]:%2") << *node;
 		awaitingNegotiation.removeOne(node);
@@ -467,7 +474,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 	} else {
 		SparkleNode* origNode = cookies[ke->cookie];
 		cookies.remove(ke->cookie);
-		
+
 		if(*origNode != *node) {
 			Log::info("link: node [%1]:%2 is apparently behind the same NAT, rewriting")
 				<< *origNode;
@@ -476,10 +483,10 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 			origNode->setAuthKey(key);
 			node = origNode;
 		}
-		
+
 		if(router.getSelfNode() != NULL && !router.getSelfNode()->isMaster())
 			sendIntroducePacket(node);
-		
+
 		sendSessionKeyExchange(node, true);
 	}
 }
@@ -489,11 +496,11 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 void LinkLayer::sendSessionKeyExchange(SparkleNode* node, bool needHisKey) {
 	key_exchange_t ke;
 	ke.needOthersKey = needHisKey;
-	
+
 	QByteArray request;
 	request.append(node->getMySessionKey()->getBytes());
 	request.prepend(QByteArray((const char*) &ke, sizeof(ke)));
-	
+
 	sendPacket(SessionKeyExchange, request, node);
 }
 
@@ -507,7 +514,7 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 	node->setHisSessionKey(key);
 
 	Log::debug("link: stored session key for [%1]:%2") << *node;
-	
+
 	if(ke->needOthersKey) {
 		sendSessionKeyExchange(node, false);
 	} else {
@@ -516,9 +523,11 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 
 		while(!node->isQueueEmpty())
 			encryptAndSend(node->popQueue(), node);
-		
-		if(awaitingNegotiation.count() == 0 && preparingForShutdown)
-			emit readyForShutdown();
+
+		if(awaitingNegotiation.count() == 0 && preparingForShutdown) {
+			cleanup();
+			emit leavedNetwork();
+		}
 	}
 }
 
@@ -535,18 +544,18 @@ void LinkLayer::sendIntroducePacket(SparkleNode* node) {
 void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(introduce_packet_t), node, "IntroducePacket"))
 		return;
-	
+
 	if(node->getSparkleMAC().length() > 0 || router.getNodes().contains(node)) {
 		Log::warn("link: node [%2]:%3 is already introduced as %1") << node->getSparkleIP() << *node;
 		return;
 	}
-	
+
 	const introduce_packet_t *intr = (const introduce_packet_t*) payload.constData();
 
 	node->setSparkleIP(QHostAddress(intr->sparkleIP));
 	node->setSparkleMAC(QByteArray((const char*) intr->sparkleMAC, 6));
 	node->setMaster(false);
-	
+
 	router.updateNode(node);
 
 	Log::debug("link: node [%1]:%2 introduced itself as %3") << *node << node->getSparkleIP();
@@ -561,13 +570,13 @@ void LinkLayer::sendMasterNodeRequest(SparkleNode* node) {
 void LinkLayer::handleMasterNodeRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, 0, node, "MasterNodeRequest"))
 		return;
-	
+
 	// scatter load over the whole network
 	SparkleNode* master = router.selectMaster();
-	
+
 	if(master == NULL)
 		Log::fatal("link: cannot choose master, this is probably a bug");
-	
+
 	sendMasterNodeReply(node, master);
 }
 
@@ -577,7 +586,7 @@ void LinkLayer::sendMasterNodeReply(SparkleNode* node, SparkleNode* masterNode) 
 	master_node_reply_t reply;
 	reply.addr = masterNode->getRealIP().toIPv4Address();
 	reply.port = masterNode->getRealPort();
-	
+
 	sendEncryptedPacket(MasterNodeReply, QByteArray((const char*) &reply, sizeof(master_node_reply_t)), node);
 }
 
@@ -587,14 +596,14 @@ void LinkLayer::handleMasterNodeReply(QByteArray &payload, SparkleNode* node) {
 
 	if(!checkPacketExpection(node, "MasterNodeReply", JoinMasterNodeRequest))
 		return;
-	
+
 	const master_node_reply_t *reply = (const master_node_reply_t*) payload.constData();
-	
+
 	SparkleNode* master = wrapNode(QHostAddress(reply->addr), reply->port);
 	joinMaster = master;
-	
+
 	Log::debug("link: determined master node: [%1]:%2") << *master;
-	
+
 	if(!forceBehindNAT) {
 		joinStep = JoinAwaitingPings;
 		joinPing.addr = 0;
@@ -604,11 +613,11 @@ void LinkLayer::handleMasterNodeReply(QByteArray &payload, SparkleNode* node) {
 		sendPingRequest(node, master, 4);
 	} else {
 		Log::debug("link: skipping NAT detection");
-		
+
 		joinStep = JoinRegistration;
 		sendRegisterRequest(master, true);
 	}
-	
+
 	joinTimer->start();
 }
 
@@ -619,23 +628,23 @@ void LinkLayer::sendPingRequest(SparkleNode* node, SparkleNode* target, int coun
 	req.count = count;
 	req.addr = target->getRealIP().toIPv4Address();
 	req.port = target->getRealPort();
-	
+
 	sendEncryptedPacket(PingRequest, QByteArray((const char*) &req, sizeof(ping_request_t)), node);
 }
 
 void LinkLayer::handlePingRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(ping_request_t), node, "PingRequest"))
 		return;
-	
+
 	const ping_request_t *req = (const ping_request_t*) payload.constData();
 
 	SparkleNode* target = wrapNode(QHostAddress(req->addr), req->port);
-	
+
 	if(*router.getSelfNode() == *target) {
 		doPing(node, req->count);
 		return;
 	}
-	
+
 	sendPingInitiate(target, node, req->count);
 }
 
@@ -646,16 +655,16 @@ void LinkLayer::sendPingInitiate(SparkleNode* node, SparkleNode* target, int cou
 	req.count = count;
 	req.addr = target->getRealIP().toIPv4Address();
 	req.port = target->getRealPort();
-	
+
 	sendEncryptedPacket(PingInitiate, QByteArray((const char*) &req, sizeof(ping_request_t)), node);
 }
 
 void LinkLayer::handlePingInitiate(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(ping_request_t), node, "PingInitiate"))
 		return;
-	
+
 	const ping_request_t *req = (const ping_request_t*) payload.constData();
-	
+
 	doPing(wrapNode(QHostAddress(req->addr), req->port), req->count);
 }
 
@@ -664,7 +673,7 @@ void LinkLayer::doPing(SparkleNode* node, quint8 count) {
 		Log::warn("link: request for many (%1) ping's for [%2]:%3. DoS attempt? Dropping.") << count << *node;
 		return;
 	}
-	
+
 	for(int i = 0; i < count; i++)
 		sendPing(node);
 }
@@ -675,35 +684,34 @@ void LinkLayer::sendPing(SparkleNode* node) {
 	ping_t ping;
 	ping.addr = node->getRealIP().toIPv4Address();
 	ping.port = node->getRealPort();
-	
+
 	sendPacket(Ping, QByteArray((const char*) &ping, sizeof(ping_t)), node);
 }
 
 void LinkLayer::handlePing(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(ping_t), node, "Ping"))
 		return;
-	
+
 	if(!checkPacketExpection(node, "Ping", JoinAwaitingPings))
 		return;
-	
+
 	if(node != joinMaster) {
 		Log::warn("link: unexpected ping from node [%1]:%2") << *node;
 		return;
 	}
-	
+
 	const ping_t* ping = (const ping_t*) payload.constData();
-	
+
 	joinPingsArrived++;
 	if(joinPing.addr == 0) {
 		joinPing = *ping;
 	} else if(joinPing.addr != ping->addr || joinPing.port != ping->port) {
 		Log::error("link: got nonidentical pings");
 
-		revertJoin();
-
+		cleanup();
 		emit joinFailed();
 	}
-	
+
 	if(joinPingsArrived == joinPingsEmitted)
 		joinGotPinged();
 }
@@ -711,9 +719,9 @@ void LinkLayer::handlePing(QByteArray &payload, SparkleNode* node) {
 void LinkLayer::pingTimeout() {
 	if(joinPingsArrived == 0) {
 		Log::debug("link: no pings arrived, NAT is detected");
-		
+
 		joinStep = JoinRegistration;
-		
+
 		Log::debug("link: registering on [%1]:%2") << *joinMaster;
 		sendRegisterRequest(joinMaster, true);
 	} else {
@@ -723,17 +731,17 @@ void LinkLayer::pingTimeout() {
 
 void LinkLayer::joinGotPinged() {
 	Log::debug("link: %1% of pings arrived") << (joinPingsArrived * 100 / joinPingsEmitted);
-	
+
 	pingTimer->stop();
-	
+
 	joinStep = JoinRegistration;
-	
+
 	Log::debug("link: no NAT detected, my real address is [%1]:%2")
 				<< QHostAddress(joinPing.addr) << joinPing.port;
-	
+
 	Log::debug("link: registering on [%1]:%2") << *joinMaster;
 	sendRegisterRequest(joinMaster, false);
-	
+
 	joinTimer->start();
 }
 
@@ -742,7 +750,7 @@ void LinkLayer::joinGotPinged() {
 void LinkLayer::sendRegisterRequest(SparkleNode* node, bool isBehindNAT) {
 	register_request_t req;
 	req.isBehindNAT = isBehindNAT;
-	
+
 	sendEncryptedPacket(RegisterRequest, QByteArray((const char*) &req, sizeof(register_request_t)), node);
 }
 
@@ -785,7 +793,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 		sendRoute(node, update);
 		sendRoute(update, node);
 	}
-	
+
 	sendRoute(node, router.getSelfNode());
 
 	router.updateNode(node);
@@ -806,20 +814,20 @@ void LinkLayer::sendRegisterReply(SparkleNode* node) {
 	} else {
 		reply.realIP = reply.realPort = 0;
 	}
-	
+
 	Q_ASSERT(node->getSparkleMAC().length() == 6);
 	memcpy(reply.sparkleMAC, node->getSparkleMAC().constData(), 6);
-	
+
 	sendEncryptedPacket(RegisterReply, QByteArray((const char*) &reply, sizeof(register_reply_t)), node);
 }
 
 void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(register_reply_t), node, "RegisterReply"))
 		return;
-	
+
 	if(!checkPacketExpection(node, "RegisterReply", JoinRegistration))
 		return;
-	
+
 	const register_reply_t* reply = (const register_reply_t*) payload.constData();
 
 	SparkleNode* self;
@@ -836,14 +844,14 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	self->setAuthKey(hostKeyPair);
 	self->setMaster(reply->isMaster);
 	router.setSelfNode(self);
-	
+
 	networkDivisor = reply->networkDivisor;
 	Log::debug("link: network divisor is 1/%1") << networkDivisor;
-	
+
 	joinTimer->stop();
-	
+
 	joinStep = JoinFinished;
-	emit joined(self);
+	emit joinedNetwork(self);
 }
 
 /* Route */
@@ -859,7 +867,7 @@ void LinkLayer::sendRoute(SparkleNode* node, SparkleNode* target)
 
 	Q_ASSERT(node->getSparkleMAC().length() == 6);
 	memcpy(route.sparkleMAC, target->getSparkleMAC().constData(), 6);
-	
+
 	sendEncryptedPacket(Route, QByteArray((const char*) &route, sizeof(route_t)), node);
 }
 
@@ -873,20 +881,20 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	}
 
 	const route_t* route = (const route_t*) payload.constData();
-	
+
 	SparkleNode* target = wrapNode(QHostAddress(route->realIP), route->realPort);
 	if(target == router.getSelfNode()) {
 		Log::warn("link: attempt to add myself by Route packet from [%1]:%2") << *node;
 		return;
 	}
-	
+
 	Log::debug("link: Route received from [%1]:%2") << *node;
-	
+
 	target->setSparkleIP(QHostAddress(route->sparkleIP));
 	target->setSparkleMAC(QByteArray((const char*) route->sparkleMAC, 6));
 	target->setMaster(route->isMaster);
 	target->setBehindNAT(route->isBehindNAT);
-	
+
 	router.updateNode(target);
 }
 
@@ -895,15 +903,15 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 void LinkLayer::sendRouteRequest(QHostAddress host) {
 	route_request_t req;
 	req.sparkleIP = host.toIPv4Address();
-	
-	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)), 
+
+	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)),
 				router.selectMaster());
 }
 
 void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest"))
 		return;
-	
+
 	if(!router.getSelfNode()->isMaster()) {
 		Log::warn("link: i'm slave and got route request from [%1]:%2") << *node;
 		return;
@@ -911,7 +919,7 @@ void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 
 	const route_request_t* req = (const route_request_t*) payload.constData();
 	QHostAddress host(req->sparkleIP);
-	
+
 	SparkleNode* target = router.searchSparkleNode(host);
 	if(target) {
 		sendRoute(node, target);
@@ -925,17 +933,17 @@ void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 void LinkLayer::sendRouteMissing(SparkleNode* node, QHostAddress host) {
 	route_missing_t req;
 	req.sparkleIP = host.toIPv4Address();
-	
+
 	sendEncryptedPacket(RouteMissing, QByteArray((const char*) &req, sizeof(route_request_t)), node);
 }
 
 void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_missing_t), node, "RouteMissing"))
 		return;
-	
+
 	const route_missing_t* req = (const route_missing_t*) payload.constData();
 	QHostAddress host(req->sparkleIP);
-	
+
 	Log::info("link: no route to %1") << host;
 }
 
@@ -945,20 +953,20 @@ void LinkLayer::sendRouteInvalidate(SparkleNode* node, SparkleNode* target) {
 	route_invalidate_t inv;
 	inv.realIP = target->getRealIP().toIPv4Address();
 	inv.realPort = target->getRealPort();
-	
+
 	sendEncryptedPacket(RouteInvalidate, QByteArray((const char*) &inv, sizeof(route_invalidate_t)), node);
 }
 
 void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_invalidate_t), node, "RouteInvalidate"))
 		return;
-	
+
 	const route_invalidate_t* inv = (const route_invalidate_t*) payload.constData();
 	SparkleNode* target = wrapNode(QHostAddress(inv->realIP), inv->realPort);
-	
+
 	Log::debug("link: invalidating route %5 @ [%1]:%2 because of command from [%3]:%4")
 			<< *target << *node << node->getSparkleIP();
-	
+
 	router.removeNode(target);
 	nodeSpool.removeOne(target);
 	delete target;
@@ -969,14 +977,14 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 void LinkLayer::sendRoleUpdate(SparkleNode* node, bool isMasterNow) {
 	role_update_t update;
 	update.isMasterNow = isMasterNow;
-	
+
 	sendEncryptedPacket(RoleUpdate, QByteArray((const char*) &update, sizeof(role_update_t)), node);
 }
 
 void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(role_update_t), node, "RoleUpdate"))
 		return;
-	
+
 	if(!node->isMaster()) {
 		Log::warn("link: RoleUpdate packet was received from slave [%1]:%2, dropping") << *node;
 		return;
@@ -986,7 +994,7 @@ void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
 
 	Log::info("link: switching to %3 role caused by [%1]:%2") << *node
 		<< (update->isMasterNow ? "Master" : "Slave");
-	
+
 	router.getSelfNode()->setMaster(update->isMasterNow);
 }
 
@@ -999,7 +1007,7 @@ void LinkLayer::sendExitNotification(SparkleNode* node) {
 void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, 0, node, "ExitNotification"))
 		return;
-	
+
 	if(!router.getSelfNode()->isMaster()) {
 		Log::warn("link: ExitNotification was received from [%1]:%2, but I am slave") << *node;
 		return;
@@ -1007,7 +1015,7 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 
 	router.removeNode(node);
 
-	foreach(SparkleNode* target, router.getOtherNodes())	
+	foreach(SparkleNode* target, router.getOtherNodes())
 		sendRouteInvalidate(target, node);
 
 	nodeSpool.removeOne(node);
@@ -1017,7 +1025,7 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 	double rk = ((double) router.getMasters().count()) / (router.getNodes().count());
 	if(rk < ik || router.getMasters().count() == 1) {
 		Log::debug("link: insufficient masters (I %1; R %2)") << ik << rk;
-		
+
 		reincarnateSomeone();
 	}
 }
@@ -1030,18 +1038,18 @@ void LinkLayer::reincarnateSomeone() {
 
 	SparkleNode* target = router.selectWhiteSlave();
 	Log::debug("link: %1 @ [%2]:%3 is selected as target") << target->getSparkleIP() << *target;
-	
+
 	target->setMaster(true);
-	
+
 	router.updateNode(target);
-	
+
 	foreach(SparkleNode* node, router.getOtherNodes()) {
 		if(!node->isMaster() && node != target) {
 			sendRoute(node, target);
 			sendRoute(target, node);
 		}
 	}
-	
+
 	sendRoleUpdate(target, true);
 }
 
@@ -1051,7 +1059,7 @@ void LinkLayer::sendDataToNode(QByteArray packet, SparkleNode *node) {
 	sendEncryptedPacket(DataPacket, packet, node);
 }
 
-void LinkLayer::revertJoin() {
+void LinkLayer::cleanup() {
 	foreach(SparkleNode *node, nodeSpool)
 		delete node;
 
@@ -1059,6 +1067,7 @@ void LinkLayer::revertJoin() {
 	nodeSpool.clear();
 	awaitingNegotiation.clear();
 	cookies.clear();
+	joinTimer->stop();
 }
 
 

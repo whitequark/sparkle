@@ -51,13 +51,13 @@ public slots:
 
 signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
-	void joined(SparkleNode* node);
-	void readyForShutdown();
 	void joinFailed();
+	void joinedNetwork(SparkleNode* self);
+	void leavedNetwork();
 
 private slots:
 	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
-	
+
 	void pingTimeout();
 	void negotiationTimeout(SparkleNode* node);
 	void joinTimeout();
@@ -94,9 +94,9 @@ private:
 		RouteRequest			= 19,
 		RouteInvalidate			= 21,
 		RouteMissing			= 22,
-		
+
 		RoleUpdate			= 23,
-		
+
 		ExitNotification		= 24,
 
 		DataPacket			= 30,
@@ -110,7 +110,7 @@ private:
 	struct protocol_version_reply_t {
 		quint32	version;
 	};
-	
+
 	struct key_exchange_t {
 		quint8		needOthersKey;
 		quint32		cookie;
@@ -125,7 +125,7 @@ private:
 		quint32		addr;
 		quint16		port;
 	};
-	
+
 	struct ping_request_t {
 		quint32		addr;
 		quint16		port;
@@ -168,11 +168,11 @@ private:
 		quint32		realIP;
 		quint16		realPort;
 	};
-	
+
 	struct route_missing_t {
 		quint32		sparkleIP;
 	};
-	
+
 	struct role_update_t {
 		quint8		isMasterNow;
 	};
@@ -185,10 +185,10 @@ private:
 		JoinFinished
 	};
 
-	bool initTransport();	
+	bool initTransport();
 
 	SparkleNode* wrapNode(QHostAddress host, quint16 port);
-	
+
 	bool isMaster();
 
 	void sendPacket(packet_type_t type, QByteArray data, SparkleNode* node);
@@ -200,7 +200,7 @@ private:
 		PacketSizeGreater
 	};
 
-	bool checkPacketSize(QByteArray& payload, quint16 requiredSize, 
+	bool checkPacketSize(QByteArray& payload, quint16 requiredSize,
 					SparkleNode* node, const char* packetName,
 							packet_size_class_t sizeClass = PacketSizeEqual);
 	bool checkPacketExpection(SparkleNode* node, const char* packetName, join_step_t neededStep);
@@ -219,10 +219,10 @@ private:
 
 	void sendIntroducePacket(SparkleNode* node);
 	void handleIntroducePacket(QByteArray &payload, SparkleNode* node);
-	
+
 	void sendMasterNodeRequest(SparkleNode* node);
 	void handleMasterNodeRequest(QByteArray &payload, SparkleNode* node);
-	
+
 	void sendMasterNodeReply(SparkleNode* node, SparkleNode* masterNode);
 	void handleMasterNodeReply(QByteArray &payload, SparkleNode* node);
 
@@ -262,7 +262,7 @@ private:
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);
 	void reincarnateSomeone();
 
-	void revertJoin();
+	void cleanup();
 
 	RSAKeyPair &hostKeyPair;
 	Router &router;
