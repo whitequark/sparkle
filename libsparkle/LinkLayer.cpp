@@ -1035,12 +1035,13 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 }
 
 void LinkLayer::reincarnateSomeone() {
-	if(router.getNodes().count() == 1) {
+	SparkleNode* target = router.selectWhiteSlave();
+
+	if(target == NULL) {
 		Log::warn("link: there're no nodes to reincarnate");
 		return;
 	}
 
-	SparkleNode* target = router.selectWhiteSlave();
 	Log::debug("link: %1 @ [%2]:%3 is selected as target") << target->getPrettySparkleMAC() << *target;
 
 	target->setMaster(true);

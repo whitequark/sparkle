@@ -125,6 +125,9 @@ SparkleNode* Router::selectWhiteSlave() const {
 			nodes.removeOne(node);
 	}
 
+	if(nodes.size() == 0)
+		return NULL;
+
 	return nodes[qrand() % nodes.size()];
 }
 
