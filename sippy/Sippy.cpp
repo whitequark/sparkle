@@ -24,15 +24,14 @@
 #include "Log.h"
 #include "LinkLayer.h"
 
-Sippy::Sippy(ConfigurationStorage* _config, DebugConsole* _console, LinkLayer* _link, SippyApplicationLayer* _app) :
-		config(_config), console(_console), connectDialog(_config, this),
-		linkLayer(_link), appLayer(_app)
+Sippy::Sippy(ConfigurationStorage* _config, DebugConsole &_console, LinkLayer &_link, MessagingApplicationLayer &_app) :
+		config(_config), console(_console),
+		linkLayer(_link), appLayer(_app), connectDialog(_config, this)
 {
 	setupUi(this);
 
-	console->connect(actionShowConsole, SIGNAL(triggered()), SLOT(show()));
-
-	console->show();
+	console.connect(actionShowConsole, SIGNAL(triggered()), SLOT(show()));
+	console.show();
 
 	connectDialog.connect(actionConnect, SIGNAL(triggered()), SLOT(show()));
 	connectDialog.connect(&connectDialog, SIGNAL(accepted()), SLOT(close()));
@@ -40,14 +39,14 @@ Sippy::Sippy(ConfigurationStorage* _config, DebugConsole* _console, LinkLayer* _
 	connect(&connectDialog, SIGNAL(accepted()), SLOT(connectToNetwork()));
 	connect(actionDisconnect, SIGNAL(triggered()), SLOT(disconnectFromNetwork()));
 
-	connect(linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(joined()));
-	connect(linkLayer, SIGNAL(joinFailed()), SLOT(joinFailed()));
-	connect(linkLayer, SIGNAL(leavedNetwork()), SLOT(leaved()));
+	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(joined()));
+	connect(&linkLayer, SIGNAL(joinFailed()), SLOT(joinFailed()));
+	connect(&linkLayer, SIGNAL(leavedNetwork()), SLOT(leaved()));
 
 	connectStateChanged(Disconnected);
 }
 
-void Sippy::connectStateChanged(ConnectState state) {
+void Sippy::connectStateChanged(connect_state_t state) {
 	actionConnect->setEnabled(state == Disconnected);
 	actionDisconnect->setEnabled(state != Disconnected);
 
@@ -72,14 +71,14 @@ void Sippy::lookupFinished(QHostInfo host) {
 			Log::warn("there are more than one IP address for host %1, using first (%2)") << host.hostName() << addr.toString();
 
 		if(config->createNetwork()) {
-			if(linkLayer->createNetwork(addr, 10)) {
+			if(linkLayer.createNetwork(addr, 10)) {
 				return;
 			} else {
 				Log::error("cannot bind to local endpoint");
 				QMessageBox::critical(this, tr("Error"), tr("Cannot create network."));
 			}
 		} else {
-			if(linkLayer->joinNetwork(addr, 1801, config->behindNat())) {
+			if(linkLayer.joinNetwork(addr, 1801, config->behindNat())) {
 				statusbar->showMessage(tr("Joining..."));
 				return;
 			} else {
@@ -109,7 +108,7 @@ void Sippy::joinFailed() {
 void Sippy::disconnectFromNetwork() {
 	Log::info("leaving network");
 	statusbar->showMessage(tr("Leaving network..."));
-	linkLayer->exitNetwork();
+	linkLayer.exitNetwork();
 }
 
 void Sippy::leaved() {

@@ -24,21 +24,23 @@
 
 class LinkLayer;
 class Router;
+class QByteArray;
+class QHostAddress;
 
-class SippyApplicationLayer: public QObject, public ApplicationLayer {
+class MessagingApplicationLayer: public QObject, public ApplicationLayer {
 	Q_OBJECT
 
 public:
-	SippyApplicationLayer(Router &router, QObject *parent = 0);
-	virtual ~SippyApplicationLayer();
+	MessagingApplicationLayer(LinkLayer &linkLayer);
+	virtual ~MessagingApplicationLayer();
 
 	virtual void handleDataPacket(QByteArray &packet, SparkleNode *node);
-	virtual void attachLinkLayer(LinkLayer *link);
 
 private:
-	Router &router;
+	MessagingApplicationLayer();
 
-	LinkLayer *link;
+	LinkLayer &linkLayer;
+	Router &router;
 };
 
 #endif

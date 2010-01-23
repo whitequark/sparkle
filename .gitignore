@@ -2,7 +2,7 @@
 *.a
 moc_*
 ui_*
-sparkgap
-sippy
+sparkgap/sparkgap
+sippy/sippy
 Makefile
 *.pro.user

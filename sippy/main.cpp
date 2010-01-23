@@ -1,6 +1,6 @@
 /*
  * Sippy - zero-configuration fully distributed self-organizing encrypting IM
- * Copyright (C) 2009 Peter Zotov
+ * Copyright (C) 2010 Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,7 @@
 
 #include "DebugConsole.h"
 #include "ConfigurationStorage.h"
-#include "SippyApplicationLayer.h"
-
+#include "MessagingApplicationLayer.h"
 #include "Sippy.h"
 
 int main(int argc, char *argv[]) {
@@ -48,22 +47,15 @@ int main(int argc, char *argv[]) {
 			Log::fatal("cannot read RSA keypair");
 	}
 
-	DebugConsole *console = new DebugConsole();
-
-	Log::debug("port: %1") << config->port();;
+	DebugConsole console;
 
 	Router router;
 	UdpPacketTransport transport(QHostAddress::Any, config->port());
+	LinkLayer linkLayer(router, transport, hostPair);
 
-	SippyApplicationLayer *appLayer = new SippyApplicationLayer(router);
-
-	LinkLayer linkLayer(router, transport, hostPair, appLayer);
-
-	appLayer->attachLinkLayer(&linkLayer);
-
-	Sippy* sippy = new Sippy(config, console, &linkLayer, appLayer);
-
-	sippy->show();
+	MessagingApplicationLayer appLayer(linkLayer);
+	Sippy sippy(config, console, linkLayer, appLayer);
+	sippy.show();
 
 	return app.exec();
 }

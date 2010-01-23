@@ -25,17 +25,15 @@
 #include "ConnectDialog.h"
 
 class LinkLayer;
-class SippyApplicationLayer;
+class MessagingApplicationLayer;
 class ConfigurationStorage;
 class DebugConsole;
 
 class Sippy : public QMainWindow, private Ui_Roster {
 	Q_OBJECT
 
-	typedef enum { Connected, Disconnected, Connecting } ConnectState;
-
 public:
-	Sippy(ConfigurationStorage* config, DebugConsole* console, LinkLayer* linkLayer, SippyApplicationLayer* appLayer);
+	Sippy(ConfigurationStorage* config, DebugConsole &console, LinkLayer &linkLayer, MessagingApplicationLayer &appLayer);
 
 public slots:
 	void connectToNetwork();
@@ -48,14 +46,16 @@ private slots:
 	void leaved();
 
 private:
+	enum connect_state_t { Connected, Disconnected, Connecting };
+
 	Sippy();
 
-	void connectStateChanged(ConnectState state);
+	void connectStateChanged(connect_state_t state);
 
 	ConfigurationStorage* config;
-	DebugConsole* console;
-	LinkLayer* linkLayer;
-	SippyApplicationLayer* appLayer;
+	DebugConsole &console;
+	LinkLayer &linkLayer;
+	MessagingApplicationLayer &appLayer;
 
 	ConnectDialog connectDialog;
 };

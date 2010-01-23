@@ -1,6 +1,6 @@
 /*
  * Sippy - zero-configuration fully distributed self-organizing encrypting IM
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2010 Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,21 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "SippyApplicationLayer.h"
+#include "MessagingApplicationLayer.h"
+#include "LinkLayer.h"
 
-SippyApplicationLayer::SippyApplicationLayer(Router &_router, QObject *parent) : QObject(parent), router(_router) {
-
+MessagingApplicationLayer::MessagingApplicationLayer(LinkLayer &_linkLayer) : linkLayer(_linkLayer), router(_linkLayer.getRouter()) {
+	linkLayer.attachApplicationLayer(Messaging, this);
 }
 
-SippyApplicationLayer::~SippyApplicationLayer() {
-
+MessagingApplicationLayer::~MessagingApplicationLayer() {
 }
 
-void SippyApplicationLayer::handleDataPacket(QByteArray &packet, SparkleNode *node) {
+void MessagingApplicationLayer::handleDataPacket(QByteArray &packet, SparkleNode *node) {
 
 }
-
-void SippyApplicationLayer::attachLinkLayer(LinkLayer *link) {
-	this->link = link;
-}
-

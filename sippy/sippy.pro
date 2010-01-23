@@ -5,24 +5,23 @@ DEPENDPATH += . \
 INCLUDEPATH += . \
 	../libsparkle/headers
 QT += network
+debug:DEFINES += DEBUG
 
-debug {
-	DEFINES += DEBUG
-}
+unix:POST_TARGETDEPS += ../libsparkle/libsparkle.a
 
 # Input
 HEADERS += DebugConsole.h \
 	ConfigurationStorage.h \
-	SippyApplicationLayer.h \
 	ConnectDialog.h \
 	Singleton.h \
-	Sippy.h
+	Sippy.h \
+	MessagingApplicationLayer.h
 SOURCES += DebugConsole.cpp \
 	main.cpp \
 	ConfigurationStorage.cpp \
-	SippyApplicationLayer.cpp \
 	ConnectDialog.cpp \
-	Sippy.cpp
+	Sippy.cpp \
+	MessagingApplicationLayer.cpp
 QMAKE_LIBS += -lsparkle
 win32:QMAKE_LFLAGS += -L../libsparkle/release
 else:QMAKE_LFLAGS += -L../libsparkle
