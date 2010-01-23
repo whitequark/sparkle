@@ -575,6 +575,10 @@ void LinkLayer::handleMasterNodeRequest(QByteArray &payload, SparkleNode* node) 
 	if(!checkPacketSize(payload, 0, node, "MasterNodeRequest"))
 		return;
 
+	SparkleNode* orphan = router.searchNode(node->getRealIP(), node->getRealPort());
+	if(orphan != NULL)
+		router.removeNode(orphan);
+
 	// scatter load over the whole network
 	SparkleNode* master = router.selectMaster();
 
