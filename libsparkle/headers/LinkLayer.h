@@ -24,29 +24,30 @@
 #include <QTime>
 
 #include "RSAKeyPair.h"
+#include "ApplicationLayer.h"
 
 class QHostAddress;
 class QTimer;
 class SparkleNode;
 class PacketTransport;
 class Router;
-class ApplicationLayer;
 
 class LinkLayer : public QObject
 {
 	Q_OBJECT
 
 public:
-	LinkLayer(Router &router, PacketTransport &transport, RSAKeyPair &rsaKeyPair, ApplicationLayer *app);
+	LinkLayer(Router &router, PacketTransport &transport, RSAKeyPair &rsaKeyPair);
+
+	void attachApplicationLayer(ApplicationLayer::Encapsulation encap, ApplicationLayer* app);
 
 	bool createNetwork(QHostAddress localAddress, quint8 networkDivisor);
 	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort, bool forceBehindNAT);
 
-	void sendDataToNode(QByteArray packet, SparkleNode *node);
-
-	void sendRouteRequest(QHostAddress addr);
+	Router& getRouter();
 
 public slots:
+	void sendDataPacket(SparkleNode *node, ApplicationLayer::Encapsulation encap, QByteArray &packet);
 	void exitNetwork();
 
 signals:
@@ -57,14 +58,13 @@ signals:
 
 private slots:
 	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
-
 	void pingTimeout();
 	void negotiationTimeout(SparkleNode* node);
 	void joinTimeout();
 
 private:
 	enum {
-		ProtocolVersion	= 9,
+		ProtocolVersion	= 10,
 	};
 
 	enum packet_type_t {
@@ -117,8 +117,7 @@ private:
 	};
 
 	struct introduce_packet_t {
-		quint32		sparkleIP;
-		quint8		sparkleMAC[8];
+		quint8		sparkleMAC[6];
 	};
 
 	struct master_node_reply_t {
@@ -144,7 +143,6 @@ private:
 	struct register_reply_t {
 		quint8		networkDivisor;
 		quint8		isMaster;
-		quint32		sparkleIP;
 		quint8		sparkleMAC[6];
 		/* filled only when NAT is detected */
 		quint32		realIP;
@@ -152,7 +150,6 @@ private:
 	};
 
 	struct route_t {
-		quint32		sparkleIP;
 		quint8		sparkleMAC[6];
 		quint32		realIP;
 		quint16		realPort;
@@ -161,7 +158,7 @@ private:
 	};
 
 	struct route_request_t {
-		quint32		sparkleIP;
+		quint8		sparkleMAC[6];
 	};
 
 	struct route_invalidate_t {
@@ -170,11 +167,15 @@ private:
 	};
 
 	struct route_missing_t {
-		quint32		sparkleIP;
+		quint8		sparkleMAC[6];
 	};
 
 	struct role_update_t {
 		quint8		isMasterNow;
+	};
+
+	struct data_packet_t {
+		quint16		encapsulation;
 	};
 
 	enum join_step_t {
@@ -247,9 +248,10 @@ private:
 	void sendRoute(SparkleNode* node, SparkleNode* target);
 	void handleRoute(QByteArray &payload, SparkleNode* node);
 
+	void sendRouteRequest(QByteArray mac);
 	void handleRouteRequest(QByteArray &payload, SparkleNode* node);
 
-	void sendRouteMissing(SparkleNode* node, QHostAddress addr);
+	void sendRouteMissing(SparkleNode* node, QByteArray mac);
 	void handleRouteMissing(QByteArray &payload, SparkleNode* node);
 
 	void sendRouteInvalidate(SparkleNode* node, SparkleNode* target);
@@ -262,6 +264,9 @@ private:
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);
 	void reincarnateSomeone();
 
+	/* see sendDataPacket(...) on top */;
+	void handleDataPacket(QByteArray &payload, SparkleNode* node);
+
 	void cleanup();
 
 	RSAKeyPair &hostKeyPair;
@@ -271,6 +276,7 @@ private:
 	QList<SparkleNode*> nodeSpool;
 	QList<SparkleNode*> awaitingNegotiation;
 	QHash<quint32, SparkleNode*> cookies;
+	QHash<ApplicationLayer::Encapsulation, ApplicationLayer*> appLayers;
 
 	quint8 networkDivisor;
 
@@ -281,8 +287,6 @@ private:
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
 	bool forceBehindNAT, preparingForShutdown, transportInitiated;
-
-	ApplicationLayer *app;
 };
 
 #endif

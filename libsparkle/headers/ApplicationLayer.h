@@ -21,11 +21,16 @@
 
 class LinkLayer;
 class SparkleNode;
+class QByteArray;
 
 class ApplicationLayer {
 public:
+	enum Encapsulation {
+		Ethernet	= 1,
+		Messaging	= 2,
+	};
+
 	virtual void handleDataPacket(QByteArray &packet, SparkleNode *node) = 0;
-	virtual void attachLinkLayer(LinkLayer *link) = 0;
 };
 
 

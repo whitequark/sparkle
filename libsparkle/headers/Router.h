@@ -32,13 +32,13 @@ public:
 
 	void setSelfNode(SparkleNode* node);
 	SparkleNode* getSelfNode() const;
-	
+
 	void updateNode(SparkleNode* node);
 	void removeNode(SparkleNode* node);
-	
+
 	SparkleNode* searchNode(QHostAddress realIP, quint16 realPort) const;
-	SparkleNode* searchSparkleNode(QHostAddress sparkleIP) const;
-	
+	SparkleNode* searchSparkleNode(QByteArray sparkleMAC) const;
+
 	SparkleNode* selectMaster() const;
 	SparkleNode* selectWhiteSlave() const;
 
@@ -48,6 +48,15 @@ public:
 	QList<SparkleNode*> getOtherNodes() const;
 
 	void clear();
+
+	void notifyNodeUpdated(SparkleNode* node);
+
+signals:
+	void nodeAdded(SparkleNode* node);
+	void nodeRemoved(SparkleNode* node);
+	void nodeUpdated(SparkleNode* node);
+	void cleared();
+
 private:
 	SparkleNode* self;
 	QList<SparkleNode*> nodes;

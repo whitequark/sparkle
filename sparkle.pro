@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS = libsparkle sparkgap sippy
+SUBDIRS = libsparkle sippy

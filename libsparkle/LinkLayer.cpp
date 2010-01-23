@@ -35,8 +35,8 @@
 #include "Log.h"
 #include "ApplicationLayer.h"
 
-LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair, ApplicationLayer *_app)
-		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport), preparingForShutdown(false), transportInitiated(false), app(_app)
+LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
+		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport), preparingForShutdown(false), transportInitiated(false)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
@@ -52,8 +52,14 @@ LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_
 	connect(joinTimer, SIGNAL(timeout()), SLOT(joinTimeout()));
 
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
+}
 
-	app->attachLinkLayer(this);
+void LinkLayer::attachApplicationLayer(ApplicationLayer::Encapsulation encap, ApplicationLayer *app) {
+	appLayers[encap] = app;
+}
+
+Router& LinkLayer::getRouter() {
+	return router;
 }
 
 bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forceBehindNAT) {
@@ -81,7 +87,7 @@ void LinkLayer::joinTimeout() {
 }
 
 bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
-	SparkleNode *self = new SparkleNode(localIP, transport.getPort());
+	SparkleNode *self = new SparkleNode(router, localIP, transport.getPort());
 	Q_CHECK_PTR(self);
 	self->setMaster(true);
 	self->setAuthKey(hostKeyPair);
@@ -160,7 +166,7 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 			return node;
 	}
 
-	SparkleNode* node = new SparkleNode(host, port);
+	SparkleNode* node = new SparkleNode(router, host, port);
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
 
@@ -349,7 +355,7 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 			return;
 
 		case DataPacket:
-			app->handleDataPacket(decPayload, node);
+			handleDataPacket(decPayload, node);
 			return;
 
 		default: {
@@ -535,7 +541,6 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 
 void LinkLayer::sendIntroducePacket(SparkleNode* node) {
 	introduce_packet_t intr;
-	intr.sparkleIP = router.getSelfNode()->getSparkleIP().toIPv4Address();
 	memcpy(intr.sparkleMAC, router.getSelfNode()->getSparkleMAC().constData(), 6);
 
 	sendEncryptedPacket(IntroducePacket, QByteArray((const char*) &intr, sizeof(introduce_packet_t)), node);
@@ -546,19 +551,18 @@ void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
 		return;
 
 	if(node->getSparkleMAC().length() > 0 || router.getNodes().contains(node)) {
-		Log::warn("link: node [%2]:%3 is already introduced as %1") << node->getSparkleIP() << *node;
+		Log::warn("link: node [%2]:%3 is already introduced as %1") << node->getPrettySparkleMAC() << *node;
 		return;
 	}
 
 	const introduce_packet_t *intr = (const introduce_packet_t*) payload.constData();
 
-	node->setSparkleIP(QHostAddress(intr->sparkleIP));
 	node->setSparkleMAC(QByteArray((const char*) intr->sparkleMAC, 6));
 	node->setMaster(false);
 
 	router.updateNode(node);
 
-	Log::debug("link: node [%1]:%2 introduced itself as %3") << *node << node->getSparkleIP();
+	Log::debug("link: node [%1]:%2 introduced itself as %3") << *node << node->getPrettySparkleMAC();
 }
 
 /* MasterNodeRequest */
@@ -807,7 +811,6 @@ void LinkLayer::sendRegisterReply(SparkleNode* node) {
 	register_reply_t reply;
 	reply.isMaster = node->isMaster();
 	reply.networkDivisor = networkDivisor;
-	reply.sparkleIP = node->getSparkleIP().toIPv4Address();
 	if(node->isBehindNAT()) {
 		reply.realIP = node->getRealIP().toIPv4Address();
 		reply.realPort = node->getRealPort();
@@ -839,7 +842,6 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 		self = wrapNode(QHostAddress(joinPing.addr), joinPing.port);
 		self->setBehindNAT(false);
 	}
-	self->setSparkleIP(QHostAddress(reply->sparkleIP));
 	self->setSparkleMAC(QByteArray((const char*) reply->sparkleMAC, 6));
 	self->setAuthKey(hostKeyPair);
 	self->setMaster(reply->isMaster);
@@ -861,7 +863,6 @@ void LinkLayer::sendRoute(SparkleNode* node, SparkleNode* target)
 	route_t route;
 	route.realIP = target->getRealIP().toIPv4Address();
 	route.realPort = target->getRealPort();
-	route.sparkleIP = target->getSparkleIP().toIPv4Address();
 	route.isMaster = target->isMaster();
 	route.isBehindNAT = target->isBehindNAT();
 
@@ -890,7 +891,6 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	Log::debug("link: Route received from [%1]:%2") << *node;
 
-	target->setSparkleIP(QHostAddress(route->sparkleIP));
 	target->setSparkleMAC(QByteArray((const char*) route->sparkleMAC, 6));
 	target->setMaster(route->isMaster);
 	target->setBehindNAT(route->isBehindNAT);
@@ -900,9 +900,9 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 /* RouteRequest */
 
-void LinkLayer::sendRouteRequest(QHostAddress host) {
+void LinkLayer::sendRouteRequest(QByteArray mac) {
 	route_request_t req;
-	req.sparkleIP = host.toIPv4Address();
+	memcpy(req.sparkleMAC, mac.constData(), 6);
 
 	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)),
 				router.selectMaster());
@@ -918,21 +918,21 @@ void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 	}
 
 	const route_request_t* req = (const route_request_t*) payload.constData();
-	QHostAddress host(req->sparkleIP);
+	QByteArray mac((const char*) req->sparkleMAC, 6);
 
-	SparkleNode* target = router.searchSparkleNode(host);
+	SparkleNode* target = router.searchSparkleNode(mac);
 	if(target) {
 		sendRoute(node, target);
 	} else {
-		sendRouteMissing(node, host);
+		sendRouteMissing(node, mac);
 	}
 }
 
 /* RouteMissing */
 
-void LinkLayer::sendRouteMissing(SparkleNode* node, QHostAddress host) {
+void LinkLayer::sendRouteMissing(SparkleNode* node, QByteArray mac) {
 	route_missing_t req;
-	req.sparkleIP = host.toIPv4Address();
+	memcpy(req.sparkleMAC, mac.constData(), 6);
 
 	sendEncryptedPacket(RouteMissing, QByteArray((const char*) &req, sizeof(route_request_t)), node);
 }
@@ -942,9 +942,9 @@ void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
 		return;
 
 	const route_missing_t* req = (const route_missing_t*) payload.constData();
-	QHostAddress host(req->sparkleIP);
+	QByteArray mac((const char*) req->sparkleMAC, 6);
 
-	Log::info("link: no route to %1") << host;
+	Log::info("link: no route to %1") << SparkleNode::makePrettyMAC(mac);
 }
 
 /* RouteInvalidate */
@@ -965,7 +965,7 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 	SparkleNode* target = wrapNode(QHostAddress(inv->realIP), inv->realPort);
 
 	Log::debug("link: invalidating route %5 @ [%1]:%2 because of command from [%3]:%4")
-			<< *target << *node << node->getSparkleIP();
+			<< *target << *node << node->getPrettySparkleMAC();
 
 	router.removeNode(target);
 	nodeSpool.removeOne(target);
@@ -1037,7 +1037,7 @@ void LinkLayer::reincarnateSomeone() {
 	}
 
 	SparkleNode* target = router.selectWhiteSlave();
-	Log::debug("link: %1 @ [%2]:%3 is selected as target") << target->getSparkleIP() << *target;
+	Log::debug("link: %1 @ [%2]:%3 is selected as target") << target->getPrettySparkleMAC() << *target;
 
 	target->setMaster(true);
 
@@ -1053,11 +1053,34 @@ void LinkLayer::reincarnateSomeone() {
 	sendRoleUpdate(target, true);
 }
 
-/* ======= END ======= */
+/* RoleUpdate */
 
-void LinkLayer::sendDataToNode(QByteArray packet, SparkleNode *node) {
-	sendEncryptedPacket(DataPacket, packet, node);
+void LinkLayer::sendDataPacket(SparkleNode* node, ApplicationLayer::Encapsulation encap, QByteArray &payload) {
+	data_packet_t info;
+	info.encapsulation = encap;
+
+	sendEncryptedPacket(DataPacket, QByteArray((const char*) &info, sizeof(data_packet_t)).append(payload), node);
 }
+
+void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
+	if(!checkPacketSize(packet, sizeof(data_packet_t), node, "DataPacket"))
+		return;
+
+	const data_packet_t* info = (const data_packet_t*) packet.constData();
+
+	QByteArray payload = packet.right(packet.size() - sizeof(data_packet_t));
+
+	ApplicationLayer::Encapsulation encap = (ApplicationLayer::Encapsulation) info->encapsulation;
+
+	if(appLayers.contains(encap)) {
+		appLayers[encap]->handleDataPacket(packet, node);
+	} else {
+		Log::warn("link: received packet from [%1]:%2 with unknown encapsulation %3") << *node << encap;
+	}
+}
+
+
+/* ======= END ======= */
 
 void LinkLayer::cleanup() {
 	foreach(SparkleNode *node, nodeSpool)

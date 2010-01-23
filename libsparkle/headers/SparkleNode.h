@@ -26,27 +26,24 @@
 
 #include "RSAKeyPair.h"
 #include "BlowfishKey.h"
-
-class Router;
+#include "Router.h"
 
 class SparkleNode : public QObject
 {
 	Q_OBJECT
 
 public:
-	SparkleNode(QHostAddress realIP, quint16 realPort);
-	
+	SparkleNode(Router& _router, QHostAddress realIP, quint16 realPort);
+
 	bool operator==(const SparkleNode& another) const;
 	bool operator!=(const SparkleNode& another) const;
 
 	QHostAddress getRealIP() const		{ return realIP; }
 	quint16 getRealPort() const		{ return realPort; }
 
-	QHostAddress getSparkleIP() const	{ return sparkleIP; }
 	QByteArray getSparkleMAC() const	{ return sparkleMAC; }
-	
 	QString getPrettySparkleMAC() const;
-	
+
 	bool isBehindNAT() const		{ return behindNAT; }
 	void setBehindNAT(bool behindNAT);
 
@@ -58,12 +55,12 @@ public:
 
 	const BlowfishKey *getHisSessionKey() const	{ return &hisSessionKey; }
 	const BlowfishKey *getMySessionKey() const	{ return &mySessionKey; }
-	
+
 	const RSAKeyPair *getAuthKey() const	{ return &authKey; }
 
 	bool setAuthKey(const RSAKeyPair &keyPair);
 	bool setAuthKey(const QByteArray &publicKey);
-	
+
 	void configureByKey();
 
 	void setHisSessionKey(const QByteArray &keyBytes);
@@ -77,6 +74,8 @@ public:
 	QByteArray popQueue();
 	void flushQueue();
 
+	static QString makePrettyMAC(QByteArray mac);
+
 public slots:
 	void negotiationStart();
 	void negotiationFinished();
@@ -88,12 +87,13 @@ private slots:
 	void negotiationTimeout();
 
 private:
+	Router& router;
+
 	QHostAddress realIP;
 	quint16 realPort;
 
-	QHostAddress sparkleIP;
 	QByteArray sparkleMAC;
-	
+
 	bool master, behindNAT;
 
 	RSAKeyPair authKey;
@@ -102,7 +102,7 @@ private:
 	bool keysNegotiated;
 
 	QList<QByteArray> queue;
-	
+
 	QTimer negotiationTimer;
 };
 

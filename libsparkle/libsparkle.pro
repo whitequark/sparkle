@@ -32,7 +32,8 @@ HEADERS += headers/BlowfishKey.h \
     headers/crypto/havege.h \
     headers/crypto/rsa.h \
     headers/crypto/sha1.h \
-    headers/crypto/timing.h
+    headers/crypto/timing.h \
+    headers/ApplicationLayer.h
 SOURCES += BlowfishKey.cpp \
     LinkLayer.cpp \
     Log.cpp \

@@ -28,10 +28,9 @@ Router::Router() : QObject(NULL), self(NULL)
 
 void Router::setSelfNode(SparkleNode* node) {
 	Q_ASSERT(self == NULL);
-	
-	Log::info("router: My MAC is %1 and IP is %2, I am %3") << node->getPrettySparkleMAC()
-		<< node->getSparkleIP().toString() << (node->isMaster() ? "master" : "slave");
-	
+
+	Log::info("router: My MAC is %1, I am %2") << node->getPrettySparkleMAC() << (node->isMaster() ? "master" : "slave");
+
 	self = node;
 	updateNode(self);
 }
@@ -43,13 +42,15 @@ SparkleNode* Router::getSelfNode() const {
 void Router::updateNode(SparkleNode* node) {
 	bool newNode = !nodes.contains(node);
 
-	if(newNode)	
+	if(newNode)
 		nodes.append(node);
-	
-	Log::debug("router: %6 node %3 @ [%1]:%2 (%4, %5)") << *node << node->getSparkleIP()
+
+	Log::debug("router: %6 node %3 @ [%1]:%2 (%4, %5)") << *node << node->getPrettySparkleMAC()
 			<< (node->isMaster() ? "master" : "slave")
 			<< (node->isBehindNAT() ? "behind NAT" : "has white IP")
 			<< (newNode ? "adding" : "updating");
+
+	emit nodeAdded(node);
 }
 
 void Router::removeNode(SparkleNode* node) {
@@ -57,11 +58,13 @@ void Router::removeNode(SparkleNode* node) {
 		Log::error("router: attempting to remove myself");
 		return;
 	}
-	
+
 	if(nodes.contains(node)) {
 		nodes.removeOne(node);
-		Log::debug("router: removing node %3 @ [%1]:%2") << *node << node->getSparkleIP();
-		
+		Log::debug("router: removing node %3 @ [%1]:%2") << *node << node->getPrettySparkleMAC();
+
+		emit nodeRemoved(node);
+
 		if(nodes.count() == 1) {
 			Log::info("router: you are the One, last node!");
 			if(!self->isMaster())
@@ -72,12 +75,12 @@ void Router::removeNode(SparkleNode* node) {
 	}
 }
 
-SparkleNode* Router::searchSparkleNode(QHostAddress sparkleIP) const {
+SparkleNode* Router::searchSparkleNode(QByteArray sparkleMAC) const {
 	foreach(SparkleNode *node, nodes) {
-		if(node->getSparkleIP() == sparkleIP)
+		if(node->getSparkleMAC() == sparkleMAC)
 			return node;
 	}
-	
+
 	return NULL;
 }
 
@@ -86,37 +89,37 @@ SparkleNode* Router::searchNode(QHostAddress realIP, quint16 realPort) const {
 		if(node->getRealIP() == realIP && node->getRealPort() == realPort)
 			return node;
 	}
-	
+
 	return NULL;
 }
 
 SparkleNode* Router::selectMaster() const {
 	QList<SparkleNode*> masters = getMasters();
-	
+
 	if(masters.size() == 0) {
 		Log::error("router: no masters are present according to my DB. Strange.");
-		
+
 		return NULL;
 	}
-	
+
 	if(masters.size() == 1) {
 /*		Log::warn ("router: only one master is present in network; this is BAD."
 			   " (If you just created a network, ignore this message)");*/
-		
+
 		return masters[0];
 	}
-	
+
 	if(getSelfNode() != NULL)
 		masters.removeOne(getSelfNode());
-	
+
 	return masters[qrand() % masters.size()];
 }
 
 SparkleNode* Router::selectWhiteSlave() const {
 	Q_ASSERT(self != NULL && self->isMaster());
-	
+
 	QList<SparkleNode*> nodes = getNodes();
-	
+
 	foreach(SparkleNode* node, nodes) {
 		if(node->isMaster() || node->isBehindNAT() || node == self)
 			nodes.removeOne(node);
@@ -127,25 +130,25 @@ SparkleNode* Router::selectWhiteSlave() const {
 
 QList<SparkleNode*> Router::getMasters() const {
 	QList<SparkleNode*> masters;
-	
+
 	foreach(SparkleNode *node, nodes) {
 		if(node->isMaster())
 			masters.append(node);
 	}
-	
+
 	return masters;
 }
 
 QList<SparkleNode*> Router::getOtherMasters() const {
 	Q_ASSERT(self != NULL && self->isMaster());
-	
+
 	QList<SparkleNode*> masters;
-	
+
 	foreach(SparkleNode *node, nodes) {
 		if(node->isMaster() && node != self)
 			masters.append(node);
 	}
-	
+
 	return masters;
 }
 
@@ -155,17 +158,25 @@ QList<SparkleNode*> Router::getNodes() const {
 
 QList<SparkleNode*> Router::getOtherNodes() const {
 	QList<SparkleNode*> selNodes;
-	
+
 	foreach(SparkleNode *node, nodes) {
 		if(node != self)
 			selNodes.append(node);
 	}
-	
+
 	return selNodes;
+}
+
+void Router::notifyNodeUpdated(SparkleNode* target) {
+	foreach(SparkleNode *node, nodes) {
+		if(node == target)
+			emit nodeUpdated(target);
+	}
 }
 
 void Router::clear() {
 	nodes.clear();
 	self = NULL;
+	emit cleared();
 }
 
