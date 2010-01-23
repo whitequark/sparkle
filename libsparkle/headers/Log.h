@@ -32,23 +32,23 @@ class Log {
 		Error		= 4,
 		Fatal		= 5
 	};
-	
+
 	class Stream {
 	public:
 		Stream(QString _format, loglevel_t _loglevel) : format(_format), loglevel(_loglevel), base(10) {}
-	
+
 		QString format;
 		QStringList list;
 		loglevel_t loglevel;
 		uint base;
 	};
-	
+
 	Stream* stream;
-	
+
 public:
 	inline Log(const char* format, loglevel_t loglevel = Info) : stream(new Stream(QString(format), loglevel)) {}
 	inline ~Log() { Log::emitMessage(stream->loglevel, prepare()); }
-	
+
 	inline Log& operator<<(short v) { stream->list.append(QString::number(v, stream->base)); return *this; }
 	inline Log& operator<<(ushort v){ stream->list.append(QString::number(v, stream->base)); return *this; }
 	inline Log& operator<<(int v)   { stream->list.append(QString::number(v, stream->base)); return *this; }
@@ -57,24 +57,24 @@ public:
 	inline Log& operator<<(ulong v) { stream->list.append(QString::number(v, stream->base)); return *this; }
 
 	inline Log& operator<<(double v)	{ stream->list.append(QString::number(v, 'g', 4)); return *this; }
-	
+
 	inline Log& operator<<(char v)		{ stream->list.append(QString(v)); return *this; }
 	inline Log& operator<<(const char* v)	{ stream->list.append(v); return *this; }
 	inline Log& operator<<(bool v)		{ stream->list.append(v ? "true" : "false"); return *this; }
 	inline Log& operator<<(const QString v) { stream->list.append(v); return *this; }
 
 	inline Log& operator<<(const QHostAddress v)	{ stream->list.append(v.toString()); return *this; }
-	
-	inline Log& operator<<(const SparkleNode &v)	{ return *this << v.getRealIP().toString() << v.getRealPort(); }
+
+	inline Log& operator<<(const SparkleNode &v)	{ return *this << v.realIP().toString() << v.realPort(); }
 
 	inline static Log debug(const char* format)	{ return Log(format, Debug);	}
 	inline static Log info(const char* format)	{ return Log(format, Info);	}
 	inline static Log warn(const char* format)	{ return Log(format, Warning);	}
 	inline static Log error(const char* format)	{ return Log(format, Error);	}
 	inline static Log fatal(const char* format)	{ return Log(format, Fatal);	}
-	
+
 	QString prepare();
-	
+
 	static void emitMessage(loglevel_t loglevel, QString message);
 };
 

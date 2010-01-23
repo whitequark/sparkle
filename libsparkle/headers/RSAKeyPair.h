@@ -33,7 +33,7 @@ public:
 	bool writeToFile(QString filename) const;
 	bool readFromFile(QString filename);
 
-	QByteArray getPublicKey() const;
+	QByteArray publicKey() const;
 	bool setPublicKey(QByteArray key);
 
 	QByteArray encrypt(QByteArray data);

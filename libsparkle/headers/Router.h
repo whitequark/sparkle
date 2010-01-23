@@ -42,9 +42,9 @@ public:
 	SparkleNode* selectMaster() const;
 	SparkleNode* selectWhiteSlave() const;
 
-	QList<SparkleNode*> getMasters() const;
-	QList<SparkleNode*> getOtherMasters() const;
-	QList<SparkleNode*> getNodes() const;
+	QList<SparkleNode*> masters() const;
+	QList<SparkleNode*> otherMasters() const;
+	QList<SparkleNode*> nodes() const;
 	QList<SparkleNode*> getOtherNodes() const;
 
 	void clear();
@@ -58,8 +58,8 @@ signals:
 	void cleared();
 
 private:
-	SparkleNode* self;
-	QList<SparkleNode*> nodes;
+	SparkleNode* _self;
+	QList<SparkleNode*> _nodes;
 };
 
 #endif

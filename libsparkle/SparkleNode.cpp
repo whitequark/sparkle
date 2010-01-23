@@ -20,9 +20,8 @@
 #include "SparkleNode.h"
 #include "Log.h"
 
-SparkleNode::SparkleNode(Router &_router, QHostAddress _realIP, quint16 _realPort) : QObject(&_router), router(_router), realIP(_realIP), realPort(_realPort), authKeyPresent(false),
-			keysNegotiated(false) {
-	mySessionKey.generate();
+SparkleNode::SparkleNode(Router &router, QHostAddress realIP, quint16 realPort) : QObject(&router), _router(router), _realIP(realIP), _realPort(realPort), authKeyPresent(false), keysNegotiated(false) {
+	_mySessionKey.generate();
 
 	negotiationTimer.setSingleShot(true);
 	negotiationTimer.setInterval(5000);
@@ -30,15 +29,15 @@ SparkleNode::SparkleNode(Router &_router, QHostAddress _realIP, quint16 _realPor
 }
 
 bool SparkleNode::operator==(const SparkleNode& another) const {
-	return another.getRealIP() == realIP && another.getRealPort() == realPort;
+	return another.realIP() == _realIP && another.realPort() == _realPort;
 }
 
 bool SparkleNode::operator!=(const SparkleNode& another) const {
 	return !(*this == another);
 }
 
-QString SparkleNode::getPrettySparkleMAC() const {
-	return makePrettyMAC(sparkleMAC);
+QString SparkleNode::prettySparkleMAC() const {
+	return makePrettyMAC(_sparkleMAC);
 }
 
 QString SparkleNode::makePrettyMAC(QByteArray mac) {
@@ -47,29 +46,29 @@ QString SparkleNode::makePrettyMAC(QByteArray mac) {
 }
 
 void SparkleNode::setSparkleMAC(const QByteArray& mac) {
-	sparkleMAC = mac;
-	router.notifyNodeUpdated(this);
+	_sparkleMAC = mac;
+	_router.notifyNodeUpdated(this);
 }
 
 void SparkleNode::setRealIP(const QHostAddress& ip) {
-	realIP = ip;
-	router.notifyNodeUpdated(this);
+	_realIP = ip;
+	_router.notifyNodeUpdated(this);
 }
 
 void SparkleNode::setRealPort(quint16 port) {
-	realPort = port;
-	router.notifyNodeUpdated(this);
+	_realPort = port;
+	_router.notifyNodeUpdated(this);
 }
 
 void SparkleNode::setBehindNAT(bool behindNAT) {
 	this->behindNAT = behindNAT;
-	router.notifyNodeUpdated(this);
+	_router.notifyNodeUpdated(this);
 }
 
 void SparkleNode::setHisSessionKey(const QByteArray &keyBytes) {
-	hisSessionKey.setBytes(keyBytes);
+	_hisSessionKey.setBytes(keyBytes);
 	keysNegotiated = true;
-	router.notifyNodeUpdated(this);
+	_router.notifyNodeUpdated(this);
 }
 
 bool SparkleNode::areKeysNegotiated() {
@@ -77,37 +76,38 @@ bool SparkleNode::areKeysNegotiated() {
 }
 
 bool SparkleNode::setAuthKey(const RSAKeyPair &keyPair) {
-	return setAuthKey(keyPair.getPublicKey());
+	return setAuthKey(keyPair.publicKey());
 }
 
 bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 	if(authKeyPresent) {
-		if(authKey.getPublicKey() != publicKey) {
+		if(_authKey.publicKey() != publicKey) {
 			Log::warn("Achtung! Attempt to assign new public key to authenticated node [%1]:%2, DROPPING.")
-					<< realIP.toString() << realPort;
+					<< _realIP.toString() << _realPort;
 			return false;
 		} else {
 			return true;
 		}
 	}
 
-	if(!authKey.setPublicKey(publicKey))
+	if(!_authKey.setPublicKey(publicKey))
 		return false;
 
 	authKeyPresent = true;
 
-	router.notifyNodeUpdated(this);
+	_router.notifyNodeUpdated(this);
 
 	return true;
 }
 
 void SparkleNode::configureByKey() {
-	QByteArray fingerprint = SHA1Digest::calculateSHA1(authKey.getPublicKey());
-	sparkleMAC = fingerprint.left(6);
+	QByteArray fingerprint = SHA1Digest::calculateSHA1(_authKey.publicKey());
+	_sparkleMAC = fingerprint.left(6);
 }
 
 void SparkleNode::setMaster(bool isMaster) {
 	master = isMaster;
+	_router.notifyNodeUpdated(this);
 }
 
 bool SparkleNode::isMaster() {

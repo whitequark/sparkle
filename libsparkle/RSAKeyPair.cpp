@@ -30,8 +30,8 @@ RSAKeyPair::RSAKeyPair(QObject *parent) : QObject(parent) {
 }
 
 RSAKeyPair::~RSAKeyPair() {
-	mpi_free(&key.N, &key.E, &key.D, &key.P, 
-		&key.Q, &key.DP, &key.DQ, &key.QP, 
+	mpi_free(&key.N, &key.E, &key.D, &key.P,
+		&key.Q, &key.DP, &key.DQ, &key.QP,
 		&key.RN, &key.RP, &key.RQ, NULL);
 }
 
@@ -105,7 +105,7 @@ bool RSAKeyPair::readFromFile(QString filename) {
 	return true;
 }
 
-QByteArray RSAKeyPair::getPublicKey() const {
+QByteArray RSAKeyPair::publicKey() const {
 	QByteArray rawKey;
 
 	QDataStream stream(&rawKey, QIODevice::WriteOnly);

@@ -31,7 +31,7 @@ public:
 	virtual ~UdpPacketTransport();
 
 	virtual bool beginReceiving();
-	virtual quint16 getPort();
+	virtual quint16 port();
 
 public slots:
 	virtual void sendPacket(QByteArray &packet, QHostAddress host, quint16 port);
@@ -45,8 +45,8 @@ signals:
 private:
 	QUdpSocket *socket;
 
-	quint16 port;
-	QHostAddress addr;
+	quint16 _port;
+	QHostAddress _addr;
 };
 
 #endif

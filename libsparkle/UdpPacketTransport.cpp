@@ -20,11 +20,8 @@
 #include "UdpPacketTransport.h"
 
 UdpPacketTransport::UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent)
-	: PacketTransport(parent)
+	: PacketTransport(parent), _port(port), _addr(addr)
 {
-	this->port = port;
-	this->addr = addr;
-
 	socket = new QUdpSocket(this);
 
 	connect(socket, SIGNAL(readyRead()), this, SLOT(haveDatagram()));
@@ -35,7 +32,7 @@ UdpPacketTransport::~UdpPacketTransport() {
 }
 
 bool UdpPacketTransport::beginReceiving() {
-	return socket->bind(addr, port);
+	return socket->bind(_addr, _port);
 }
 
 void UdpPacketTransport::haveDatagram() {
@@ -54,6 +51,6 @@ void UdpPacketTransport::sendPacket(QByteArray &packet, QHostAddress host, quint
 	socket->writeDatagram(packet, host, port);
 }
 
-quint16 UdpPacketTransport::getPort() {
-	return port;
+quint16 UdpPacketTransport::port() {
+	return _port;
 }

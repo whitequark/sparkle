@@ -49,7 +49,7 @@ void BlowfishKey::generate() {
 	cb_setkey(key, (unsigned char *) rawKey.data(), rawKey.size());
 }
 
-QByteArray BlowfishKey::getBytes() const {
+QByteArray BlowfishKey::bytes() const {
 	return rawKey;
 }
 
