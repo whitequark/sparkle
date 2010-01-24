@@ -16,29 +16,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#ifndef ADDCONTACTDIALOG_H
+#define ADDCONTACTDIALOG_H
 
-#include <QDialog>
-#include "ui_ConnectDialog.h"
+#include "ui_AddContactDialog.h"
 
-class ConfigurationStorage;
+class ContactList;
 
-class ConnectDialog : public QDialog, private Ui_ConnectDialog {
+class AddContactDialog : public QDialog, private Ui_AddContactDialog {
 	Q_OBJECT
 public:
-	ConnectDialog(ConfigurationStorage* config, QWidget *parent);
+	AddContactDialog(ContactList& contactList, QWidget *parent);
 
 public slots:
-	virtual void accept();
+	void show();
+	void accept();
 
 private slots:
-	void checkOptions();
+	void validate();
 
 private:
-	ConnectDialog();
-
-	ConfigurationStorage* config;
+	ContactList &contactList;
 };
 
-#endif // CONNECTDIALOG_H
+#endif // ADDCONTACTDIALOG_H

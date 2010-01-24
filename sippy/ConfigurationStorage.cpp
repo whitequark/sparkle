@@ -20,6 +20,7 @@
 #include <QApplication>
 #include <QStringList>
 #include "ConfigurationStorage.h"
+#include "Contact.h"
 
 ConfigurationStorage::ConfigurationStorage(QObject *parent) : QObject(parent) {
 	QString scope = "default";
@@ -32,7 +33,6 @@ ConfigurationStorage::ConfigurationStorage(QObject *parent) : QObject(parent) {
 }
 
 ConfigurationStorage::~ConfigurationStorage() {
-
 }
 
 bool ConfigurationStorage::createNetwork() {
@@ -79,3 +79,30 @@ QString ConfigurationStorage::getKeyName() {
 	return settings->fileName() + ".key";
 }
 
+QList<Contact*> ConfigurationStorage::contacts() {
+	QList<Contact*> contacts;
+
+	int size = settings->beginReadArray("contacts");
+	for(int i = 0; i < size; i++) {
+		settings->setArrayIndex(i);
+
+		Contact* contact;
+		contact = new Contact(settings->value("mac").toString());
+		contact->setDisplayName(settings->value("display").toString());
+		contacts.append(contact);
+	}
+	settings->endArray();
+
+	return contacts;
+}
+
+void ConfigurationStorage::setContacts(QList<Contact*> list) {
+	settings->remove("contacts");
+	settings->beginWriteArray("contacts");
+	for(int i = 0; i < list.count(); i++) {
+		settings->setArrayIndex(i);
+		settings->setValue("mac", list.at(i)->textAddress());
+		settings->setValue("display", list.at(i)->displayName());
+	}
+	settings->endArray();
+}

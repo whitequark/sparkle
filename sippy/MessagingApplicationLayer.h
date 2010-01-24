@@ -22,25 +22,45 @@
 #include <QObject>
 #include <ApplicationLayer.h>
 
-class LinkLayer;
-class Router;
 class QByteArray;
 class QHostAddress;
+class LinkLayer;
+class Router;
+class ContactList;
+
+namespace Messaging {
+	enum NodeState { /* an insider joke */
+		Present      = 200,
+		Unauthorized = 403,
+		NotFound     = 404,
+	};
+}
 
 class MessagingApplicationLayer: public QObject, public ApplicationLayer {
 	Q_OBJECT
 
 public:
-	MessagingApplicationLayer(LinkLayer &linkLayer);
+	MessagingApplicationLayer(ContactList &contactList, LinkLayer &linkLayer);
 	virtual ~MessagingApplicationLayer();
 
 	virtual void handleDataPacket(QByteArray &packet, SparkleNode *node);
 
+	Router& router();
+
+	Messaging::NodeState nodeState(QByteArray mac);
+
+signals:
+	void nodeStateChanged(SparkleNode* node);
+
+private slots:
+	void resolveContacts();
+
 private:
 	MessagingApplicationLayer();
 
+	ContactList &contactList;
 	LinkLayer &linkLayer;
-	Router &router;
+	Router &_router;
 };
 
 #endif

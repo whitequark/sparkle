@@ -16,29 +16,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#ifndef CONTACT_H
+#define CONTACT_H
 
-#include <QDialog>
-#include "ui_ConnectDialog.h"
+#include <QObject>
+#include "Roster.h"
 
-class ConfigurationStorage;
-
-class ConnectDialog : public QDialog, private Ui_ConnectDialog {
+class Contact : public QObject {
 	Q_OBJECT
 public:
-	ConnectDialog(ConfigurationStorage* config, QWidget *parent);
+	Contact(QString address);
 
-public slots:
-	virtual void accept();
+	QByteArray address() const;
+	QString textAddress() const;
 
-private slots:
-	void checkOptions();
+	QString displayName() const;
+	void setDisplayName(QString);
+
+signals:
+	void updated();
 
 private:
-	ConnectDialog();
-
-	ConfigurationStorage* config;
+	QString _displayName;
+	QByteArray _address;
 };
 
-#endif // CONNECTDIALOG_H
+#endif // CONTACT_H

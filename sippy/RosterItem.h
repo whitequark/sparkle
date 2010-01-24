@@ -16,29 +16,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#ifndef ROSTERITEM_H
+#define ROSTERITEM_H
 
-#include <QDialog>
-#include "ui_ConnectDialog.h"
+#include <QWidget>
 
-class ConfigurationStorage;
+class Contact;
+class QLabel;
+class QVBoxLayout;
+class QListWidgetItem;
+class MessagingApplicationLayer;
+class SparkleNode;
 
-class ConnectDialog : public QDialog, private Ui_ConnectDialog {
+class RosterItem : public QWidget {
 	Q_OBJECT
 public:
-	ConnectDialog(ConfigurationStorage* config, QWidget *parent);
+	RosterItem(MessagingApplicationLayer &appLayer, Contact* contact, QListWidgetItem* listItem);
 
-public slots:
-	virtual void accept();
+	QListWidgetItem *listItem() const;
+	void setSelected(bool selected);
+	void setDetailed(bool detailed);
+
+protected:
+	void contextMenuEvent(QContextMenuEvent *e);
+
+signals:
+	void menuRequested(QPoint point);
 
 private slots:
-	void checkOptions();
+	void update();
+	void processStateChange(SparkleNode* node);
 
 private:
-	ConnectDialog();
+	Contact* contact;
 
-	ConfigurationStorage* config;
+	QLabel *name, *info;
+	QVBoxLayout *layout;
+	QListWidgetItem *_listItem;
+	MessagingApplicationLayer &appLayer;
+	bool selected;
 };
 
-#endif // CONNECTDIALOG_H
+#endif // ROSTERITEM_H

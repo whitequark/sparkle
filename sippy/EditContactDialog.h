@@ -1,6 +1,6 @@
 /*
  * Sippy - zero-configuration fully distributed self-organizing encrypting IM
- * Copyright (C) 2009 Sergey Gridassov
+ * Copyright (C) 2010 Peter Zotov
  *
  * Ths program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,32 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __DEBUG_CONSOLE__H__
-#define __DEBUG_CONSOLE__H__
+#ifndef EDITCONTACTDIALOG_H
+#define EDITCONTACTDIALOG_H
 
-#include "ui_DebugConsole.h"
+#include "ui_EditContactDialog.h"
 
-class QSocketNotifier;
+class Contact;
 
-class DebugConsole: public QDialog, private Ui_DebugConsole {
+class EditContactDialog : public QDialog, private Ui_EditContactDialog {
 	Q_OBJECT
-
 public:
-	DebugConsole(QWidget *parent = 0);
-	virtual ~DebugConsole();
+	EditContactDialog(QWidget *parent = 0);
 
-private slots:
-#ifdef Q_OS_UNIX
-	void pipeReadable();
-#endif
+public slots:
+	void showFor(Contact* contact);
+	void accept();
 
 private:
-#ifdef Q_OS_UNIX
-	int outputPipe[2];
-
-	QSocketNotifier *pipeNotify;
-#endif
+	Contact* currentContact;
 };
 
-#endif
-
+#endif // EDITCONTACTDIALOG_H

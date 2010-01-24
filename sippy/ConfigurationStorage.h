@@ -20,10 +20,11 @@
 #define __CONFIGURATION_STORAGE__H__
 
 #include <QObject>
-
+#include <QList>
 #include "Singleton.h"
 
 class QSettings;
+class Contact;
 
 class ConfigurationStorage: public QObject, public Singleton<ConfigurationStorage> {
 	Q_OBJECT
@@ -48,6 +49,10 @@ public:
 
 	bool autoLogin();
 	void setAutoLogin(bool login);
+
+	QList<Contact*> contacts();
+	void setContacts(QList<Contact*> list);
+
 private:
 	QSettings *settings;
 };

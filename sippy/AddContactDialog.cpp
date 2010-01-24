@@ -16,33 +16,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ConnectDialog.h"
-#include "ui_ConnectDialog.h"
-#include "ConfigurationStorage.h"
+#include <QPushButton>
+#include "AddContactDialog.h"
+#include "Contact.h"
+#include "ContactList.h"
 
-ConnectDialog::ConnectDialog(ConfigurationStorage* _config, QWidget *parent) :
-		QDialog(parent), config(_config)
+AddContactDialog::AddContactDialog(ContactList &_contactList, QWidget *parent) :
+	QDialog(parent), contactList(_contactList)
 {
 	setupUi(this);
 
-	createNetwork->setChecked(config->createNetwork());
-	address->setText(config->address());
-	forceNATPassthrough->setChecked(config->behindNat());
-
-	connect(createNetwork, SIGNAL(toggled(bool)), SLOT(checkOptions()));
-
-	checkOptions();
+	connect(addressEdit, SIGNAL(textChanged(QString)), SLOT(validate()));
+	connect(this, SIGNAL(accepted()), SLOT(close()));
 }
 
-void ConnectDialog::checkOptions() {
-	forceNATPassthrough->setEnabled(!createNetwork->isChecked());
-	if(createNetwork->isChecked())
-		forceNATPassthrough->setChecked(false);
+void AddContactDialog::show() {
+	addressEdit->clear();
+	displayNameEdit->clear();
+	buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
+
+	QDialog::show();
 }
 
-void ConnectDialog::accept() {
-	config->setCreateNetwork(createNetwork->isChecked());
-	config->setAddress(address->text());
-	config->setBehindNat(forceNATPassthrough->isChecked());
+void AddContactDialog::validate() {
+	buttons->button(QDialogButtonBox::Ok)->setEnabled(addressEdit->hasAcceptableInput());
+}
+
+void AddContactDialog::accept() {
+	Contact* contact = new Contact(addressEdit->text());
+	contact->setDisplayName(displayNameEdit->text());
+	contactList.addContact(contact);
+
 	emit accepted();
 }

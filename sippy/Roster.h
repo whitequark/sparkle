@@ -21,19 +21,26 @@
 
 #include <QMainWindow>
 #include <QHostInfo>
+#include <QHash>
 #include "ui_Roster.h"
 #include "ConnectDialog.h"
+#include "AddContactDialog.h"
+#include "EditContactDialog.h"
+#include "SparkleNode.h"
+#include "Contact.h"
+#include "ContactList.h"
 
 class LinkLayer;
+class Router;
 class MessagingApplicationLayer;
 class ConfigurationStorage;
-class DebugConsole;
+class RosterItem;
 
-class Sippy : public QMainWindow, private Ui_Roster {
+class Roster : public QMainWindow, private Ui_Roster {
 	Q_OBJECT
 
 public:
-	Sippy(ConfigurationStorage* config, DebugConsole &console, LinkLayer &linkLayer, MessagingApplicationLayer &appLayer);
+	Roster(ContactList& contactList, LinkLayer &linkLayer, MessagingApplicationLayer &appLayer);
 
 public slots:
 	void connectToNetwork();
@@ -45,19 +52,42 @@ private slots:
 	void joinFailed();
 	void leaved();
 
+	void selectItem(QListWidgetItem *current, QListWidgetItem *previous);
+	void editItem();
+	void removeItem();
+	void showMenu(QPoint point);
+
+	void addContact(Contact* contact);
+	void removeContact(Contact* contact);
+
+	void about();
+
 private:
 	enum connect_state_t { Connected, Disconnected, Connecting };
 
-	Sippy();
+	Roster();
 
 	void connectStateChanged(connect_state_t state);
 
 	ConfigurationStorage* config;
-	DebugConsole &console;
 	LinkLayer &linkLayer;
+	Router& router;
 	MessagingApplicationLayer &appLayer;
 
+	ContactList	&contactList;
+	QHash<Contact*, QListWidgetItem*> contactViewItems;
+
+	/* UI elements */
+
 	ConnectDialog connectDialog;
+	AddContactDialog addContactDialog;
+	EditContactDialog editContactDialog;
+
+	QMenu* contactMenu;
+	QAction* actionChat;
+	QAction* actionContactInfo;
+	QAction* actionEditContact;
+	QAction* actionRemoveContact;
 };
 
 #endif // ROSTER_H

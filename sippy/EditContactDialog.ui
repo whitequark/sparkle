@@ -1,66 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ConnectDialog</class>
- <widget class="QDialog" name="ConnectDialog">
+ <class>EditContactDialog</class>
+ <widget class="QDialog" name="EditContactDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>387</width>
-    <height>147</height>
+    <width>281</width>
+    <height>87</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>387</width>
-    <height>147</height>
+    <width>281</width>
+    <height>87</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>387</width>
-    <height>147</height>
+    <width>281</width>
+    <height>87</height>
    </size>
   </property>
   <property name="windowTitle">
-   <string>Connect</string>
+   <string>Edit Contact</string>
   </property>
   <property name="modal">
    <bool>true</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QCheckBox" name="createNetwork">
-     <property name="text">
-      <string>Create new network</string>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="hostnameLayout">
-     <item>
-      <widget class="QLabel" name="addressLabel">
+    <layout class="QFormLayout" name="form">
+     <item row="0" column="0">
+      <widget class="QLabel" name="displayNameLabel">
        <property name="text">
-        <string>Address</string>
+        <string>Display name</string>
        </property>
       </widget>
      </item>
-     <item>
-      <widget class="QLineEdit" name="address"/>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QVBoxLayout" name="optionsLayout">
-     <item>
-      <widget class="QCheckBox" name="forceNATPassthrough">
-       <property name="text">
-        <string>Force NAT passthrough</string>
-       </property>
-      </widget>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="displayName"/>
      </item>
     </layout>
    </item>
@@ -81,7 +60,7 @@
   <connection>
    <sender>buttons</sender>
    <signal>accepted()</signal>
-   <receiver>ConnectDialog</receiver>
+   <receiver>EditContactDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -97,12 +76,12 @@
   <connection>
    <sender>buttons</sender>
    <signal>rejected()</signal>
-   <receiver>ConnectDialog</receiver>
+   <receiver>EditContactDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>193</x>
-     <y>222</y>
+     <x>316</x>
+     <y>260</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>

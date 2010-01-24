@@ -1,30 +1,38 @@
 TEMPLATE = app
 TARGET = sippy
 DEPENDPATH += . \
-	../libsparkle/headers
+    ../libsparkle/headers
 INCLUDEPATH += . \
-	../libsparkle/headers
+    ../libsparkle/headers
 QT += network
 debug:DEFINES += DEBUG
-
-unix:POST_TARGETDEPS += ../libsparkle/libsparkle.a
+unix:PRE_TARGETDEPS += ../libsparkle/libsparkle.a
 
 # Input
-HEADERS += DebugConsole.h \
-	ConfigurationStorage.h \
-	ConnectDialog.h \
-	Singleton.h \
-	Sippy.h \
-	MessagingApplicationLayer.h
-SOURCES += DebugConsole.cpp \
-	main.cpp \
-	ConfigurationStorage.cpp \
-	ConnectDialog.cpp \
-	Sippy.cpp \
-	MessagingApplicationLayer.cpp
+HEADERS += ConfigurationStorage.h \
+    ConnectDialog.h \
+    Singleton.h \
+    MessagingApplicationLayer.h \
+    RosterItem.h \
+    Roster.h \
+    AddContactDialog.h \
+    Contact.h \
+    ContactList.h \
+    EditContactDialog.h
+SOURCES += main.cpp \
+    ConfigurationStorage.cpp \
+    ConnectDialog.cpp \
+    MessagingApplicationLayer.cpp \
+    RosterItem.cpp \
+    Roster.cpp \
+    AddContactDialog.cpp \
+    Contact.cpp \
+    ContactList.cpp \
+    EditContactDialog.cpp
 QMAKE_LIBS += -lsparkle
 win32:QMAKE_LFLAGS += -L../libsparkle/release
 else:QMAKE_LFLAGS += -L../libsparkle
-FORMS += DebugConsole.ui \
-	Roster.ui \
-	ConnectDialog.ui
+FORMS += Roster.ui \
+    ConnectDialog.ui \
+    AddContactDialog.ui \
+    EditContactDialog.ui

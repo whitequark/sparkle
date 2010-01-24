@@ -18,12 +18,35 @@
 
 #include "MessagingApplicationLayer.h"
 #include "LinkLayer.h"
+#include "Router.h"
+#include "ContactList.h"
 
-MessagingApplicationLayer::MessagingApplicationLayer(LinkLayer &_linkLayer) : linkLayer(_linkLayer), router(_linkLayer.getRouter()) {
+MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, LinkLayer &_linkLayer) : contactList(_contactList), linkLayer(_linkLayer), _router(_linkLayer.router()) {
 	linkLayer.attachApplicationLayer(Messaging, this);
+
+	connect(&_router, SIGNAL(nodeAdded(SparkleNode*)), SIGNAL(nodeStateChanged(SparkleNode*)));
+	connect(&_router, SIGNAL(nodeUpdated(SparkleNode*)), SIGNAL(nodeStateChanged(SparkleNode*)));
+	connect(&_router, SIGNAL(nodeRemoved(SparkleNode*)), SIGNAL(nodeStateChanged(SparkleNode*)));
 }
 
 MessagingApplicationLayer::~MessagingApplicationLayer() {
+}
+
+Router& MessagingApplicationLayer::router() {
+	return _router;
+}
+
+Messaging::NodeState MessagingApplicationLayer::nodeState(QByteArray mac) {
+	SparkleNode* node = _router.findSparkleNode(mac);
+	if(node != NULL) {
+		return Messaging::Unauthorized;
+	} else {
+		return Messaging::NotFound;
+	}
+}
+
+void MessagingApplicationLayer::resolveContacts() {
+
 }
 
 void MessagingApplicationLayer::handleDataPacket(QByteArray &packet, SparkleNode *node) {

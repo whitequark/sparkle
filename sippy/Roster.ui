@@ -25,7 +25,7 @@
      <number>5</number>
     </property>
     <item>
-     <widget class="QListView" name="listView"/>
+     <widget class="QListWidget" name="contactView"/>
     </item>
    </layout>
   </widget>
@@ -44,13 +44,16 @@
     </property>
     <addaction name="actionConnect"/>
     <addaction name="actionDisconnect"/>
+    <addaction name="separator"/>
+    <addaction name="actionAddContact"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
      <string>&amp;Tools</string>
     </property>
     <addaction name="actionConfigure"/>
-    <addaction name="actionShowConsole"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -91,6 +94,16 @@
   <action name="actionShowConsole">
    <property name="text">
     <string>Show C&amp;onsole...</string>
+   </property>
+  </action>
+  <action name="actionAddContact">
+   <property name="text">
+    <string>&amp;Add contact...</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>E&amp;xit</string>
    </property>
   </action>
  </widget>

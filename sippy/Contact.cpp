@@ -16,29 +16,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONNECTDIALOG_H
-#define CONNECTDIALOG_H
+#include "Contact.h"
 
-#include <QDialog>
-#include "ui_ConnectDialog.h"
+Contact::Contact(QString textAddress) {
+	_address = QByteArray::fromHex(textAddress.replace(':', "").toLocal8Bit());
+}
 
-class ConfigurationStorage;
+QByteArray Contact::address() const {
+	return _address;
+}
 
-class ConnectDialog : public QDialog, private Ui_ConnectDialog {
-	Q_OBJECT
-public:
-	ConnectDialog(ConfigurationStorage* config, QWidget *parent);
+QString Contact::textAddress() const {
+	return SparkleNode::makePrettyMAC(_address);
+}
 
-public slots:
-	virtual void accept();
+QString Contact::displayName() const {
+	return _displayName;
+}
 
-private slots:
-	void checkOptions();
-
-private:
-	ConnectDialog();
-
-	ConfigurationStorage* config;
-};
-
-#endif // CONNECTDIALOG_H
+void Contact::setDisplayName(QString displayName) {
+	_displayName = displayName;
+	emit updated();
+}

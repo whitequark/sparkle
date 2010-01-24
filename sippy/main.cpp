@@ -23,10 +23,9 @@
 #include <Router.h>
 #include <UdpPacketTransport.h>
 
-#include "DebugConsole.h"
 #include "ConfigurationStorage.h"
 #include "MessagingApplicationLayer.h"
-#include "Sippy.h"
+#include "Roster.h"
 
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);
@@ -47,15 +46,18 @@ int main(int argc, char *argv[]) {
 			Log::fatal("cannot read RSA keypair");
 	}
 
-	DebugConsole console;
-
 	Router router;
 	UdpPacketTransport transport(QHostAddress::Any, config->port());
 	LinkLayer linkLayer(router, transport, hostPair);
 
-	MessagingApplicationLayer appLayer(linkLayer);
-	Sippy sippy(config, console, linkLayer, appLayer);
-	sippy.show();
+	linkLayer.connect(&app, SIGNAL(aboutToQuit()), SLOT(exitNetwork()));
+
+	ContactList contactList;
+	MessagingApplicationLayer appLayer(contactList, linkLayer);
+	Roster roster(contactList, linkLayer, appLayer);
+
+	contactList.load();
+	roster.show();
 
 	return app.exec();
 }
