@@ -56,9 +56,12 @@ public slots:
 
 signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
+
 	void joinFailed();
 	void joinedNetwork(SparkleNode* self);
 	void leavedNetwork();
+
+	void routeMissing(SparkleAddress addr);
 
 private slots:
 	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);

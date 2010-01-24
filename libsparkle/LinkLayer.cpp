@@ -176,8 +176,6 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 
 	connect(node, SIGNAL(negotiationTimedOut(SparkleNode*)), SLOT(negotiationTimeout(SparkleNode*)));
 
-	//Log::debug("link: added [%1]:%2 to node spool") << host << port;
-
 	return node;
 }
 
@@ -904,16 +902,45 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	target->setBehindNAT(route->isBehindNAT);
 
 	_router.updateNode(target);
+
+	SparkleAddress addr(target->sparkleMAC());
+
+	// two checks to prevent automatic list creation
+	if(queuedData.contains(addr) && queuedData[addr].count() > 0) {
+		Log::debug("link: sending %1 packets in %2 queue") << queuedData[addr].count() << addr.pretty();
+
+		foreach(const QByteArray& packet, queuedData[addr])
+			sendEncryptedPacket(DataPacket, packet, target);
+		queuedData.remove(addr); // route is estabilished
+	}
 }
 
 /* RouteRequest */
 
+//TODO: add timeouts on route requests
+
 void LinkLayer::sendRouteRequest(SparkleAddress mac) {
+	Q_ASSERT(!mac.isNull());
+
+	if(_router.hasRouteTo(mac)) {
+		Log::error("link: route request for known address %1") << mac.pretty();
+		return;
+	}
+
+	SparkleNode* master = _router.selectMaster();
+	if(master == _router.getSelfNode()) {
+		// i'm the one master & i don't know route
+		Log::info("link: no route to %1") << mac.pretty();
+
+		emit routeMissing(mac);
+
+		return;
+	}
+
 	route_request_t req;
 	memcpy(req.sparkleMAC, mac.rawBytes(), SPARKLE_ADDRESS_SIZE);
 
-	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)),
-				_router.selectMaster());
+	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)), master);
 }
 
 void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
@@ -949,8 +976,17 @@ void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
 		return;
 
 	const route_missing_t* req = (const route_missing_t*) payload.constData();
+	SparkleAddress addr(req->sparkleMAC);
 
-	Log::info("link: no route to %1") << SparkleAddress(req->sparkleMAC).pretty();
+	Log::info("link: no route to %1") << addr.pretty();
+
+	// two checks to prevent automatic list creation
+	if(queuedData.contains(addr) && queuedData[addr].count()) {
+		Log::debug("link: dropping %1 packets to %2") << queuedData[addr].count() << addr.pretty();
+		queuedData[addr].clear();
+	}
+
+	emit routeMissing(addr);
 }
 
 /* RouteInvalidate */
@@ -1079,7 +1115,7 @@ void LinkLayer::sendDataPacket(SparkleAddress address, ApplicationLayer::Encapsu
 }
 
 void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
-	if(!checkPacketSize(packet, sizeof(data_packet_t), node, "DataPacket"))
+	if(!checkPacketSize(packet, sizeof(data_packet_t), node, "DataPacket", PacketSizeGreater))
 		return;
 
 	const data_packet_t* info = (const data_packet_t*) packet.constData();
@@ -1089,7 +1125,7 @@ void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
 	ApplicationLayer::Encapsulation encap = (ApplicationLayer::Encapsulation) info->encapsulation;
 
 	if(appLayers.contains(encap)) {
-		appLayers[encap]->handleDataPacket(packet, node->sparkleMAC());
+		appLayers[encap]->handleDataPacket(payload, node->sparkleMAC());
 	} else {
 		Log::warn("link: received packet from [%1]:%2 with unknown encapsulation %3") << *node << encap;
 	}
