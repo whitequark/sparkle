@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <QDataStream>
 #include "MessagingApplicationLayer.h"
 #include "LinkLayer.h"
 #include "Router.h"
@@ -25,23 +26,62 @@
 
 class PresenceRequest;
 
-MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, LinkLayer &_linkLayer) : contactList(_contactList), linkLayer(_linkLayer), _router(_linkLayer.router()) {
+MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, LinkLayer &_linkLayer) : contactList(_contactList), linkLayer(_linkLayer), _router(_linkLayer.router()), _status(Messaging::Online) {
 	linkLayer.attachApplicationLayer(Messaging, this);
 
 	connect(&_router, SIGNAL(peerAdded(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
 	connect(&_router, SIGNAL(peerRemoved(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
 
 	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(pollPresence()));
+	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(sendPresence()));
 	connect(&linkLayer, SIGNAL(routeMissing(SparkleAddress)), SLOT(peerAbsent(SparkleAddress)));
 	connect(&linkLayer, SIGNAL(leavedNetwork()), SLOT(cleanup()));
+
+	connect(this, SIGNAL(statusChanged(Messaging::Status)), SLOT(sendPresence()));
+	connect(this, SIGNAL(statusTextChanged(QString)), SLOT(sendPresence()));
+
+	connect(&contactList, SIGNAL(contactAdded(Contact*)), SLOT(fetchContact(Contact*)));
+
 }
 
 MessagingApplicationLayer::~MessagingApplicationLayer() {
 }
 
+Messaging::Status MessagingApplicationLayer::status() const {
+	return _status;
+}
+
+QString MessagingApplicationLayer::statusText() const {
+	return _statusText;
+}
+
+void MessagingApplicationLayer::setStatus(Messaging::Status newStatus) {
+	_status = newStatus;
+	emit statusChanged(_status);
+}
+
+void MessagingApplicationLayer::setStatusText(QString newStatusText) {
+	_statusText = newStatusText;
+	emit statusTextChanged(_statusText);
+}
+
+/* ===== NETWORKING ===== */
+
 void MessagingApplicationLayer::pollPresence() {
-	Log::debug("mesg: polling presence");
-	foreach(Contact* contact, contactList.contacts()) {
+	Log::debug("mesg: polling for presence");
+	foreach(Contact* contact, contactList.contacts())
+		sendPresenceRequest(contact->address());
+}
+
+void MessagingApplicationLayer::sendPresence() {
+	Log::debug("mesg: sending presence update");
+	foreach(Contact* contact, contactList.contacts())
+		sendPresenceNotify(contact->address());
+}
+
+void MessagingApplicationLayer::fetchContact(Contact* contact) {
+	if(linkLayer.isJoined()) {
+		Log::debug("mesg: fetching contact %1") << contact->address().pretty();
 		sendPresenceRequest(contact->address());
 	}
 }
@@ -49,13 +89,18 @@ void MessagingApplicationLayer::pollPresence() {
 void MessagingApplicationLayer::cleanup() {
 	Log::debug("mesg: cleanup");
 	absentPeers.clear();
+	authorizedPeers.clear();
 	foreach(Contact* contact, contactList.contacts())
 		emit peerStateChanged(contact->address());
 }
 
 Messaging::PeerState MessagingApplicationLayer::peerState(SparkleAddress mac) {
 	if(_router.hasRouteTo(mac)) {
-		return Messaging::Unauthorized;
+		if(authorizedPeers.contains(mac)) {
+			return Messaging::Present;
+		} else {
+			return Messaging::Unauthorized;
+		}
 	} else if(absentPeers.contains(mac)) {
 		return Messaging::NotPresent;
 	} else if(!linkLayer.isJoined()) {
@@ -89,6 +134,10 @@ void MessagingApplicationLayer::handleDataPacket(QByteArray &packet, SparkleAddr
 		handlePresenceRequest(payload, address);
 		break;
 
+		case PresenceNotify:
+		handlePresenceNotify(payload, address);
+		break;
+
 		default:
 		Log::warn("mesg: dropping version %1 packet of unknown type %2 from %3") << hdr->version << hdr->type << address.pretty();
 	}
@@ -104,7 +153,7 @@ void MessagingApplicationLayer::sendPacket(packet_type_t type, QByteArray data, 
 	linkLayer.sendDataPacket(addr, Messaging, data);
 }
 
-/* === PACKET RELATED STUFF === */
+/* ===== PACKET RELATED STUFF ===== */
 
 /* PresenceRequest */
 
@@ -113,7 +162,39 @@ void MessagingApplicationLayer::sendPresenceRequest(SparkleAddress addr) {
 }
 
 void MessagingApplicationLayer::handlePresenceRequest(QByteArray&, SparkleAddress addr) {
-	Log::debug("mesg: presence request from %1") << addr.pretty();
+	if(contactList.hasAddress(addr))
+		sendPresenceNotify(addr);
 }
 
 /* PresenceReply */
+
+void MessagingApplicationLayer::sendPresenceNotify(SparkleAddress addr) {
+	QByteArray packet;
+	QDataStream stream(&packet, QIODevice::WriteOnly);
+
+	stream << (quint16) _status;
+	stream << _statusText;
+
+	sendPacket(PresenceNotify, packet, addr);
+}
+
+void MessagingApplicationLayer::handlePresenceNotify(QByteArray& packet, SparkleAddress addr) {
+	QDataStream stream(&packet, QIODevice::ReadOnly);
+
+	Messaging::Status peerStatus;
+	QString peerStatusText;
+
+	stream >> (quint16&) peerStatus;
+	stream >> peerStatusText;
+
+	authorizedPeers.insert(addr);
+
+	Contact* contact = contactList.findByAddress(addr);
+	if(contact) {
+		Log::debug("mesg: received presence for %1: %2[%3]") << addr.pretty() << peerStatus << peerStatusText;
+		contact->setStatus(peerStatus);
+		contact->setStatusText(peerStatusText);
+	} else {
+		Log::warn("mesg: received presence for unknown contact %1") << addr.pretty();
+	}
+}

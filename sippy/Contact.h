@@ -22,6 +22,7 @@
 #include <QObject>
 #include "Roster.h"
 #include "SparkleAddress.h"
+#include "MessagingApplicationLayer.h"
 
 class Contact : public QObject {
 	Q_OBJECT
@@ -34,12 +35,20 @@ public:
 	QString displayName() const;
 	void setDisplayName(QString);
 
+	Messaging::Status status() const;
+	void setStatus(Messaging::Status);
+
+	QString statusText() const;
+	void setStatusText(QString);
+
 signals:
 	void updated();
 
 private:
 	QString _displayName;
 	SparkleAddress _address;
+	Messaging::Status _status;
+	QString _statusText;
 };
 
 #endif // CONTACT_H

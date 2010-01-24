@@ -153,6 +153,7 @@ void Roster::addContact(Contact* contact) {
 	contactViewItems[contact] = item;
 	contactView->addItem(item);
 	contactView->setItemWidget(item, rosterItem);
+	contactView->setCurrentRow(contactView->row(item));
 }
 
 void Roster::removeContact(Contact *contact) {

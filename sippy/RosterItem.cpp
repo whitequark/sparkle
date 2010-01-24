@@ -64,7 +64,11 @@ void RosterItem::update() {
 	Messaging::PeerState state = appLayer.peerState(contact->address());
 	switch(state) {
 		case Messaging::Present:
-		infoText = tr("Online");
+		if(contact->statusText() != "") {
+			infoText = contact->statusText();
+		} else { //fixme
+			infoText = tr("Online");
+		}
 		break;
 
 		case Messaging::NotPresent:
@@ -85,15 +89,7 @@ void RosterItem::update() {
 	}
 
 	QColor nameColor, infoColor;
-	if(selected) {
-		nameColor = infoColor = palette().highlightedText().color();
-	} else {
-		infoColor = palette().dark().color();
-		if(state == Messaging::Present)
-			nameColor = palette().foreground().color();
-		else
-			nameColor = infoColor;
-	}
+	infoColor = nameColor = palette().text().color();
 
 	name->setText(QString("<font color='%2'>%1</font>").arg(nameText).arg(nameColor.name()));
 	info->setText(QString("<font color='%2'>%1</font>").arg(infoText).arg(infoColor.name()));

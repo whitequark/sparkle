@@ -28,6 +28,7 @@ class QHostAddress;
 class LinkLayer;
 class Router;
 class ContactList;
+class Contact;
 
 namespace Messaging {
 	enum PeerState { /* an insider joke */
@@ -36,6 +37,13 @@ namespace Messaging {
 		NotPresent    = 404,
 		InternalError = 500,
 		Unavailable   = 503,
+	};
+
+	enum Status {
+		Unknown,
+		Online,
+		Away,
+		DoNotDisturb
 	};
 }
 
@@ -50,14 +58,27 @@ public:
 
 	Messaging::PeerState peerState(SparkleAddress address);
 
+	Messaging::Status status() const;
+	QString statusText() const;
+
+public slots:
+	void setStatus(Messaging::Status newStatus);
+	void setStatusText(QString newStatusText);
+
 signals:
 	void peerStateChanged(SparkleAddress address);
 
+	void statusChanged(Messaging::Status status);
+	void statusTextChanged(QString statusText);
+
 private slots:
 	void pollPresence();
-	void cleanup();
+	void sendPresence();
+	void fetchContact(Contact* contact);
 
 	void peerAbsent(SparkleAddress address);
+
+	void cleanup();
 
 private:
 	enum {
@@ -79,11 +100,17 @@ private:
 	void sendPresenceRequest(SparkleAddress addr);
 	void handlePresenceRequest(QByteArray& payload, SparkleAddress addr);
 
+	void sendPresenceNotify(SparkleAddress addr);
+	void handlePresenceNotify(QByteArray& payload, SparkleAddress addr);
+
 	ContactList &contactList;
 	LinkLayer &linkLayer;
 	Router &_router;
 
-	QSet<SparkleAddress> absentPeers;
+	QSet<SparkleAddress> absentPeers, authorizedPeers;
+
+	Messaging::Status _status;
+	QString _statusText;
 };
 
 #endif

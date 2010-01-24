@@ -68,6 +68,19 @@ bool ContactList::removeContact(Contact* contact) {
 	return true;
 }
 
+Contact* ContactList::findByAddress(SparkleAddress address) {
+	foreach(Contact* contact, _contacts) {
+		if(contact->address() == address)
+			return contact;
+	}
+
+	return NULL;
+}
+
+bool ContactList::hasAddress(SparkleAddress address) {
+	return (findByAddress(address) != NULL);
+}
+
 void ContactList::clear() {
 	for(int i = 0; i < _contacts.count(); i++) {
 		disconnect(_contacts[i], SIGNAL(updated()));

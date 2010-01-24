@@ -34,7 +34,25 @@ QString Contact::displayName() const {
 	return _displayName;
 }
 
+Messaging::Status Contact::status() const {
+	return _status;
+}
+
+QString Contact::statusText() const {
+	return _statusText;
+}
+
 void Contact::setDisplayName(QString displayName) {
 	_displayName = displayName;
+	emit updated();
+}
+
+void Contact::setStatus(Messaging::Status status) {
+	_status = status;
+	emit updated();
+}
+
+void Contact::setStatusText(QString statusText) {
+	_statusText = statusText;
 	emit updated();
 }
