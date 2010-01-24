@@ -926,7 +926,7 @@ void LinkLayer::sendRouteRequest(SparkleAddress mac) {
 	SparkleNode* master = _router.selectMaster();
 	if(master == _router.getSelfNode()) {
 		// i'm the one master & i don't know route
-		Log::info("link: no route to %1") << mac.pretty();
+		Log::debug("link: no route to %1") << mac.pretty();
 
 		emit routeMissing(mac);
 
@@ -974,7 +974,7 @@ void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
 	const route_missing_t* req = (const route_missing_t*) payload.constData();
 	SparkleAddress addr(req->sparkleMAC);
 
-	Log::info("link: no route to %1") << addr.pretty();
+	Log::debug("link: no route to %1") << addr.pretty();
 
 	// two checks to prevent automatic list creation
 	if(queuedData.contains(addr) && queuedData[addr].count()) {
