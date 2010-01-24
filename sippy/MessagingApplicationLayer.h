@@ -20,6 +20,7 @@
 #define __SIPPY_APPLICATION_LAYER__H__
 
 #include <QObject>
+#include <QSet>
 #include <ApplicationLayer.h>
 #include "SparkleAddress.h"
 
@@ -30,9 +31,11 @@ class ContactList;
 
 namespace Messaging {
 	enum PeerState { /* an insider joke */
-		Present      = 200,
-		Unauthorized = 403,
-		NotFound     = 404,
+		Present       = 200,
+		Unauthorized  = 403,
+		NotPresent    = 404,
+		InternalError = 500,
+		Unavailable   = 503,
 	};
 }
 
@@ -45,13 +48,16 @@ public:
 
 	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address);
 
-	Messaging::PeerState peerState(SparkleAddress mac);
+	Messaging::PeerState peerState(SparkleAddress address);
 
 signals:
 	void peerStateChanged(SparkleAddress address);
 
 private slots:
-	void resolveContacts();
+	void pollPresence();
+	void cleanup();
+
+	void peerAbsent(SparkleAddress address);
 
 private:
 	enum {
@@ -63,11 +69,21 @@ private:
 		PresenceNotify	= 2,
 	};
 
-	void sendPacket(packet_type_t type, QByteArray data, SparkleAddress node);
+	struct packet_header_t {
+		quint16 type;
+		quint16 version;
+	};
+
+	void sendPacket(packet_type_t type, QByteArray data, SparkleAddress node, quint16 version = 0);
+
+	void sendPresenceRequest(SparkleAddress addr);
+	void handlePresenceRequest(QByteArray& payload, SparkleAddress addr);
 
 	ContactList &contactList;
 	LinkLayer &linkLayer;
 	Router &_router;
+
+	QSet<SparkleAddress> absentPeers;
 };
 
 #endif

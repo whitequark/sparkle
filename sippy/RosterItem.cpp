@@ -63,16 +63,24 @@ void RosterItem::update() {
 
 	Messaging::PeerState state = appLayer.peerState(contact->address());
 	switch(state) {
-		case Messaging::NotFound:
-		infoText = QString("<i>%1</i>").arg(tr("Not found"));
+		case Messaging::Present:
+		infoText = tr("Online");
+		break;
+
+		case Messaging::NotPresent:
+		infoText = tr("Offline");
 		break;
 
 		case Messaging::Unauthorized:
 		infoText = QString("<i>%1</i>").arg(tr("Unauthorized"));
 		break;
 
-		case Messaging::Present:
-		infoText = tr("Online");
+		case Messaging::Unavailable:
+		infoText = QString("<i>%1</i>").arg(tr("Unavailable"));
+		break;
+
+		case Messaging::InternalError:
+		infoText = QString("<i>%1</i>").arg(tr("Internal error"));
 		break;
 	}
 
