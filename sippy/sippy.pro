@@ -18,7 +18,8 @@ HEADERS += ConfigurationStorage.h \
     AddContactDialog.h \
     Contact.h \
     ContactList.h \
-    EditContactDialog.h
+    EditContactDialog.h \
+    StatusBox.h
 SOURCES += main.cpp \
     ConfigurationStorage.cpp \
     ConnectDialog.cpp \
@@ -28,7 +29,8 @@ SOURCES += main.cpp \
     AddContactDialog.cpp \
     Contact.cpp \
     ContactList.cpp \
-    EditContactDialog.cpp
+    EditContactDialog.cpp \
+    StatusBox.cpp
 QMAKE_LIBS += -lsparkle
 win32:QMAKE_LFLAGS += -L../libsparkle/release
 else:QMAKE_LFLAGS += -L../libsparkle

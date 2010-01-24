@@ -16,39 +16,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONTACT_H
-#define CONTACT_H
+#include "StatusBox.h"
+#include <QKeyEvent>
 
-#include <QObject>
-#include "Roster.h"
-#include "SparkleAddress.h"
-#include "MessagingApplicationLayer.h"
+StatusBox::StatusBox(QWidget *parent) :
+	QComboBox(parent)
+{
+}
 
-class Contact : public QObject {
-	Q_OBJECT
-public:
-	Contact(QString address);
+QString StatusBox::defaultStatusText(Messaging::Status status) {
+	switch(status) {
+		default:
+		case Messaging::Online:
+		return tr("Online");
 
-	SparkleAddress address() const;
-	QString textAddress() const;
+		case Messaging::Away:
+		return tr("Away");
 
-	QString displayName() const;
-	void setDisplayName(QString);
+		case Messaging::DoNotDisturb:
+		return tr("Do not disturb");
+	}
+}
 
-	Messaging::Status status() const;
-	void setStatus(Messaging::Status);
+void StatusBox::setStatusText(QString text) {
+	setEditText(text);
+}
 
-	QString statusText() const;
-	void setStatusText(QString);
+void StatusBox::setStatus(Messaging::Status) {
 
-signals:
-	void updated();
+}
 
-private:
-	QString _displayName;
-	SparkleAddress _address;
-	Messaging::Status _status;
-	QString _statusText;
-};
+void StatusBox::focusOutEvent(QFocusEvent *e) {
+	emit statusTextChanged(currentText());
+	QComboBox::focusOutEvent(e);
+}
 
-#endif // CONTACT_H
+void StatusBox::keyPressEvent(QKeyEvent *e) {
+	if(e->key() == Qt::Key_Return) {
+		focusNextChild();
+	} else {
+		QComboBox::keyPressEvent(e);
+	}
+}

@@ -2,7 +2,7 @@
  * Sippy - zero-configuration fully distributed self-organizing encrypting IM
  * Copyright (C) 2009 Peter Zotov
  *
- * Ths program is free software: you can redistribute it and/or modify
+ * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
@@ -63,6 +63,8 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	connect(&contactList, SIGNAL(contactAdded(Contact*)), SLOT(addContact(Contact*)));
 	connect(&contactList, SIGNAL(contactRemoved(Contact*)), SLOT(removeContact(Contact*)));
 
+	appLayer.connect(statusBox, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
+
 	connect(actionAbout, SIGNAL(triggered()), SLOT(about()));
 
 	app->connect(actionExit, SIGNAL(triggered()), SLOT(quit()));
@@ -70,7 +72,6 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	connectStateChanged(Disconnected);
 
 	contactList.load();
-	contactView->setCurrentRow(0);
 }
 
 void Roster::connectStateChanged(connect_state_t state) {
@@ -153,7 +154,6 @@ void Roster::addContact(Contact* contact) {
 	contactViewItems[contact] = item;
 	contactView->addItem(item);
 	contactView->setItemWidget(item, rosterItem);
-	contactView->setCurrentRow(contactView->row(item));
 }
 
 void Roster::removeContact(Contact *contact) {

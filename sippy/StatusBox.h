@@ -16,39 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CONTACT_H
-#define CONTACT_H
+#ifndef STATUSBOX_H
+#define STATUSBOX_H
 
-#include <QObject>
-#include "Roster.h"
-#include "SparkleAddress.h"
+#include <QComboBox>
 #include "MessagingApplicationLayer.h"
 
-class Contact : public QObject {
+class StatusBox : public QComboBox
+{
 	Q_OBJECT
 public:
-	Contact(QString address);
+	StatusBox(QWidget *parent);
 
-	SparkleAddress address() const;
-	QString textAddress() const;
+	QString defaultStatusText(Messaging::Status);
 
-	QString displayName() const;
-	void setDisplayName(QString);
-
-	Messaging::Status status() const;
+public slots:
+	void setStatusText(QString);
 	void setStatus(Messaging::Status);
 
-	QString statusText() const;
-	void setStatusText(QString);
-
 signals:
-	void updated();
+	void statusTextChanged(QString);
+	void statusChanged(Messaging::Status);
 
-private:
-	QString _displayName;
-	SparkleAddress _address;
-	Messaging::Status _status;
-	QString _statusText;
+protected:
+	void focusOutEvent(QFocusEvent *e);
+	void keyPressEvent(QKeyEvent *e);
 };
 
-#endif // CONTACT_H
+#endif // STATUSBOX_H

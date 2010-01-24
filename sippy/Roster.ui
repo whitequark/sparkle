@@ -21,11 +21,31 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
-    <property name="margin">
+    <property name="leftMargin">
      <number>5</number>
     </property>
+    <property name="topMargin">
+     <number>5</number>
+    </property>
+    <property name="rightMargin">
+     <number>5</number>
+    </property>
+    <property name="bottomMargin">
+     <number>2</number>
+    </property>
     <item>
-     <widget class="QListWidget" name="contactView"/>
+     <widget class="QListWidget" name="contactView">
+      <property name="sortingEnabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="StatusBox" name="statusBox">
+      <property name="editable">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -76,11 +96,6 @@
     <string>&amp;Disconnect</string>
    </property>
   </action>
-  <action name="actionSetNickname">
-   <property name="text">
-    <string>Set &amp;nickname..</string>
-   </property>
-  </action>
   <action name="actionAbout">
    <property name="text">
     <string>&amp;About</string>
@@ -89,11 +104,6 @@
   <action name="actionConfigure">
    <property name="text">
     <string>Co&amp;nfigure...</string>
-   </property>
-  </action>
-  <action name="actionShowConsole">
-   <property name="text">
-    <string>Show C&amp;onsole...</string>
    </property>
   </action>
   <action name="actionAddContact">
@@ -107,6 +117,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>StatusBox</class>
+   <extends>QComboBox</extends>
+   <header location="global">StatusBox.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
