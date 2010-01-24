@@ -28,7 +28,7 @@ Router::Router() : _self(NULL) {
 void Router::setSelfNode(SparkleNode* node) {
 	Q_ASSERT(_self == NULL);
 
-	Log::info("router: My MAC is %1, I am %2") << node->prettySparkleMAC() << (node->isMaster() ? "master" : "slave");
+	Log::info("router: My MAC is %1, I am %2") << node->sparkleMAC().pretty() << (node->isMaster() ? "master" : "slave");
 
 	_self = node;
 	updateNode(_self);
@@ -44,12 +44,13 @@ void Router::updateNode(SparkleNode* node) {
 	if(newNode)
 		_nodes.append(node);
 
-	Log::debug("router: %6 node %3 @ [%1]:%2 (%4, %5)") << *node << node->prettySparkleMAC()
+	Log::debug("router: %6 node %3 @ [%1]:%2 (%4, %5)") << *node << node->sparkleMAC().pretty()
 			<< (node->isMaster() ? "master" : "slave")
 			<< (node->isBehindNAT() ? "behind NAT" : "has white IP")
 			<< (newNode ? "adding" : "updating");
 
 	emit nodeAdded(node);
+	emit peerAdded(node->sparkleMAC());
 }
 
 void Router::removeNode(SparkleNode* node) {
@@ -60,9 +61,10 @@ void Router::removeNode(SparkleNode* node) {
 
 	if(_nodes.contains(node)) {
 		_nodes.removeOne(node);
-		Log::debug("router: removing node %3 @ [%1]:%2") << *node << node->prettySparkleMAC();
+		Log::debug("router: removing node %3 @ [%1]:%2") << *node << node->sparkleMAC().pretty();
 
 		emit nodeRemoved(node);
+		emit peerRemoved(node->sparkleMAC());
 
 		if(_nodes.count() == 1) {
 			Log::info("router: you are the One, last node!");
@@ -74,7 +76,7 @@ void Router::removeNode(SparkleNode* node) {
 	}
 }
 
-SparkleNode* Router::findSparkleNode(QByteArray sparkleMAC) const {
+SparkleNode* Router::findSparkleNode(SparkleAddress sparkleMAC) const {
 	foreach(SparkleNode *node, _nodes) {
 		if(node->sparkleMAC() == sparkleMAC)
 			return node;
@@ -179,6 +181,7 @@ void Router::notifyNodeUpdated(SparkleNode* target) {
 void Router::clear() {
 	foreach(SparkleNode* node, _nodes) {
 		_nodes.removeOne(node);
+		emit peerRemoved(node->sparkleMAC());
 		emit nodeRemoved(node);
 	}
 	_self = NULL;

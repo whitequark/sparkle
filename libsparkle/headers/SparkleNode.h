@@ -28,6 +28,8 @@
 #include "BlowfishKey.h"
 #include "Router.h"
 
+class SparkleAddress;
+
 class SparkleNode : public QObject
 {
 	Q_OBJECT
@@ -41,14 +43,12 @@ public:
 	QHostAddress realIP() const		{ return _realIP; }
 	quint16 realPort() const		{ return _realPort; }
 
-	QByteArray sparkleMAC() const	{ return _sparkleMAC; }
-	QString prettySparkleMAC() const;
+	SparkleAddress sparkleMAC() const	{ return _sparkleMAC; }
 
 	bool isBehindNAT() const		{ return behindNAT; }
 	void setBehindNAT(bool behindNAT);
 
-	void setSparkleIP(const QHostAddress& ip);
-	void setSparkleMAC(const QByteArray& mac);
+	void setSparkleMAC(const SparkleAddress& mac);
 
 	void setRealIP(const QHostAddress& ip);
 	void setRealPort(quint16 port);
@@ -74,8 +74,6 @@ public:
 	QByteArray popQueue();
 	void flushQueue();
 
-	static QString makePrettyMAC(QByteArray mac);
-
 public slots:
 	void negotiationStart();
 	void negotiationFinished();
@@ -92,7 +90,7 @@ private:
 	QHostAddress _realIP;
 	quint16 _realPort;
 
-	QByteArray _sparkleMAC;
+	SparkleAddress _sparkleMAC;
 
 	bool master, behindNAT;
 

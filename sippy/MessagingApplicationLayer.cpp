@@ -20,23 +20,27 @@
 #include "LinkLayer.h"
 #include "Router.h"
 #include "ContactList.h"
+#include "Contact.h"
+
+class PresenceRequest;
 
 MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, LinkLayer &_linkLayer) : contactList(_contactList), linkLayer(_linkLayer), _router(_linkLayer.router()) {
 	linkLayer.attachApplicationLayer(Messaging, this);
 
-	connect(&_router, SIGNAL(nodeAdded(SparkleNode*)), SIGNAL(nodeStateChanged(SparkleNode*)));
-	connect(&_router, SIGNAL(nodeUpdated(SparkleNode*)), SIGNAL(nodeStateChanged(SparkleNode*)));
-	connect(&_router, SIGNAL(nodeRemoved(SparkleNode*)), SIGNAL(nodeStateChanged(SparkleNode*)));
+	connect(&_router, SIGNAL(peerAdded(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
+	connect(&_router, SIGNAL(peerRemoved(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
+	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(resolveContacts()));
 }
 
 MessagingApplicationLayer::~MessagingApplicationLayer() {
 }
 
-Router& MessagingApplicationLayer::router() {
-	return _router;
+void MessagingApplicationLayer::resolveContacts() {
+	foreach(Contact* contact, contactList.contacts()) {
+	}
 }
 
-Messaging::NodeState MessagingApplicationLayer::nodeState(QByteArray mac) {
+Messaging::PeerState MessagingApplicationLayer::peerState(SparkleAddress mac) {
 	SparkleNode* node = _router.findSparkleNode(mac);
 	if(node != NULL) {
 		return Messaging::Unauthorized;
@@ -45,10 +49,6 @@ Messaging::NodeState MessagingApplicationLayer::nodeState(QByteArray mac) {
 	}
 }
 
-void MessagingApplicationLayer::resolveContacts() {
-
-}
-
-void MessagingApplicationLayer::handleDataPacket(QByteArray &packet, SparkleNode *node) {
+void MessagingApplicationLayer::handleDataPacket(QByteArray &packet, SparkleAddress address) {
 
 }

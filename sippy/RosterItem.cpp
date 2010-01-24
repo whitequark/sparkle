@@ -20,6 +20,7 @@
 #include <QVBoxLayout>
 #include <QListWidgetItem>
 #include <QContextMenuEvent>
+#include <QMargins>
 #include "RosterItem.h"
 #include "Contact.h"
 #include "Log.h"
@@ -42,13 +43,13 @@ RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, 
 	setLayout(layout);
 
 	connect(contact, SIGNAL(updated()), SLOT(update()));
-	connect(&appLayer, SIGNAL(nodeStateChanged(SparkleNode*)), SLOT(processStateChange(SparkleNode*)));
+	connect(&appLayer, SIGNAL(peerStateChanged(SparkleAddress)), SLOT(processStateChange(SparkleAddress)));
 
 	update();
 }
 
-void RosterItem::processStateChange(SparkleNode *node) {
-	if(node->sparkleMAC() == contact->address())
+void RosterItem::processStateChange(SparkleAddress address) {
+	if(address == contact->address())
 		update();
 }
 
@@ -60,7 +61,7 @@ void RosterItem::update() {
 	else
 		nameText = contact->displayName();
 
-	Messaging::NodeState state = appLayer.nodeState(contact->address());
+	Messaging::PeerState state = appLayer.peerState(contact->address());
 	switch(state) {
 		case Messaging::NotFound:
 		infoText = QString("<i>%1</i>").arg(tr("Not found"));

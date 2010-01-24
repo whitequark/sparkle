@@ -4,46 +4,48 @@
 TEMPLATE = lib
 TARGET = sparkle
 DEPENDPATH += . \
-	crypto \
-	headers \
-	headers/crypto
+    crypto \
+    headers \
+    headers/crypto
 INCLUDEPATH += . \
-	headers \
-	headers/crypto
+    headers \
+    headers/crypto
 CONFIG += staticlib
 QT -= gui
 QT += network
 
 # Input
 HEADERS += headers/BlowfishKey.h \
-	headers/LinkLayer.h \
-	headers/Log.h \
-	headers/PacketTransport.h \
-	headers/random.h \
-	headers/Router.h \
-	headers/RSAKeyPair.h \
-	headers/SHA1Digest.h \
-	headers/SparkleNode.h \
-	headers/UdpPacketTransport.h \
-	headers/crypto/bignum.h \
-	headers/crypto/bn_mul.h \
-	headers/crypto/havege.h \
-	headers/crypto/rsa.h \
-	headers/crypto/sha1.h \
-	headers/crypto/timing.h \
-	headers/ApplicationLayer.h
+    headers/LinkLayer.h \
+    headers/Log.h \
+    headers/PacketTransport.h \
+    headers/random.h \
+    headers/Router.h \
+    headers/RSAKeyPair.h \
+    headers/SHA1Digest.h \
+    headers/SparkleNode.h \
+    headers/UdpPacketTransport.h \
+    headers/crypto/bignum.h \
+    headers/crypto/bn_mul.h \
+    headers/crypto/havege.h \
+    headers/crypto/rsa.h \
+    headers/crypto/sha1.h \
+    headers/crypto/timing.h \
+    headers/ApplicationLayer.h \
+    headers/SparkleAddress.h
 SOURCES += BlowfishKey.cpp \
-	LinkLayer.cpp \
-	Log.cpp \
-	random.cpp \
-	Router.cpp \
-	RSAKeyPair.cpp \
-	SHA1Digest.cpp \
-	SparkleNode.cpp \
-	UdpPacketTransport.cpp \
-	crypto/bignum.c \
-	crypto/blowfish.c \
-	crypto/havege.c \
-	crypto/rsa.c \
-	crypto/sha1.c \
-	crypto/timing.c
+    LinkLayer.cpp \
+    Log.cpp \
+    random.cpp \
+    Router.cpp \
+    RSAKeyPair.cpp \
+    SHA1Digest.cpp \
+    SparkleNode.cpp \
+    UdpPacketTransport.cpp \
+    crypto/bignum.c \
+    crypto/blowfish.c \
+    crypto/havege.c \
+    crypto/rsa.c \
+    crypto/sha1.c \
+    crypto/timing.c \
+    SparkleAddress.cpp

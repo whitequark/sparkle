@@ -20,6 +20,7 @@
 #define ROSTERITEM_H
 
 #include <QWidget>
+#include "SparkleAddress.h"
 
 class Contact;
 class QLabel;
@@ -45,7 +46,7 @@ signals:
 
 private slots:
 	void update();
-	void processStateChange(SparkleNode* node);
+	void processStateChange(SparkleAddress node);
 
 private:
 	Contact* contact;

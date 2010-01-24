@@ -22,12 +22,12 @@ Contact::Contact(QString textAddress) {
 	_address = QByteArray::fromHex(textAddress.replace(':', "").toLocal8Bit());
 }
 
-QByteArray Contact::address() const {
+SparkleAddress Contact::address() const {
 	return _address;
 }
 
 QString Contact::textAddress() const {
-	return SparkleNode::makePrettyMAC(_address);
+	return _address.pretty();
 }
 
 QString Contact::displayName() const {

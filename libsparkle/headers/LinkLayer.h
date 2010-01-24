@@ -24,6 +24,7 @@
 #include <QTime>
 
 #include "RSAKeyPair.h"
+#include "SparkleAddress.h"
 #include "ApplicationLayer.h"
 
 class QHostAddress;
@@ -44,10 +45,11 @@ public:
 	bool createNetwork(QHostAddress localAddress, quint8 networkDivisor);
 	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort, bool forceBehindNAT);
 
+	void sendDataPacket(SparkleAddress address, ApplicationLayer::Encapsulation encap, QByteArray &packet);
+
 	Router& router();
 
 public slots:
-	void sendDataPacket(SparkleNode *node, ApplicationLayer::Encapsulation encap, QByteArray &packet);
 	void exitNetwork();
 
 signals:
@@ -117,7 +119,7 @@ private:
 	};
 
 	struct introduce_packet_t {
-		quint8		sparkleMAC[6];
+		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
 	};
 
 	struct master_node_reply_t {
@@ -143,14 +145,14 @@ private:
 	struct register_reply_t {
 		quint8		networkDivisor;
 		quint8		isMaster;
-		quint8		sparkleMAC[6];
+		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
 		/* filled only when NAT is detected */
 		quint32		realIP;
 		quint16		realPort;
 	};
 
 	struct route_t {
-		quint8		sparkleMAC[6];
+		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
 		quint32		realIP;
 		quint16		realPort;
 		quint8		isMaster;
@@ -158,7 +160,7 @@ private:
 	};
 
 	struct route_request_t {
-		quint8		sparkleMAC[6];
+		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
 	};
 
 	struct route_invalidate_t {
@@ -167,7 +169,7 @@ private:
 	};
 
 	struct route_missing_t {
-		quint8		sparkleMAC[6];
+		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
 	};
 
 	struct role_update_t {
@@ -248,10 +250,10 @@ private:
 	void sendRoute(SparkleNode* node, SparkleNode* target);
 	void handleRoute(QByteArray &payload, SparkleNode* node);
 
-	void sendRouteRequest(QByteArray mac);
+	void sendRouteRequest(SparkleAddress mac);
 	void handleRouteRequest(QByteArray &payload, SparkleNode* node);
 
-	void sendRouteMissing(SparkleNode* node, QByteArray mac);
+	void sendRouteMissing(SparkleNode* node, SparkleAddress mac);
 	void handleRouteMissing(QByteArray &payload, SparkleNode* node);
 
 	void sendRouteInvalidate(SparkleNode* node, SparkleNode* target);
@@ -264,7 +266,7 @@ private:
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);
 	void reincarnateSomeone();
 
-	/* see sendDataPacket(...) on top */;
+	/* see sendDataPacket(...) on top */
 	void handleDataPacket(QByteArray &payload, SparkleNode* node);
 
 	void cleanup();
@@ -275,6 +277,7 @@ private:
 
 	QList<SparkleNode*> nodeSpool;
 	QList<SparkleNode*> awaitingNegotiation;
+	QHash<SparkleAddress, QList<QByteArray> > queuedData;
 	QHash<quint32, SparkleNode*> cookies;
 	QHash<ApplicationLayer::Encapsulation, ApplicationLayer*> appLayers;
 

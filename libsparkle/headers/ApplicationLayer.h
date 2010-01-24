@@ -19,9 +19,8 @@
 #ifndef __APPLICATION_LAYER_H__
 #define __APPLICATION_LAYER_H__
 
-class LinkLayer;
-class SparkleNode;
 class QByteArray;
+class SparkleAddress;
 
 class ApplicationLayer {
 public:
@@ -30,7 +29,7 @@ public:
 		Messaging	= 2,
 	};
 
-	virtual void handleDataPacket(QByteArray &packet, SparkleNode *node) = 0;
+	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address) = 0;
 };
 
 

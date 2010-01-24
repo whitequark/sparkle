@@ -21,13 +21,14 @@
 
 #include <QObject>
 #include "Roster.h"
+#include "SparkleAddress.h"
 
 class Contact : public QObject {
 	Q_OBJECT
 public:
 	Contact(QString address);
 
-	QByteArray address() const;
+	SparkleAddress address() const;
 	QString textAddress() const;
 
 	QString displayName() const;
@@ -38,7 +39,7 @@ signals:
 
 private:
 	QString _displayName;
-	QByteArray _address;
+	SparkleAddress _address;
 };
 
 #endif // CONTACT_H

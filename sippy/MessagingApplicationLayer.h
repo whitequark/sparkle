@@ -21,15 +21,15 @@
 
 #include <QObject>
 #include <ApplicationLayer.h>
+#include "SparkleAddress.h"
 
-class QByteArray;
 class QHostAddress;
 class LinkLayer;
 class Router;
 class ContactList;
 
 namespace Messaging {
-	enum NodeState { /* an insider joke */
+	enum PeerState { /* an insider joke */
 		Present      = 200,
 		Unauthorized = 403,
 		NotFound     = 404,
@@ -43,20 +43,27 @@ public:
 	MessagingApplicationLayer(ContactList &contactList, LinkLayer &linkLayer);
 	virtual ~MessagingApplicationLayer();
 
-	virtual void handleDataPacket(QByteArray &packet, SparkleNode *node);
+	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address);
 
-	Router& router();
-
-	Messaging::NodeState nodeState(QByteArray mac);
+	Messaging::PeerState peerState(SparkleAddress mac);
 
 signals:
-	void nodeStateChanged(SparkleNode* node);
+	void peerStateChanged(SparkleAddress address);
 
 private slots:
 	void resolveContacts();
 
 private:
-	MessagingApplicationLayer();
+	enum {
+		ProtocolVersion = 0,
+	};
+
+	enum packet_type_t {
+		PresenceRequest	= 1,
+		PresenceNotify	= 2,
+	};
+
+	void sendPacket(packet_type_t type, QByteArray data, SparkleAddress node);
 
 	ContactList &contactList;
 	LinkLayer &linkLayer;

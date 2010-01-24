@@ -36,16 +36,7 @@ bool SparkleNode::operator!=(const SparkleNode& another) const {
 	return !(*this == another);
 }
 
-QString SparkleNode::prettySparkleMAC() const {
-	return makePrettyMAC(_sparkleMAC);
-}
-
-QString SparkleNode::makePrettyMAC(QByteArray mac) {
-	QString hexMac = QString(mac.toHex()).toUpper();
-	return hexMac.replace(QRegExp("(..)"), "\\1:").left(17);
-}
-
-void SparkleNode::setSparkleMAC(const QByteArray& mac) {
+void SparkleNode::setSparkleMAC(const SparkleAddress& mac) {
 	_sparkleMAC = mac;
 	_router.notifyNodeUpdated(this);
 }
@@ -102,7 +93,7 @@ bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 
 void SparkleNode::configureByKey() {
 	QByteArray fingerprint = SHA1Digest::calculateSHA1(_authKey.publicKey());
-	_sparkleMAC = fingerprint.left(6);
+	_sparkleMAC = fingerprint.left(SPARKLE_ADDRESS_SIZE);
 }
 
 void SparkleNode::setMaster(bool isMaster) {
