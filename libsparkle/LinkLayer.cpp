@@ -35,8 +35,8 @@
 #include "Log.h"
 #include "ApplicationLayer.h"
 
-LinkLayer::LinkLayer(Router &_router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
-		: QObject(NULL), hostKeyPair(_hostKeyPair), router(_router), transport(_transport), preparingForShutdown(false), transportInitiated(false)
+LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
+		: QObject(NULL), hostKeyPair(_hostKeyPair), _router(router), transport(_transport), preparingForShutdown(false), transportInitiated(false)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
@@ -58,8 +58,8 @@ void LinkLayer::attachApplicationLayer(ApplicationLayer::Encapsulation encap, Ap
 	appLayers[encap] = app;
 }
 
-Router& LinkLayer::getRouter() {
-	return router;
+Router& LinkLayer::router() {
+	return _router;
 }
 
 bool LinkLayer::joinNetwork(QHostAddress remoteIP, quint16 remotePort, bool forceBehindNAT) {
@@ -87,13 +87,13 @@ void LinkLayer::joinTimeout() {
 }
 
 bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
-	SparkleNode *self = new SparkleNode(router, localIP, transport.port());
+	SparkleNode *self = new SparkleNode(_router, localIP, transport.port());
 	Q_CHECK_PTR(self);
 	self->setMaster(true);
 	self->setAuthKey(hostKeyPair);
 	self->configureByKey();
 
-	router.setSelfNode(self);
+	_router.setSelfNode(self);
 
 	if(!initTransport()) {
 		cleanup();
@@ -121,12 +121,12 @@ void LinkLayer::exitNetwork() {
 		return;
 	}
 
-	if(router.getSelfNode()->isMaster() && router.masters().count() == 1) {
+	if(_router.getSelfNode()->isMaster() && _router.masters().count() == 1) {
 		Log::debug("link: i'm the last master");
 		reincarnateSomeone();
 	} else {
 		Log::debug("link: sending exit notification");
-		sendExitNotification(router.selectMaster());
+		sendExitNotification(_router.selectMaster());
 	}
 
 	if(awaitingNegotiation.count() > 0) {
@@ -154,10 +154,10 @@ bool LinkLayer::initTransport() {
 }
 
 bool LinkLayer::isMaster() {
-	if(router.getSelfNode() == NULL)
+	if(_router.getSelfNode() == NULL)
 		return false;
 	else
-		return router.getSelfNode()->isMaster();
+		return _router.getSelfNode()->isMaster();
 }
 
 SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
@@ -166,7 +166,7 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 			return node;
 	}
 
-	SparkleNode* node = new SparkleNode(router, host, port);
+	SparkleNode* node = new SparkleNode(_router, host, port);
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
 
@@ -184,7 +184,7 @@ void LinkLayer::sendPacket(packet_type_t type, QByteArray data, SparkleNode* nod
 
 	data.prepend(QByteArray((const char *) &hdr, sizeof(packet_header_t)));
 
-	if(node == router.getSelfNode()) {
+	if(node == _router.getSelfNode()) {
 		Log::error("link: attempting to send packet to myself, dropping");
 		return;
 	}
@@ -490,7 +490,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 			node = origNode;
 		}
 
-		if(router.getSelfNode() != NULL && !router.getSelfNode()->isMaster())
+		if(_router.getSelfNode() != NULL && !_router.getSelfNode()->isMaster())
 			sendIntroducePacket(node);
 
 		sendSessionKeyExchange(node, true);
@@ -541,7 +541,7 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 
 void LinkLayer::sendIntroducePacket(SparkleNode* node) {
 	introduce_packet_t intr;
-	memcpy(intr.sparkleMAC, router.getSelfNode()->sparkleMAC().constData(), 6);
+	memcpy(intr.sparkleMAC, _router.getSelfNode()->sparkleMAC().constData(), 6);
 
 	sendEncryptedPacket(IntroducePacket, QByteArray((const char*) &intr, sizeof(introduce_packet_t)), node);
 }
@@ -550,7 +550,7 @@ void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(introduce_packet_t), node, "IntroducePacket"))
 		return;
 
-	if(node->sparkleMAC().length() > 0 || router.nodes().contains(node)) {
+	if(node->sparkleMAC().length() > 0 || _router.nodes().contains(node)) {
 		Log::warn("link: node [%2]:%3 is already introduced as %1") << node->prettySparkleMAC() << *node;
 		return;
 	}
@@ -560,7 +560,7 @@ void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
 	node->setSparkleMAC(QByteArray((const char*) intr->sparkleMAC, 6));
 	node->setMaster(false);
 
-	router.updateNode(node);
+	_router.updateNode(node);
 
 	Log::debug("link: node [%1]:%2 introduced itself as %3") << *node << node->prettySparkleMAC();
 }
@@ -575,12 +575,12 @@ void LinkLayer::handleMasterNodeRequest(QByteArray &payload, SparkleNode* node) 
 	if(!checkPacketSize(payload, 0, node, "MasterNodeRequest"))
 		return;
 
-	SparkleNode* orphan = router.searchNode(node->realIP(), node->realPort());
+	SparkleNode* orphan = _router.findNode(node->realIP(), node->realPort());
 	if(orphan != NULL)
-		router.removeNode(orphan);
+		_router.removeNode(orphan);
 
 	// scatter load over the whole network
-	SparkleNode* master = router.selectMaster();
+	SparkleNode* master = _router.selectMaster();
 
 	if(master == NULL)
 		Log::fatal("link: cannot choose master, this is probably a bug");
@@ -648,7 +648,7 @@ void LinkLayer::handlePingRequest(QByteArray &payload, SparkleNode* node) {
 
 	SparkleNode* target = wrapNode(QHostAddress(req->addr), req->port);
 
-	if(*router.getSelfNode() == *target) {
+	if(*_router.getSelfNode() == *target) {
 		doPing(node, req->count);
 		return;
 	}
@@ -766,7 +766,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(register_request_t), node, "RegisterRequest"))
 		return;
 
-	if(!router.getSelfNode()->isMaster()) {
+	if(!_router.getSelfNode()->isMaster()) {
 		Log::warn("link: got RegisterRequest while not master");
 		return;
 	}
@@ -777,11 +777,11 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	node->setBehindNAT(req->isBehindNAT);
 
 	if(!node->isBehindNAT()) {
-		if(router.masters().count() == 1) {
+		if(_router.masters().count() == 1) {
 			node->setMaster(true);
 		} else {
 			double ik = 1. / networkDivisor;
-			double rk = ((double) router.masters().count()) / (router.nodes().count() + 1);
+			double rk = ((double) _router.masters().count()) / (_router.nodes().count() + 1);
 			if(rk < ik) {
 				Log::debug("link: insufficient masters (I %1; R %2), adding one") << ik << rk;
 				node->setMaster(true);
@@ -794,17 +794,17 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	}
 
 	QList<SparkleNode*> updates;
-	if(node->isMaster())	updates = router.getOtherNodes();
-	else			updates = router.otherMasters();
+	if(node->isMaster())	updates = _router.getOtherNodes();
+	else			updates = _router.otherMasters();
 
 	foreach(SparkleNode* update, updates) {
 		sendRoute(node, update);
 		sendRoute(update, node);
 	}
 
-	sendRoute(node, router.getSelfNode());
+	sendRoute(node, _router.getSelfNode());
 
-	router.updateNode(node);
+	_router.updateNode(node);
 
 	sendRegisterReply(node);
 }
@@ -849,7 +849,7 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 	self->setSparkleMAC(QByteArray((const char*) reply->sparkleMAC, 6));
 	self->setAuthKey(hostKeyPair);
 	self->setMaster(reply->isMaster);
-	router.setSelfNode(self);
+	_router.setSelfNode(self);
 
 	networkDivisor = reply->networkDivisor;
 	Log::debug("link: network divisor is 1/%1") << networkDivisor;
@@ -880,7 +880,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_t), node, "Route"))
 		return;
 
-	if(!node->isMaster() && router.getSelfNode() != NULL) {
+	if(!node->isMaster() && _router.getSelfNode() != NULL) {
 		Log::warn("link: Route packet from unauthoritative source [%1]:%2") << *node;
 		return;
 	}
@@ -888,7 +888,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	const route_t* route = (const route_t*) payload.constData();
 
 	SparkleNode* target = wrapNode(QHostAddress(route->realIP), route->realPort);
-	if(target == router.getSelfNode()) {
+	if(target == _router.getSelfNode()) {
 		Log::warn("link: attempt to add myself by Route packet from [%1]:%2") << *node;
 		return;
 	}
@@ -899,7 +899,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	target->setMaster(route->isMaster);
 	target->setBehindNAT(route->isBehindNAT);
 
-	router.updateNode(target);
+	_router.updateNode(target);
 }
 
 /* RouteRequest */
@@ -909,14 +909,14 @@ void LinkLayer::sendRouteRequest(QByteArray mac) {
 	memcpy(req.sparkleMAC, mac.constData(), 6);
 
 	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)),
-				router.selectMaster());
+				_router.selectMaster());
 }
 
 void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest"))
 		return;
 
-	if(!router.getSelfNode()->isMaster()) {
+	if(!_router.getSelfNode()->isMaster()) {
 		Log::warn("link: i'm slave and got route request from [%1]:%2") << *node;
 		return;
 	}
@@ -924,7 +924,7 @@ void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 	const route_request_t* req = (const route_request_t*) payload.constData();
 	QByteArray mac((const char*) req->sparkleMAC, 6);
 
-	SparkleNode* target = router.searchSparkleNode(mac);
+	SparkleNode* target = _router.findSparkleNode(mac);
 	if(target) {
 		sendRoute(node, target);
 	} else {
@@ -971,7 +971,7 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 	Log::debug("link: invalidating route %5 @ [%1]:%2 because of command from [%3]:%4")
 			<< *target << *node << node->prettySparkleMAC();
 
-	router.removeNode(target);
+	_router.removeNode(target);
 	nodeSpool.removeOne(target);
 	delete target;
 }
@@ -999,7 +999,7 @@ void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
 	Log::info("link: switching to %3 role caused by [%1]:%2") << *node
 		<< (update->isMasterNow ? "Master" : "Slave");
 
-	router.getSelfNode()->setMaster(update->isMasterNow);
+	_router.getSelfNode()->setMaster(update->isMasterNow);
 }
 
 /* ExitNotification */
@@ -1012,22 +1012,22 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, 0, node, "ExitNotification"))
 		return;
 
-	if(!router.getSelfNode()->isMaster()) {
+	if(!_router.getSelfNode()->isMaster()) {
 		Log::warn("link: ExitNotification was received from [%1]:%2, but I am slave") << *node;
 		return;
 	}
 
-	router.removeNode(node);
+	_router.removeNode(node);
 
-	foreach(SparkleNode* target, router.getOtherNodes())
+	foreach(SparkleNode* target, _router.getOtherNodes())
 		sendRouteInvalidate(target, node);
 
 	nodeSpool.removeOne(node);
 	delete node;
 
 	double ik = 1. / networkDivisor;
-	double rk = ((double) router.masters().count()) / (router.nodes().count());
-	if(rk < ik || router.masters().count() == 1) {
+	double rk = ((double) _router.masters().count()) / (_router.nodes().count());
+	if(rk < ik || _router.masters().count() == 1) {
 		Log::debug("link: insufficient masters (I %1; R %2)") << ik << rk;
 
 		reincarnateSomeone();
@@ -1035,7 +1035,7 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 }
 
 void LinkLayer::reincarnateSomeone() {
-	SparkleNode* target = router.selectWhiteSlave();
+	SparkleNode* target = _router.selectWhiteSlave();
 
 	if(target == NULL) {
 		Log::warn("link: there're no nodes to reincarnate");
@@ -1046,9 +1046,9 @@ void LinkLayer::reincarnateSomeone() {
 
 	target->setMaster(true);
 
-	router.updateNode(target);
+	_router.updateNode(target);
 
-	foreach(SparkleNode* node, router.getOtherNodes()) {
+	foreach(SparkleNode* node, _router.getOtherNodes()) {
 		if(!node->isMaster() && node != target) {
 			sendRoute(node, target);
 			sendRoute(target, node);
@@ -1091,7 +1091,7 @@ void LinkLayer::cleanup() {
 	foreach(SparkleNode *node, nodeSpool)
 		delete node;
 
-	router.clear();
+	_router.clear();
 	nodeSpool.clear();
 	awaitingNegotiation.clear();
 	cookies.clear();

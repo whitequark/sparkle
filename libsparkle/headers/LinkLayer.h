@@ -44,7 +44,7 @@ public:
 	bool createNetwork(QHostAddress localAddress, quint8 networkDivisor);
 	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort, bool forceBehindNAT);
 
-	Router& getRouter();
+	Router& router();
 
 public slots:
 	void sendDataPacket(SparkleNode *node, ApplicationLayer::Encapsulation encap, QByteArray &packet);
@@ -270,7 +270,7 @@ private:
 	void cleanup();
 
 	RSAKeyPair &hostKeyPair;
-	Router &router;
+	Router &_router;
 	PacketTransport& transport;
 
 	QList<SparkleNode*> nodeSpool;

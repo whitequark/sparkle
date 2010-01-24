@@ -36,8 +36,8 @@ public:
 	void updateNode(SparkleNode* node);
 	void removeNode(SparkleNode* node);
 
-	SparkleNode* searchNode(QHostAddress realIP, quint16 realPort) const;
-	SparkleNode* searchSparkleNode(QByteArray sparkleMAC) const;
+	SparkleNode* findNode(QHostAddress realIP, quint16 realPort) const;
+	SparkleNode* findSparkleNode(QByteArray sparkleMAC) const;
 
 	SparkleNode* selectMaster() const;
 	SparkleNode* selectWhiteSlave() const;
@@ -55,7 +55,6 @@ signals:
 	void nodeAdded(SparkleNode* node);
 	void nodeRemoved(SparkleNode* node);
 	void nodeUpdated(SparkleNode* node);
-	void cleared();
 
 private:
 	SparkleNode* _self;

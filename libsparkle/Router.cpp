@@ -22,7 +22,7 @@
 #include "SparkleNode.h"
 #include "Log.h"
 
-Router::Router() {
+Router::Router() : _self(NULL) {
 }
 
 void Router::setSelfNode(SparkleNode* node) {
@@ -74,7 +74,7 @@ void Router::removeNode(SparkleNode* node) {
 	}
 }
 
-SparkleNode* Router::searchSparkleNode(QByteArray sparkleMAC) const {
+SparkleNode* Router::findSparkleNode(QByteArray sparkleMAC) const {
 	foreach(SparkleNode *node, _nodes) {
 		if(node->sparkleMAC() == sparkleMAC)
 			return node;
@@ -83,7 +83,7 @@ SparkleNode* Router::searchSparkleNode(QByteArray sparkleMAC) const {
 	return NULL;
 }
 
-SparkleNode* Router::searchNode(QHostAddress realIP, quint16 realPort) const {
+SparkleNode* Router::findNode(QHostAddress realIP, quint16 realPort) const {
 	foreach(SparkleNode *node, _nodes) {
 		if(node->realIP() == realIP && node->realPort() == realPort)
 			return node;
@@ -115,7 +115,7 @@ SparkleNode* Router::selectMaster() const {
 }
 
 SparkleNode* Router::selectWhiteSlave() const {
-	Q_ASSERT(self != NULL && self->isMaster());
+	Q_ASSERT(_self != NULL && _self->isMaster());
 
 	QList<SparkleNode*> list = _nodes;
 
@@ -142,7 +142,7 @@ QList<SparkleNode*> Router::masters() const {
 }
 
 QList<SparkleNode*> Router::otherMasters() const {
-	Q_ASSERT(self != NULL && self->isMaster());
+	Q_ASSERT(_self != NULL && _self->isMaster());
 
 	QList<SparkleNode*> masters;
 
@@ -177,8 +177,10 @@ void Router::notifyNodeUpdated(SparkleNode* target) {
 }
 
 void Router::clear() {
-	_nodes.clear();
+	foreach(SparkleNode* node, _nodes) {
+		_nodes.removeOne(node);
+		emit nodeRemoved(node);
+	}
 	_self = NULL;
-	emit cleared();
 }
 
