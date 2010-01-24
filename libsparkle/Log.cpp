@@ -38,16 +38,20 @@ void Log::emitMessage(loglevel_t loglevel, QString message) {
 		case Warning:	final = "[WARN ] "; break;
 		case Error:	final = "[ERROR] "; break;
 		case Fatal:	final = "[FATAL] "; break;
-		
+
 		default:	final = "[?????] "; break;
 	}
-	
+
 	final += message;
 	final += "\n";
 
-	if(loglevel >= Warning)	std::fprintf(stderr, "%s", qPrintable(final));
-	else			std::fprintf(stdout, "%s", qPrintable(final));
-	
+	if(loglevel >= Warning) {
+		std::fprintf(stderr, "%s", qPrintable(final));
+	} else {
+		std::fprintf(stdout, "%s", qPrintable(final));
+		std::fflush(stdout);
+	}
+
 	if(loglevel == Fatal) {
 		std::fprintf(stderr, "Fatal error encountered, exiting.\n");
 		exit(1);
