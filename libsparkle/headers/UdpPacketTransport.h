@@ -34,6 +34,7 @@ public:
 	virtual quint16 port();
 
 public slots:
+	virtual void endReceiving();
 	virtual void sendPacket(QByteArray &packet, QHostAddress host, quint16 port);
 
 private slots:

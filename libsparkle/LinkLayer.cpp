@@ -51,6 +51,8 @@ LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_h
 	joinTimer->setInterval(5000);
 	connect(joinTimer, SIGNAL(timeout()), SLOT(joinTimeout()));
 
+	_transport.connect(this, SIGNAL(leavedNetwork()), SLOT(endReceiving()));
+
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
 }
 
