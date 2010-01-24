@@ -21,26 +21,51 @@
 #include <QListWidgetItem>
 #include <QContextMenuEvent>
 #include <QMargins>
+#include <QImage>
 #include "RosterItem.h"
 #include "Contact.h"
 #include "Log.h"
 #include "MessagingApplicationLayer.h"
 #include "SparkleNode.h"
 
-RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, QListWidgetItem* listItem) : contact(_contact), _listItem(listItem), appLayer(_appLayer), selected(false)
+RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, QListWidgetItem* listItem, bool detailed) : contact(_contact), _listItem(listItem), appLayer(_appLayer)
 {
-	name = new QLabel(this);
-	info = new QLabel(this);
-	info->setIndent(10);
-	info->hide();
+	if(!detailed) {
+		icon = new QLabel();
+		name = new QLabel();
+		info = NULL;
 
-	layout = new QVBoxLayout();
-	layout->setSpacing(0);
-	layout->setContentsMargins(QMargins(10, 0, 10, 0));
-	layout->addWidget(name);
-	layout->addWidget(info);
+		icon->setPixmap(QPixmap("pixmaps/status/11/offline.png"));
 
-	setLayout(layout);
+		QBoxLayout* layout = new QHBoxLayout();
+		layout->setContentsMargins(3, 0, 10, 0);
+		layout->addWidget(icon, 0);
+		layout->addWidget(name, 1);
+
+		setLayout(layout);
+	} else {
+		icon = new QLabel();
+		name = new QLabel();
+		info = new QLabel();
+		info->setIndent(5);
+
+		icon->setPixmap(QPixmap("pixmaps/status/16/offline.png"));
+
+		QBoxLayout* innerLayout = new QVBoxLayout();
+		innerLayout->setSpacing(0);
+		innerLayout->setContentsMargins(0, 0, 0, 0);
+		innerLayout->addWidget(name);
+		innerLayout->addWidget(info);
+
+		QBoxLayout* layout = new QHBoxLayout();
+		layout->setContentsMargins(3, 0, 10, 0);
+		layout->addWidget(icon, 0);
+		layout->addLayout(innerLayout, 1);
+
+		setLayout(layout);
+	}
+
+	_listItem->setSizeHint(QSize(0, layout()->minimumSize().height() + 2));
 
 	connect(contact, SIGNAL(updated()), SLOT(update()));
 	connect(&appLayer, SIGNAL(peerStateChanged(SparkleAddress)), SLOT(processStateChange(SparkleAddress)));
@@ -64,11 +89,7 @@ void RosterItem::update() {
 	Messaging::PeerState state = appLayer.peerState(contact->address());
 	switch(state) {
 		case Messaging::Present:
-		if(contact->statusText() != "") {
-			infoText = contact->statusText();
-		} else { //fixme
-			infoText = tr("Online");
-		}
+		infoText = contact->statusText();
 		break;
 
 		case Messaging::NotPresent:
@@ -88,23 +109,8 @@ void RosterItem::update() {
 		break;
 	}
 
-	QColor nameColor, infoColor;
-	infoColor = nameColor = palette().text().color();
-
-	name->setText(QString("<font color='%2'>%1</font>").arg(nameText).arg(nameColor.name()));
-	info->setText(QString("<font color='%2'>%1</font>").arg(infoText).arg(infoColor.name()));
-
-	_listItem->setSizeHint(QSize(0, layout->sizeHint().height() + 4));
-}
-
-void RosterItem::setSelected(bool _selected) {
-	selected = _selected;
-	update();
-}
-
-void RosterItem::setDetailed(bool _detailed) {
-	info->setVisible(_detailed);
-	update();
+	name->setText(nameText);
+	if(info) info->setText(infoText);
 }
 
 QListWidgetItem* RosterItem::listItem() const {

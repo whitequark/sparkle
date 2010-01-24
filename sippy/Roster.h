@@ -68,6 +68,7 @@ private:
 	Roster();
 
 	void connectStateChanged(connect_state_t state);
+	void createRosterItem(Contact* contact, bool detailed = false);
 
 	ConfigurationStorage* config;
 	LinkLayer &linkLayer;

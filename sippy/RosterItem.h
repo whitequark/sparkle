@@ -24,7 +24,7 @@
 
 class Contact;
 class QLabel;
-class QVBoxLayout;
+class QBoxLayout;
 class QListWidgetItem;
 class MessagingApplicationLayer;
 class SparkleNode;
@@ -32,11 +32,9 @@ class SparkleNode;
 class RosterItem : public QWidget {
 	Q_OBJECT
 public:
-	RosterItem(MessagingApplicationLayer &appLayer, Contact* contact, QListWidgetItem* listItem);
+	RosterItem(MessagingApplicationLayer &appLayer, Contact* contact, QListWidgetItem* listItem, bool detailed = false);
 
 	QListWidgetItem *listItem() const;
-	void setSelected(bool selected);
-	void setDetailed(bool detailed);
 
 protected:
 	void contextMenuEvent(QContextMenuEvent *e);
@@ -51,11 +49,11 @@ private slots:
 private:
 	Contact* contact;
 
-	QLabel *name, *info;
-	QVBoxLayout *layout;
+	QLabel *icon, *name, *info;
 	QListWidgetItem *_listItem;
 	MessagingApplicationLayer &appLayer;
-	bool selected;
+
+	static QPixmap iconOffline, iconBusy, iconAway, iconOnline;
 };
 
 #endif // ROSTERITEM_H

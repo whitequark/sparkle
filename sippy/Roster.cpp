@@ -147,13 +147,18 @@ void Roster::leaved() {
 	connectStateChanged(Disconnected);
 }
 
-void Roster::addContact(Contact* contact) {
-	QListWidgetItem* item = new QListWidgetItem(contactView);
-	RosterItem* rosterItem = new RosterItem(appLayer, contact, item);
+void Roster::createRosterItem(Contact* contact, bool detailed) {
+	QListWidgetItem* item = contactViewItems[contact];
+	RosterItem* rosterItem = new RosterItem(appLayer, contact, item, detailed);
 	connect(rosterItem, SIGNAL(menuRequested(QPoint)), SLOT(showMenu(QPoint)));
-	contactViewItems[contact] = item;
 	contactView->addItem(item);
 	contactView->setItemWidget(item, rosterItem);
+}
+
+void Roster::addContact(Contact* contact) {
+	QListWidgetItem* item = new QListWidgetItem(contactView);
+	contactViewItems[contact] = item;
+	createRosterItem(contact, false);
 }
 
 void Roster::removeContact(Contact *contact) {
@@ -162,17 +167,13 @@ void Roster::removeContact(Contact *contact) {
 }
 
 void Roster::selectItem(QListWidgetItem *current, QListWidgetItem *previous) {
-	RosterItem* rcurr = static_cast<RosterItem*>(contactView->itemWidget(current));
-	if(rcurr) {
-		rcurr->setSelected(true);
-		rcurr->setDetailed(true);
-	}
+	RosterItem* rcurrent = static_cast<RosterItem*>(contactView->itemWidget(current));
+	if(rcurrent) delete rcurrent;
+	if(current)  createRosterItem(contactViewItems.key(current), true);
 
-	RosterItem* rprev = static_cast<RosterItem*>(contactView->itemWidget(previous));
-	if(rprev) {
-		rprev->setSelected(false);
-		rprev->setDetailed(false);
-	}
+	RosterItem* rprevious = static_cast<RosterItem*>(contactView->itemWidget(previous));
+	if(rprevious) delete rprevious;
+	if(previous)  createRosterItem(contactViewItems.key(previous), false);
 }
 
 void Roster::editItem() {
