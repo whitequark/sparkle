@@ -288,6 +288,7 @@ private:
 
 	quint8 networkDivisor;
 
+	bool joined;
 	join_step_t joinStep;
 
 	QTimer *pingTimer, *joinTimer;

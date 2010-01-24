@@ -21,7 +21,7 @@
 #include "Log.h"
 
 UdpPacketTransport::UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent)
-	: PacketTransport(parent), _port(port), _addr(addr)
+	: PacketTransport(parent), bound(false), _port(port), _addr(addr)
 {
 	socket = new QUdpSocket(this);
 
@@ -33,13 +33,17 @@ UdpPacketTransport::~UdpPacketTransport() {
 }
 
 bool UdpPacketTransport::beginReceiving() {
+	if(bound)
+		return true;
+
 	Log::debug("udp: receiving at [%1]:%2") << _addr << _port;
-	return socket->bind(_addr, _port);
+	return (bound = socket->bind(_addr, _port));
 }
 
 void UdpPacketTransport::endReceiving() {
 	Log::debug("udp: stopped receive");
 	socket->close();
+	bound = false;
 }
 
 void UdpPacketTransport::haveDatagram() {

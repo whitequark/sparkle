@@ -36,7 +36,7 @@
 #include "ApplicationLayer.h"
 
 LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
-		: QObject(NULL), hostKeyPair(_hostKeyPair), _router(router), transport(_transport), preparingForShutdown(false)
+		: QObject(NULL), hostKeyPair(_hostKeyPair), _router(router), transport(_transport), joined(false), preparingForShutdown(false)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
@@ -84,7 +84,6 @@ void LinkLayer::joinTimeout() {
 	Log::error("link: join timeout");
 
 	cleanup();
-
 	emit joinFailed();
 }
 
@@ -108,6 +107,7 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 	Log::debug("link: network divisor is 1/%1") << networkDivisor;
 
 	joinStep = JoinFinished;
+	joined = true;
 	emit joinedNetwork(self);
 
 	return true;
@@ -140,7 +140,7 @@ void LinkLayer::exitNetwork() {
 }
 
 bool LinkLayer::isJoined() {
-	return (joinStep == JoinFinished);
+	return joined;
 }
 
 bool LinkLayer::initTransport() {
@@ -854,6 +854,7 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 
 	joinTimer->stop();
 
+	joined = true;
 	joinStep = JoinFinished;
 	emit joinedNetwork(self);
 }
@@ -1131,6 +1132,8 @@ void LinkLayer::handleDataPacket(QByteArray& packet, SparkleNode* node) {
 /* ======= END ======= */
 
 void LinkLayer::cleanup() {
+	Log::debug("link: cleanup");
+
 	foreach(SparkleNode *node, nodeSpool)
 		delete node;
 
@@ -1139,6 +1142,7 @@ void LinkLayer::cleanup() {
 	awaitingNegotiation.clear();
 	cookies.clear();
 	joinTimer->stop();
+	joined = false;
 }
 
 

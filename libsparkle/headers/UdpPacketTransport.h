@@ -46,6 +46,7 @@ signals:
 private:
 	QUdpSocket *socket;
 
+	bool bound;
 	quint16 _port;
 	QHostAddress _addr;
 };
