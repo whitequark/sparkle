@@ -294,7 +294,7 @@ private:
 	SparkleNode* joinMaster;
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
-	bool forceBehindNAT, preparingForShutdown, transportInitiated;
+	bool forceBehindNAT, preparingForShutdown;
 };
 
 #endif

@@ -36,7 +36,7 @@
 #include "ApplicationLayer.h"
 
 LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
-		: QObject(NULL), hostKeyPair(_hostKeyPair), _router(router), transport(_transport), preparingForShutdown(false), transportInitiated(false)
+		: QObject(NULL), hostKeyPair(_hostKeyPair), _router(router), transport(_transport), preparingForShutdown(false)
 {
 	connect(&transport, SIGNAL(receivedPacket(QByteArray&, QHostAddress, quint16)),
 			SLOT(handlePacket(QByteArray&, QHostAddress, quint16)));
@@ -144,17 +144,11 @@ bool LinkLayer::isJoined() {
 }
 
 bool LinkLayer::initTransport() {
-	if(transportInitiated)
-		return true;
-
 	if(!transport.beginReceiving()) {
 		Log::error("link: cannot initiate transport (port is already bound?)");
 		return false;
 	} else {
 		Log::debug("link: transport initiated");
-
-		transportInitiated = true;
-
 		return true;
 	}
 }
