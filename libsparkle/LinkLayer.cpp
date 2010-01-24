@@ -137,6 +137,10 @@ void LinkLayer::exitNetwork() {
 	}
 }
 
+bool LinkLayer::isJoined() {
+	return (joinStep == JoinFinished);
+}
+
 bool LinkLayer::initTransport() {
 	if(transportInitiated)
 		return true;

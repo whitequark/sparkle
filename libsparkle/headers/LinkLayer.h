@@ -47,6 +47,8 @@ public:
 
 	void sendDataPacket(SparkleAddress address, ApplicationLayer::Encapsulation encap, QByteArray &packet);
 
+	bool isJoined();
+
 	Router& router();
 
 public slots:

@@ -39,6 +39,8 @@ public:
 	SparkleNode* findNode(QHostAddress realIP, quint16 realPort) const;
 	SparkleNode* findSparkleNode(SparkleAddress sparkleMAC) const;
 
+	bool hasRouteTo(SparkleAddress sparkleMAC) const;
+
 	SparkleNode* selectMaster() const;
 	SparkleNode* selectWhiteSlave() const;
 

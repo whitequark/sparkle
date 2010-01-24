@@ -85,6 +85,11 @@ SparkleNode* Router::findSparkleNode(SparkleAddress sparkleMAC) const {
 	return NULL;
 }
 
+bool Router::hasRouteTo(SparkleAddress sparkleMAC) const {
+	return findSparkleNode(sparkleMAC) != NULL;
+}
+
+
 SparkleNode* Router::findNode(QHostAddress realIP, quint16 realPort) const {
 	foreach(SparkleNode *node, _nodes) {
 		if(node->realIP() == realIP && node->realPort() == realPort)
