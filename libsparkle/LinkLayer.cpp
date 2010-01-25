@@ -937,7 +937,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	}
 
 	foreach(SparkleNode* node, _router.nodes()) {
-		if(node->sparkleMAC() == route->sparkleMAC && *node != *target) {
+		if(node->sparkleMAC() == route->sparkleMAC && !(node->realIP() == target->phantomIP() && node->realPort() == target->phantomPort())) {
 			Log::debug("link: endpoint [%1]:%2 is obsolete in favor of [%3]:%4") << *node << *target;
 			_router.removeNode(node);
 		}
@@ -1056,8 +1056,8 @@ void LinkLayer::handleRouteMissing(QByteArray &payload, SparkleNode* node) {
 
 void LinkLayer::sendRouteInvalidate(SparkleNode* node, SparkleNode* target) {
 	route_invalidate_t inv;
-	inv.realIP = target->realIP().toIPv4Address();
-	inv.realPort = target->realPort();
+	inv.realIP = target->phantomIP().toIPv4Address();
+	inv.realPort = target->phantomPort();
 
 	sendEncryptedPacket(RouteInvalidate, QByteArray((const char*) &inv, sizeof(route_invalidate_t)), node);
 }
@@ -1067,14 +1067,25 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 		return;
 
 	const route_invalidate_t* inv = (const route_invalidate_t*) payload.constData();
-	SparkleNode* target = wrapNode(QHostAddress(inv->realIP), inv->realPort);
+	SparkleNode* target = NULL;
+	foreach(SparkleNode* node, _router.otherNodes()) {
+		if(node->phantomIP() == QHostAddress(inv->realIP) && node->phantomPort() == inv->realPort) {
+			target = node;
+			break;
+		}
+	}
 
-	Log::debug("link: invalidating route %5 @ [%1]:%2 because of command from [%3]:%4")
+	if(target != NULL) {
+		Log::debug("link: invalidating route %5 @ [%1]:%2 because of command from [%3]:%4")
 			<< *target << *node << node->sparkleMAC().pretty();
 
-	_router.removeNode(target);
-	nodeSpool.removeOne(target);
-	delete target;
+		_router.removeNode(target);
+		nodeSpool.removeOne(target);
+		delete target;
+	} else {
+		Log::warn("link: request of invalidating unexistent route [%1]:%2 because of command from [%3]:%4")
+			<< QHostAddress(inv->realIP) << inv->realPort << *node;
+	}
 }
 
 /* RoleUpdate */
