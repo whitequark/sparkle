@@ -20,7 +20,6 @@
 #include <QVBoxLayout>
 #include <QListWidgetItem>
 #include <QContextMenuEvent>
-#include <QMargins>
 #include <QImage>
 #include "RosterItem.h"
 #include "Contact.h"
