@@ -119,6 +119,7 @@ Messaging::PeerState MessagingApplicationLayer::peerState(SparkleAddress mac) {
 		return Messaging::Unavailable;
 	}
 
+	sendPresenceRequest(mac);
 	return Messaging::InternalError;
 }
 

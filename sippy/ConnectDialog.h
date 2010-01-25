@@ -27,7 +27,7 @@ class ConfigurationStorage;
 class ConnectDialog : public QDialog, private Ui_ConnectDialog {
 	Q_OBJECT
 public:
-	ConnectDialog(ConfigurationStorage* config, QWidget *parent);
+	ConnectDialog(QWidget *parent);
 
 public slots:
 	virtual void accept();

@@ -26,6 +26,7 @@
 #include "ConnectDialog.h"
 #include "AddContactDialog.h"
 #include "EditContactDialog.h"
+#include "PreferencesDialog.h"
 #include "SparkleNode.h"
 #include "Contact.h"
 #include "ContactList.h"
@@ -85,6 +86,7 @@ private:
 	ConnectDialog connectDialog;
 	AddContactDialog addContactDialog;
 	EditContactDialog editContactDialog;
+	PreferencesDialog preferencesDialog;
 
 	QMenu* contactMenu;
 	QAction* actionChat;

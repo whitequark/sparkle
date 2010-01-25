@@ -49,3 +49,4 @@ SOURCES += BlowfishKey.cpp \
     crypto/sha1.c \
     crypto/timing.c \
     SparkleAddress.cpp
+FORMS += 

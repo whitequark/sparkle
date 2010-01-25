@@ -40,7 +40,6 @@ namespace Messaging {
 	};
 
 	enum Status {
-		Unknown,
 		Online,
 		Away,
 		Busy

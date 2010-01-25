@@ -67,6 +67,14 @@ void ConfigurationStorage::setBehindNat(bool behind) {
 	settings->setValue("network/behind_nat", behind);
 }
 
+QString ConfigurationStorage::nick() {
+	return settings->value("profile/nick", "").toString();
+}
+
+void ConfigurationStorage::setNick(QString nick) {
+	settings->setValue("profile/nick", nick);
+}
+
 QString ConfigurationStorage::statusText() {
 	return settings->value("status/text", tr("Online")).toString();
 }

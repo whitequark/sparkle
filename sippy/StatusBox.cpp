@@ -44,7 +44,7 @@ void StatusBox::updateStatus(int index) {
 	if(cachedStatusText != "" && findText(cachedStatusText) == -1)
 		setEditText(cachedStatusText);
 	focusNextChild();
-	emit statusChanged((Messaging::Status) itemData(currentIndex()).toInt());
+	emit statusChanged((Messaging::Status) itemData(index).toInt());
 }
 
 void StatusBox::focusOutEvent(QFocusEvent *e) {

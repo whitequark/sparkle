@@ -20,7 +20,8 @@ HEADERS += ConfigurationStorage.h \
     ContactList.h \
     EditContactDialog.h \
     StatusBox.h \
-    pixmaps.h
+    pixmaps.h \
+    PreferencesDialog.h
 SOURCES += main.cpp \
     ConfigurationStorage.cpp \
     ConnectDialog.cpp \
@@ -31,11 +32,13 @@ SOURCES += main.cpp \
     Contact.cpp \
     ContactList.cpp \
     EditContactDialog.cpp \
-    StatusBox.cpp
+    StatusBox.cpp \
+    PreferencesDialog.cpp
 QMAKE_LIBS += -lsparkle
 win32:QMAKE_LFLAGS += -L../libsparkle/release
 else:QMAKE_LFLAGS += -L../libsparkle
 FORMS += Roster.ui \
     ConnectDialog.ui \
     AddContactDialog.ui \
-    EditContactDialog.ui
+    EditContactDialog.ui \
+    PreferencesDialog.ui

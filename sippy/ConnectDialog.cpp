@@ -20,10 +20,12 @@
 #include "ui_ConnectDialog.h"
 #include "ConfigurationStorage.h"
 
-ConnectDialog::ConnectDialog(ConfigurationStorage* _config, QWidget *parent) :
-		QDialog(parent), config(_config)
+ConnectDialog::ConnectDialog(QWidget *parent) :
+		QDialog(parent)
 {
 	setupUi(this);
+
+	config = ConfigurationStorage::instance();
 
 	createNetwork->setChecked(config->createNetwork());
 	address->setText(config->address());

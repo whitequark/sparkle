@@ -73,7 +73,7 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
-    <addaction name="actionConfigure"/>
+    <addaction name="actionPreferences"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -101,9 +101,9 @@
     <string>&amp;About</string>
    </property>
   </action>
-  <action name="actionConfigure">
+  <action name="actionPreferences">
    <property name="text">
-    <string>Co&amp;nfigure...</string>
+    <string>&amp;Preferences...</string>
    </property>
   </action>
   <action name="actionAddContact">

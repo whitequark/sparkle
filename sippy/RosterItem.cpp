@@ -103,7 +103,7 @@ void RosterItem::update() {
 		break;
 
 		case Messaging::InternalError:
-		infoText = QString("<i>%1</i>").arg(tr("Internal error"));
+		infoText = QString("<i>%1</i>").arg(tr("Network error"));
 		break;
 	}
 

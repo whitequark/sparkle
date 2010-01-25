@@ -28,7 +28,7 @@
 #include "Router.h"
 
 Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplicationLayer &_app) :
-		config(ConfigurationStorage::instance()), linkLayer(_link),  router(_link.router()), appLayer(_app), contactList(_contactList), connectDialog(config, this), addContactDialog(contactList, this)
+		config(ConfigurationStorage::instance()), linkLayer(_link),  router(_link.router()), appLayer(_app), contactList(_contactList), connectDialog(this), addContactDialog(contactList, this), preferencesDialog(appLayer, this)
 {
 	QCoreApplication* app = QCoreApplication::instance();
 
@@ -60,6 +60,8 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	connect(&connectDialog, SIGNAL(accepted()), SLOT(connectToNetwork()));
 	connect(actionDisconnect, SIGNAL(triggered()), SLOT(disconnectFromNetwork()));
 
+	preferencesDialog.connect(actionPreferences, SIGNAL(triggered()), SLOT(show()));
+
 	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(joined()));
 	connect(&linkLayer, SIGNAL(joinFailed()), SLOT(joinFailed()));
 	connect(&linkLayer, SIGNAL(leavedNetwork()), SLOT(leaved()));
@@ -69,10 +71,13 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 
 	appLayer.connect(statusBox, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
 	appLayer.connect(statusBox, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
+
 	statusBox->connect(&appLayer, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
 	statusBox->connect(&appLayer, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
+
 	config->connect(&appLayer, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
 	config->connect(&appLayer, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
+	config->connect(&appLayer, SIGNAL(nickChanged(QString)), SLOT(setNick(QString)));
 
 	connect(&appLayer, SIGNAL(authorizationRequested(SparkleAddress,QString,QString)), SLOT(offerAuthorization(SparkleAddress,QString,QString)));
 
@@ -83,6 +88,7 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	connectStateChanged(Disconnected);
 
 	contactList.load();
+	appLayer.setNick(config->nick());
 	appLayer.setStatus(config->status());
 	appLayer.setStatusText(config->statusText());
 }
@@ -208,11 +214,12 @@ void Roster::requestAuthorization() {
 }
 
 void Roster::offerAuthorization(SparkleAddress addr, QString nick, QString reason) {
+	QString displayedNick;
 	if(nick != "")
-		nick = QString(" (%1)").arg(nick);
+		displayedNick = QString(" (%1)").arg(nick);
 	if(reason != "")
-		reason = tr("Reason: %1").arg(reason);
-	if(QMessageBox::question(this, tr("Authorization request"), tr("Peer %1%2 asks you for an authorization. %3\nAdd him/her to your contact list?").arg(addr.pretty(), nick, reason), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes) {
+		reason = tr("\nReason: %1").arg(reason);
+	if(QMessageBox::question(this, tr("Authorization request"), tr("Peer %1%2 asks you for an authorization.%3\nAdd him/her to your contact list?").arg(addr.pretty(), displayedNick, reason), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes) {
 		Contact* contact = new Contact(addr.pretty());
 		contact->setDisplayName(nick);
 		contactList.addContact(contact);

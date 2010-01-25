@@ -42,6 +42,7 @@ public:
 	bool behindNat();
 	bool autoLogin();
 
+	QString nick();
 	QList<Contact*> contacts();
 
 	QString statusText();
@@ -54,6 +55,7 @@ public slots:
 	void setBehindNat(bool behind);
 	void setAutoLogin(bool login);
 
+	void setNick(QString nick);
 	void setContacts(QList<Contact*> list);
 
 	void setStatusText(QString statusText);
