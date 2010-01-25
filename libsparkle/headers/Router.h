@@ -42,6 +42,7 @@ public:
 	bool hasRouteTo(SparkleAddress sparkleMAC) const;
 
 	SparkleNode* selectMaster() const;
+	SparkleNode* selectJoinMaster(QHostAddress excludeIP) const;
 	SparkleNode* selectWhiteSlave() const;
 
 	QList<SparkleNode*> masters() const;

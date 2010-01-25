@@ -104,16 +104,43 @@ SparkleNode* Router::selectMaster() const {
 
 	if(list.size() == 0) {
 		Log::error("router: no masters are present according to my DB. Strange.");
-
 		return NULL;
 	}
 
-	if(list.size() == 1) {
-/*		Log::warn ("router: only one master is present in network; this is BAD."
-			   " (If you just created a network, ignore this message)");*/
-
+	if(list.size() == 1)
 		return list[0];
+
+	if(_self != NULL)
+		list.removeOne(_self);
+
+	return list[qrand() % list.size()];
+}
+
+SparkleNode* Router::selectJoinMaster(QHostAddress excludeIP) const {
+	QList<SparkleNode*> list = masters();
+
+	if(list.size() == 0) {
+		Log::error("router: no masters are present according to my DB. Strange.");
+		return NULL;
 	}
+
+	if(list.size() == 1)
+		return list[0];
+
+	foreach(SparkleNode* node, list) {
+		if(node->realIP() == excludeIP)
+			list.removeOne(node);
+	}
+
+	if(list.size() == 0) {
+		Log::error("router: all masters belong to the same IP");
+		Log::error("router: returning random master because join will fail anyway");
+		list = masters();
+		return list[qrand() % list.size()];
+	}
+
+	if(list.size() == 1)
+		return list[0];
 
 	if(_self != NULL)
 		list.removeOne(_self);

@@ -73,9 +73,7 @@ bool SparkleNode::setAuthKey(const RSAKeyPair &keyPair) {
 bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 	if(authKeyPresent) {
 		if(_authKey.publicKey() != publicKey) {
-			Log::warn("Achtung! Attempt to assign new public key to authenticated node [%1]:%2, DROPPING.")
-					<< _realIP.toString() << _realPort;
-			return false;
+			Log::warn("link: assigning new pubkey to authenticated node [%1]:%2") << _realIP.toString() << _realPort;
 		} else {
 			return true;
 		}

@@ -595,7 +595,7 @@ void LinkLayer::handleMasterNodeRequest(QByteArray &payload, SparkleNode* node) 
 		_router.removeNode(orphan);
 
 	// scatter load over the whole network
-	SparkleNode* master = _router.selectMaster();
+	SparkleNode* master = _router.selectJoinMaster(node->realIP());
 
 	if(master == NULL)
 		Log::fatal("link: cannot choose master, this is probably a bug");
@@ -903,13 +903,21 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	const route_t* route = (const route_t*) payload.constData();
 
+	Log::debug("link: Route received from [%1]:%2") << *node;
+
 	SparkleNode* target = wrapNode(QHostAddress(route->realIP), route->realPort);
+
 	if(target == _router.getSelfNode()) {
 		Log::warn("link: attempt to add myself by Route packet from [%1]:%2") << *node;
 		return;
 	}
 
-	Log::debug("link: Route received from [%1]:%2") << *node;
+	foreach(SparkleNode* node, _router.nodes()) {
+		if(node->sparkleMAC() == route->sparkleMAC) {
+			Log::debug("link: endpoint [%1]:%2 is obsolete in favor of [%3]:%4") << *node << *target;
+			_router.removeNode(node);
+		}
+	}
 
 	target->setSparkleMAC(route->sparkleMAC);
 	target->setMaster(route->isMaster);
