@@ -552,7 +552,7 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 	}
 }
 
-/* IntroducePacket */
+/* LocalRewrite */
 
 void LinkLayer::sendLocalRewritePacket(SparkleNode* node) {
 	sendEncryptedPacket(LocalRewritePacket, QByteArray(), node);

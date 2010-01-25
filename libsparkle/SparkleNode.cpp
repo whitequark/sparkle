@@ -20,7 +20,7 @@
 #include "SparkleNode.h"
 #include "Log.h"
 
-SparkleNode::SparkleNode(Router &router, QHostAddress realIP, quint16 realPort) : QObject(&router), _router(router), _realIP(realIP), _phantomIP(realIP), _realPort(_realPort), _phantomPort(realPort), authKeyPresent(false), keysNegotiated(false) {
+SparkleNode::SparkleNode(Router &router, QHostAddress realIP, quint16 realPort) : QObject(&router), _router(router), _realIP(realIP), _phantomIP(realIP), _realPort(realPort), _phantomPort(realPort), authKeyPresent(false), keysNegotiated(false) {
 	_mySessionKey.generate();
 
 	negotiationTimer.setSingleShot(true);
