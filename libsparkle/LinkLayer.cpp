@@ -958,9 +958,6 @@ void LinkLayer::sendRouteRequest(SparkleAddress mac) {
 }
 
 void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
-	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest", PacketSizeGreater))
-		return;
-
 	if(!_router.getSelfNode()->isMaster()) {
 		Log::warn("link: i'm slave and got route request from [%1]:%2") << *node;
 		return;
@@ -982,6 +979,9 @@ void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 
 		return;
 	}
+
+	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest"))
+		return;
 
 	const route_request_t* req = (const route_request_t*) payload.constData();
 
