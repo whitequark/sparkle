@@ -41,6 +41,9 @@ bool UdpPacketTransport::beginReceiving() {
 }
 
 void UdpPacketTransport::endReceiving() {
+	if(!bound)
+		return;
+
 	Log::debug("udp: stopped receive");
 	socket->close();
 	bound = false;
