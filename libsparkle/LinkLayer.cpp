@@ -181,13 +181,15 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 }
 
 void LinkLayer::sendPacket(packet_type_t type, QByteArray data, SparkleNode* node) {
+	Q_ASSERT(node != NULL);
+
 	packet_header_t hdr;
 	hdr.length = sizeof(packet_header_t) + data.size();
 	hdr.type = type;
 
 	data.prepend(QByteArray((const char *) &hdr, sizeof(packet_header_t)));
 
-	if(*node == *_router.getSelfNode()) {
+	if(node == _router.getSelfNode()) {
 		Log::error("link: attempting to send packet to myself, dropping");
 		return;
 	}
