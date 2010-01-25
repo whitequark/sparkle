@@ -20,7 +20,7 @@
 #include "SparkleNode.h"
 #include "Log.h"
 
-SparkleNode::SparkleNode(Router &router, QHostAddress realIP, quint16 realPort) : QObject(&router), _router(router), _realIP(realIP), _realPort(realPort), authKeyPresent(false), keysNegotiated(false) {
+SparkleNode::SparkleNode(Router &router, QHostAddress realIP, quint16 realPort) : QObject(&router), _router(router), _realIP(realIP), _phantomIP(realIP), _realPort(_realPort), _phantomPort(realPort), authKeyPresent(false), keysNegotiated(false) {
 	_mySessionKey.generate();
 
 	negotiationTimer.setSingleShot(true);
@@ -42,13 +42,21 @@ void SparkleNode::setSparkleMAC(const SparkleAddress& mac) {
 }
 
 void SparkleNode::setRealIP(const QHostAddress& ip) {
-	_realIP = ip;
+	_realIP = _phantomIP = ip;
 	_router.notifyNodeUpdated(this);
 }
 
 void SparkleNode::setRealPort(quint16 port) {
-	_realPort = port;
+	_realPort = _phantomPort = port;
 	_router.notifyNodeUpdated(this);
+}
+
+void SparkleNode::setPhantomIP(const QHostAddress& ip) {
+	_phantomIP = ip;
+}
+
+void SparkleNode::setPhantomPort(quint16 port) {
+	_phantomPort = port;
 }
 
 void SparkleNode::setBehindNAT(bool behindNAT) {
@@ -89,10 +97,14 @@ bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 	return true;
 }
 
-void SparkleNode::configureByKey() {
-	QByteArray mac = SHA1Digest::calculateSHA1(_authKey.publicKey()).left(SPARKLE_ADDRESS_SIZE);
+SparkleAddress SparkleNode::addressFromKey(const RSAKeyPair *keyPair) {
+	QByteArray mac = SHA1Digest::calculateSHA1(keyPair->publicKey()).left(SPARKLE_ADDRESS_SIZE);
 	mac[0] = (mac[0] & ~0x03) | 0x02; // make address local and unicast
-	_sparkleMAC = mac;
+	return mac;
+}
+
+void SparkleNode::configure() {
+	_sparkleMAC = addressFromKey(&_authKey);
 }
 
 void SparkleNode::setMaster(bool isMaster) {

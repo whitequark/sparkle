@@ -43,6 +43,9 @@ public:
 	QHostAddress realIP() const		{ return _realIP; }
 	quint16 realPort() const		{ return _realPort; }
 
+	QHostAddress phantomIP() const	{ return _phantomIP; }
+	quint16 phantomPort() const		{ return _phantomPort; }
+
 	SparkleAddress sparkleMAC() const	{ return _sparkleMAC; }
 
 	bool isBehindNAT() const		{ return behindNAT; }
@@ -53,6 +56,9 @@ public:
 	void setRealIP(const QHostAddress& ip);
 	void setRealPort(quint16 port);
 
+	void setPhantomIP(const QHostAddress& ip);
+	void setPhantomPort(quint16 port);
+
 	const BlowfishKey *hisSessionKey() const	{ return &_hisSessionKey; }
 	const BlowfishKey *mySessionKey() const		{ return &_mySessionKey; }
 
@@ -61,7 +67,8 @@ public:
 	bool setAuthKey(const RSAKeyPair &keyPair);
 	bool setAuthKey(const QByteArray &publicKey);
 
-	void configureByKey();
+	void configure();
+	static SparkleAddress addressFromKey(const RSAKeyPair *keyPair);
 
 	void setHisSessionKey(const QByteArray &keyBytes);
 	bool areKeysNegotiated();
@@ -87,8 +94,8 @@ private slots:
 private:
 	Router& _router;
 
-	QHostAddress _realIP;
-	quint16 _realPort;
+	QHostAddress _realIP, _phantomIP;
+	quint16 _realPort, _phantomPort;
 
 	SparkleAddress _sparkleMAC;
 

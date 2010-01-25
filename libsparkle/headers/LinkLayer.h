@@ -74,7 +74,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 10,
+		ProtocolVersion	= 11,
 	};
 
 	enum packet_type_t {
@@ -88,7 +88,7 @@ private:
 
 		EncryptedPacket			= 10,
 
-		IntroducePacket			= 11,
+		LocalRewritePacket		= 11,
 
 		MasterNodeRequest		= 12,
 		MasterNodeReply			= 13,
@@ -124,10 +124,6 @@ private:
 	struct key_exchange_t {
 		quint8		needOthersKey;
 		quint32		cookie;
-	};
-
-	struct introduce_packet_t {
-		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
 	};
 
 	struct master_node_reply_t {
@@ -234,8 +230,8 @@ private:
 	void sendSessionKeyExchange(SparkleNode* node, bool needHisKey);
 	void handleSessionKeyExchange(QByteArray &payload, SparkleNode* node);
 
-	void sendIntroducePacket(SparkleNode* node);
-	void handleIntroducePacket(QByteArray &payload, SparkleNode* node);
+	void sendLocalRewritePacket(SparkleNode* node);
+	void handleLocalRewritePacket(QByteArray &payload, SparkleNode* node);
 
 	void sendMasterNodeRequest(SparkleNode* node);
 	void handleMasterNodeRequest(QByteArray &payload, SparkleNode* node);

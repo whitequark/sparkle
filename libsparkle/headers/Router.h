@@ -47,8 +47,9 @@ public:
 
 	QList<SparkleNode*> masters() const;
 	QList<SparkleNode*> otherMasters() const;
+	QList<SparkleNode*> slaves() const;
 	QList<SparkleNode*> nodes() const;
-	QList<SparkleNode*> getOtherNodes() const;
+	QList<SparkleNode*> otherNodes() const;
 
 	void clear();
 

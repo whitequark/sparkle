@@ -92,7 +92,7 @@ bool LinkLayer::createNetwork(QHostAddress localIP, quint8 networkDivisor) {
 	Q_CHECK_PTR(self);
 	self->setMaster(true);
 	self->setAuthKey(hostKeyPair);
-	self->configureByKey();
+	self->configure();
 
 	_router.setSelfNode(self);
 
@@ -317,8 +317,8 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 
 	QByteArray decPayload = decData.right(decData.size() - sizeof(packet_header_t));
 	switch((packet_type_t) decHdr->type) {
-		case IntroducePacket:
-			handleIntroducePacket(decPayload, node);
+		case LocalRewritePacket:
+			handleLocalRewritePacket(decPayload, node);
 			return;
 
 		case MasterNodeRequest:
@@ -506,7 +506,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 		}
 
 		if(_router.getSelfNode() != NULL && !_router.getSelfNode()->isMaster())
-			sendIntroducePacket(node);
+			sendLocalRewritePacket(node);
 
 		sendSessionKeyExchange(node, true);
 	}
@@ -554,30 +554,36 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 
 /* IntroducePacket */
 
-void LinkLayer::sendIntroducePacket(SparkleNode* node) {
-	introduce_packet_t intr;
-	memcpy(intr.sparkleMAC, _router.getSelfNode()->sparkleMAC().rawBytes(), SPARKLE_ADDRESS_SIZE);
-
-	sendEncryptedPacket(IntroducePacket, QByteArray((const char*) &intr, sizeof(introduce_packet_t)), node);
+void LinkLayer::sendLocalRewritePacket(SparkleNode* node) {
+	sendEncryptedPacket(LocalRewritePacket, QByteArray(), node);
 }
 
-void LinkLayer::handleIntroducePacket(QByteArray &payload, SparkleNode* node) {
-	if(!checkPacketSize(payload, sizeof(introduce_packet_t), node, "IntroducePacket"))
+void LinkLayer::handleLocalRewritePacket(QByteArray &payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, 0, node, "LocalRewritePacket"))
 		return;
 
-	if(!node->sparkleMAC().isNull() || _router.nodes().contains(node)) {
-		Log::warn("link: node [%2]:%3 is already introduced as %1") << node->sparkleMAC().pretty() << *node;
+	SparkleNode* target = NULL;
+	foreach(SparkleNode* slave, _router.slaves()) {
+		if(SparkleNode::addressFromKey(node->authKey()) == slave->sparkleMAC())
+			target = slave;
+	}
+
+	if(target == NULL) {
+		Log::warn("link: cannot associate LocalRewrite source [%1]:%2") << *node;
 		return;
 	}
 
-	const introduce_packet_t *intr = (const introduce_packet_t*) payload.constData();
+	QHostAddress phantomIP = target->realIP();
+	quint16 phantomPort = target->realPort();
 
-	node->setSparkleMAC(intr->sparkleMAC);
-	node->setMaster(false);
+	target->setRealIP(node->realIP());
+	target->setRealPort(node->realPort());
+	target->setPhantomIP(phantomIP);
+	target->setPhantomPort(phantomPort);
 
-	_router.updateNode(node);
+	_router.removeNode(node);
 
-	Log::debug("link: node [%1]:%2 introduced itself as %3") << *node << node->sparkleMAC().pretty();
+	Log::debug("link: [%3]:%4 is rewritten as local [%1]:%2") << *node << *target;
 }
 
 /* MasterNodeRequest */
@@ -788,7 +794,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 
 	const register_request_t* req = (const register_request_t*) payload.constData();
 
-	node->configureByKey();
+	node->configure();
 	node->setBehindNAT(req->isBehindNAT);
 
 	if(!node->isBehindNAT()) {
@@ -809,7 +815,7 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	}
 
 	QList<SparkleNode*> updates;
-	if(node->isMaster())	updates = _router.getOtherNodes();
+	if(node->isMaster())	updates = _router.otherNodes();
 	else			updates = _router.otherMasters();
 
 	foreach(SparkleNode* update, updates) {
@@ -881,8 +887,8 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 void LinkLayer::sendRoute(SparkleNode* node, SparkleNode* target)
 {
 	route_t route;
-	route.realIP = target->realIP().toIPv4Address();
-	route.realPort = target->realPort();
+	route.realIP = target->phantomIP().toIPv4Address();
+	route.realPort = target->phantomPort();
 	route.isMaster = target->isMaster();
 	route.isBehindNAT = target->isBehindNAT();
 
@@ -1096,7 +1102,7 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 
 	_router.removeNode(node);
 
-	foreach(SparkleNode* target, _router.getOtherNodes())
+	foreach(SparkleNode* target, _router.otherNodes())
 		sendRouteInvalidate(target, node);
 
 	nodeSpool.removeOne(node);
@@ -1125,7 +1131,7 @@ void LinkLayer::reincarnateSomeone() {
 
 	_router.updateNode(target);
 
-	foreach(SparkleNode* node, _router.getOtherNodes()) {
+	foreach(SparkleNode* node, _router.otherNodes()) {
 		if(!node->isMaster() && node != target) {
 			sendRoute(node, target);
 			sendRoute(target, node);

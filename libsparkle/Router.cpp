@@ -188,11 +188,23 @@ QList<SparkleNode*> Router::otherMasters() const {
 	return masters;
 }
 
+QList<SparkleNode*> Router::slaves() const {
+	QList<SparkleNode*> slaves;
+
+	foreach(SparkleNode *node, _nodes) {
+		if(!node->isMaster())
+			slaves.append(node);
+	}
+
+	return slaves;
+}
+
+
 QList<SparkleNode*> Router::nodes() const {
 	return _nodes;
 }
 
-QList<SparkleNode*> Router::getOtherNodes() const {
+QList<SparkleNode*> Router::otherNodes() const {
 	QList<SparkleNode*> selNodes;
 
 	foreach(SparkleNode *node, _nodes) {
