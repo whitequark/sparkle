@@ -43,12 +43,12 @@ LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_h
 
 	pingTimer = new QTimer(this);
 	pingTimer->setSingleShot(true);
-	pingTimer->setInterval(5000);
+	pingTimer->setInterval(10000);
 	connect(pingTimer, SIGNAL(timeout()), SLOT(pingTimeout()));
 
 	joinTimer = new QTimer(this);
 	joinTimer->setSingleShot(true);
-	joinTimer->setInterval(5000);
+	joinTimer->setInterval(15000);
 	connect(joinTimer, SIGNAL(timeout()), SLOT(joinTimeout()));
 
 	_transport.connect(this, SIGNAL(leavedNetwork()), SLOT(endReceiving()));
