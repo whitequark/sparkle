@@ -231,6 +231,23 @@ void LinkLayer::negotiationTimeout(SparkleNode* node) {
 	}
 }
 
+SparkleAddress LinkLayer::findPartialRoute(QByteArray mac) {
+	foreach(SparkleNode* node, _router.nodes()) {
+		if(node->sparkleMAC().bytes().left(mac.size()) == mac)
+			return node->sparkleMAC();
+	}
+
+	if(_router.getSelfNode()->isMaster())
+		return SparkleAddress();
+
+	route_request_extended_t req;
+	memcpy(req.sparkleMAC, mac.constData(), mac.size());
+	req.length = mac.size();
+
+	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_extended_t)), _router.selectMaster());
+
+	return SparkleAddress();
+}
 
 void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) {
 	const packet_header_t *hdr = (packet_header_t *) data.constData();
@@ -941,11 +958,28 @@ void LinkLayer::sendRouteRequest(SparkleAddress mac) {
 }
 
 void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
-	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest"))
+	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest", PacketSizeGreater))
 		return;
 
 	if(!_router.getSelfNode()->isMaster()) {
 		Log::warn("link: i'm slave and got route request from [%1]:%2") << *node;
+		return;
+	}
+
+	if(payload.size() == sizeof(route_request_extended_t)) {
+		const route_request_extended_t* req = (const route_request_extended_t*) payload.constData();
+
+		if(req->length > 6) {
+			Log::warn("link: got malformed extended RouteRequest from [%1]:%2") << *node;
+			return;
+		}
+
+		QByteArray mac((const char*) req->sparkleMAC, req->length);
+		SparkleAddress fullMAC = findPartialRoute(mac);
+
+		if(!fullMAC.isNull())
+			sendRoute(node, _router.findSparkleNode(fullMAC));
+
 		return;
 	}
 

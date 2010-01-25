@@ -52,7 +52,7 @@ QHostAddress checkoutAddress(QString strAddr) {
 			if(list.size() > 1)
 				Log::warn("there are more than one IP address for host %1, using first (%2)")
 						<< strAddr << list[0].toString();
-			
+
 			return list[0];
 		}
 	}
@@ -62,7 +62,7 @@ QHostAddress checkoutAddress(QString strAddr) {
 int main(int argc, char *argv[]) {
 #ifdef Q_OS_UNIX
 	bool daemonize = false;
-	
+
 	for(int i = 1; i < argc; i++)
 		if(!strcmp(argv[i], "-D") || !strcmp(argv[i], "--daemonize"))
 			daemonize = true;
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 			exit(0);
 	}
 #endif
-	
+
 	QCoreApplication app(argc, argv);
 	app.setApplicationName("sparkle");
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
 	int keyLength = 1024;
 	bool generateNewKeypair = false;
-	
+
 	qsrand(QDateTime::currentDateTime().toTime_t());
 
 	{
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 
 		parser.registerOption('N', "force-nat", ArgumentParser::NoArgument, &behindNatStr, NULL,
 			NULL, "skips any NAT checks with positive result", NULL);
-		
+
 #ifdef Q_OS_UNIX
 		parser.registerOption('D', "daemonize", ArgumentParser::NoArgument, &daemonizeStr, NULL,
 			NULL, "daemonize", NULL);
@@ -121,35 +121,35 @@ int main(int argc, char *argv[]) {
 
 		parser.registerOption(QChar::Null, "get-pubkey", ArgumentParser::NoArgument,
 			&getPubkeyStr, NULL, NULL, "\tprint my public key", NULL);
-		
+
 		parser.registerOption(QChar::Null, "no-tap", ArgumentParser::NoArgument,
 			&noTapStr, NULL, NULL, "\tdo not create TAP interface (`headless' mode)", NULL);
-		
+
 		if(!parser.parse()) { // help was displayed
 			return 0;
 		}
-		
+
 		configDir = QDir::homePath() + "/." + app.applicationName() + "/" + profile;
 		QDir().mkdir(QDir::homePath() + "/." + app.applicationName());
 		QDir().mkdir(configDir);
 
 		if(!getPubkeyStr.isNull()) {
 			RSAKeyPair keyPair;
-	
+
 			if(!keyPair.readFromFile(configDir + "/rsa_key")) {
 				Log::fatal("cannot read RSA keypair");
 			} else {
-				printf("%s\n", QString(keyPair.getPublicKey().toBase64()).toLocal8Bit().constData());
+				printf("%s\n", QString(keyPair.publicKey().toBase64()).toLocal8Bit().constData());
 				return 0;
 			}
 		}
 
 		if(!createStr.isNull() && !joinStr.isNull())
 			Log::fatal("options --create and --join cannot be specified simultaneously");
-		
+
 		if(createStr.isNull() && joinStr.isNull())
 			Log::fatal("specify at least --create or --join option");
-		
+
 		if(!createStr.isNull()) {
 			createNetwork = true;
 			if(createStr != "set")
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
 				Log::fatal("impossible setting of network divisor");
 			}
 		}
-		
+
 		if(!joinStr.isNull()) {
 			QStringList parts = joinStr.split(":");
 
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
 			if(remoteAddress.isNull()) {
 				Log::fatal("invalid node address %1") << parts[0];
 			}
-			
+
 			if(parts.size() == 1) {
 				/* already assigned */
 			} else if(parts.size() == 2) {
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
 				Log::fatal("invalid node address %1") << joinStr;
 			}
 		}
-		
+
 		if(!endpointStr.isNull()) {
 			QStringList parts = endpointStr.split(":");
 
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
 					Log::fatal("invalid address %1") << parts[0];
 				}
 			}
-		
+
 			if(parts.size() == 1) {
 			} else if(parts.size() == 2) {
 				localPort = parts[1].toInt();
@@ -195,30 +195,30 @@ int main(int argc, char *argv[]) {
 				Log::fatal("invalid endpoint %1") << joinStr;
 			}
 		}
-		
+
 		if(!bindStr.isNull()) {
 			bindAddress = checkoutAddress(bindStr);
 			if(bindAddress.isNull())
 				Log::fatal("invalid address %1") << bindStr;
 		}
-		
+
 		if(!keyLenStr.isNull()) {
 			generateNewKeypair = true;
 			keyLength = keyLenStr.toInt();
 		}
-		
+
 		if(createNetwork && localAddress == QHostAddress::Any)
 			Log::fatal("you need to specify local endpoint to create network");
-		
+
 		if(!noTapStr.isNull())
 			noTap = true;
-		
+
 		if(!behindNatStr.isNull())
 			forceBehindNAT = true;
 	}
 
 	RSAKeyPair hostPair;
-	
+
 	if(!QFile::exists(configDir + "/rsa_key") || generateNewKeypair) {
 		Log::debug("generating new RSA key pair (%1 bits)") << keyLength;
 
@@ -231,13 +231,10 @@ int main(int argc, char *argv[]) {
 		if(!hostPair.readFromFile(configDir + "/rsa_key"))
 			Log::fatal("cannot read RSA keypair");
 	}
-	
+
 	Router router;
 	UdpPacketTransport transport(bindAddress, localPort);
-
-	EthernetApplicationLayer ethernetApp(router);
-
-	LinkLayer linkLayer(router, transport, hostPair, &ethernetApp);
+	LinkLayer linkLayer(router, transport, hostPair);
 
 #ifdef Q_OS_UNIX
 	SignalHandler* sighandler = SignalHandler::getInstance();
@@ -247,21 +244,24 @@ int main(int argc, char *argv[]) {
 		QObject::connect(sighandler, SIGNAL(sighup()), &linkLayer, SLOT(exitNetwork()));
 #endif
 
-	QObject::connect(&linkLayer, SIGNAL(readyForShutdown()), &app, SLOT(quit()));
+	QObject::connect(&linkLayer, SIGNAL(leavedNetwork()), &app, SLOT(quit()));
 	QObject::connect(&linkLayer, SIGNAL(joinFailed()), &linkLayer, SLOT(exitNetwork()));
+
+	EthernetApplicationLayer* appLayer;
 
 	if(!noTap) {
 #ifdef Q_OS_LINUX
-
 		LinuxTAP *tap = new LinuxTAP(linkLayer);
 
 		if(tap->createInterface("sparkle%d") == false)
 			Log::fatal("cannot initialize TAP");
 
-		ethernetApp.attachTap(tap);
+		tap = tap;
 #endif
+		appLayer = new EthernetApplicationLayer(linkLayer, tap);
+	} else {
+		appLayer = new EthernetApplicationLayer(linkLayer, NULL); //dummy
 	}
-	
 
 	if(createNetwork) {
 		if(!linkLayer.createNetwork(localAddress, networkDivisor))

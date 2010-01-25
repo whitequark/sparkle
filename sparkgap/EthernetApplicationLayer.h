@@ -20,31 +20,35 @@
 #define __ETHERNET_APPLICATION_LAYER__H__
 
 #include <QObject>
+#include <QHostAddress>
+#include <SparkleAddress.h>
 #include <ApplicationLayer.h>
 
 class Router;
+class LinkLayer;
 class TapInterface;
+class SparkleNode;
 
 class EthernetApplicationLayer: public QObject, public ApplicationLayer {
 	Q_OBJECT
 
 public:
-	EthernetApplicationLayer(Router &router, QObject *parent = 0);
+	EthernetApplicationLayer(LinkLayer &linkLayer, TapInterface* tap);
 	virtual ~EthernetApplicationLayer();
 
-	virtual void handleDataPacket(QByteArray &packet, SparkleNode *node);
-	virtual void attachLinkLayer(LinkLayer *link);
-
-	void attachTap(TapInterface *tap);
+	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address);
 
 private slots:
 	void haveTapPacket(QByteArray packet);
+	void initialize(SparkleNode* self);
 
 signals:
 	void sendTapPacket(QByteArray packet);
 
 private:
-	void sendARPReply(SparkleNode* node);
+	void sendARPReply(SparkleAddress address);
+
+	static QHostAddress makeIPv4Address(SparkleAddress mac);
 
 private:
 	struct ethernet_header_t {
@@ -79,9 +83,12 @@ private:
 	} __attribute__((packed));
 
 private:
-
 	Router &router;
-	LinkLayer *link;
+	LinkLayer &linkLayer;
+	TapInterface* tap;
+
+	SparkleAddress selfMAC;
+	QHostAddress selfIPv4;
 };
 
 #endif

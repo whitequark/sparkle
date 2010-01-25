@@ -21,8 +21,8 @@
 
 #include <QByteArray>
 #include <QObject>
-
-class SparkleNode;
+#include <QHostAddress>
+#include <SparkleAddress.h>
 
 class TapInterface: public QObject {
 	Q_OBJECT
@@ -30,9 +30,9 @@ class TapInterface: public QObject {
 public:
 	TapInterface() : QObject() { }
 	virtual ~TapInterface() { }
-	
+
 public slots:
-	virtual void joined(SparkleNode* node) = 0;
+	virtual void setupInterface(SparkleAddress ha, QHostAddress ip) = 0;
 	virtual void sendPacket(QByteArray packet) = 0;
 
 signals:

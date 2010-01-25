@@ -45,6 +45,9 @@ public:
 	bool createNetwork(QHostAddress localAddress, quint8 networkDivisor);
 	bool joinNetwork(QHostAddress remoteAddress, quint16 remotePort, bool forceBehindNAT);
 
+	// fixme Add some kind of DHCP to Ethernet layer
+	SparkleAddress findPartialRoute(QByteArray address);
+
 	void sendDataPacket(SparkleAddress address, ApplicationLayer::Encapsulation encap, QByteArray &packet);
 
 	bool isJoined();
@@ -166,6 +169,12 @@ private:
 
 	struct route_request_t {
 		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
+	};
+
+	// protocol level 10 compatibility
+	struct route_request_extended_t {
+		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
+		quint8		length;
 	};
 
 	struct route_invalidate_t {

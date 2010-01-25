@@ -92,8 +92,9 @@ bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 }
 
 void SparkleNode::configureByKey() {
-	QByteArray fingerprint = SHA1Digest::calculateSHA1(_authKey.publicKey());
-	_sparkleMAC = fingerprint.left(SPARKLE_ADDRESS_SIZE);
+	QByteArray mac = SHA1Digest::calculateSHA1(_authKey.publicKey()).left(SPARKLE_ADDRESS_SIZE);
+	mac[0] = (mac[0] & ~0x03) | 0x02; // make address local and unicast
+	_sparkleMAC = mac;
 }
 
 void SparkleNode::setMaster(bool isMaster) {

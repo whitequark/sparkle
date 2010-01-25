@@ -17,6 +17,7 @@
  */
 
 #include <QSocketNotifier>
+#include <QHostAddress>
 #include <linux/if_tun.h>
 #include <net/if_arp.h>
 #include <netinet/in.h>
@@ -26,7 +27,7 @@
 
 #include "LinuxTAP.h"
 #include "LinkLayer.h"
-#include "SparkleNode.h"
+#include "SparkleAddress.h"
 #include "Log.h"
 
 #define MTU 1518
@@ -49,7 +50,7 @@ bool LinuxTAP::createInterface(QString pattern) {
 
 		return false;
 	}
-	
+
 	struct ifreq ifr;
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
 	strncpy(ifr.ifr_name, pattern.toAscii().data(), IFNAMSIZ);
@@ -73,7 +74,7 @@ bool LinuxTAP::createInterface(QString pattern) {
 	return true;
 }
 
-void LinuxTAP::joined(SparkleNode* node) {
+void LinuxTAP::setupInterface(SparkleAddress addr, QHostAddress ip) {
 	if(tun == -1)
 		Log::fatal("tap: joined to network before the device was created");
 
@@ -85,26 +86,26 @@ void LinuxTAP::joined(SparkleNode* node) {
 	struct ifreq ifr;
 
 	memset(&ifr, 0, sizeof(ifreq));
-	
+
 	ifr.ifr_mtu = MTU;
 	memcpy(ifr.ifr_name, device, IFNAMSIZ);
 
 	struct sockaddr_in *sockaddr = (sockaddr_in *) &ifr.ifr_addr;
 	sockaddr->sin_family = AF_INET;
-	sockaddr->sin_addr.s_addr = htonl(node->getSparkleIP().toIPv4Address());
+	sockaddr->sin_addr.s_addr = htonl(ip.toIPv4Address());
 
 	if(ioctl(fd, SIOCSIFADDR, &ifr) == -1)
 		Log::fatal("tap: SIOCSIFADDR: %1") << QString::fromLocal8Bit(strerror(errno));
 
 	sockaddr = (sockaddr_in *) &ifr.ifr_netmask;
 	sockaddr->sin_family = AF_INET;
-	sockaddr->sin_addr.s_addr = 0xff; // 255.255.255.0
+	sockaddr->sin_addr.s_addr = 0xff; // 255.0.0.0
 
 	if(ioctl(fd, SIOCSIFNETMASK, &ifr) == -1)
 		Log::fatal("tap: SIOCSIFNETMASK: %1") << QString::fromLocal8Bit(strerror(errno));
 
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-	memcpy(&ifr.ifr_hwaddr.sa_data, node->getSparkleMAC().constData(), 6);
+	memcpy(&ifr.ifr_hwaddr.sa_data, addr.rawBytes(), 6);
 	if(ioctl(fd, SIOCSIFHWADDR, &ifr) == -1)
 		Log::fatal("tap: SIOCSIFHWADDR: %1") << QString::fromLocal8Bit(strerror(errno));
 

@@ -27,7 +27,8 @@
 
 class LinkLayer;
 class QSocketNotifier;
-class SparkleNode;
+class SparkleAddress;
+class QHostAddress;
 
 class LinuxTAP : public TapInterface
 {
@@ -40,7 +41,7 @@ public:
 	bool createInterface(QString pattern);
 
 public slots:
-	virtual void joined(SparkleNode* node);
+	virtual void setupInterface(SparkleAddress ha, QHostAddress ip);
 	virtual void sendPacket(QByteArray packet);
 
 private slots:
