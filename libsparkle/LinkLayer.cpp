@@ -879,7 +879,7 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 		self = wrapNode(QHostAddress(reply->realIP), reply->realPort);
 		self->setBehindNAT(true);
 
-		Log::debug("link: enabling NAT keepalive polling (each %1s)") << natKeepaliveTimer->interval();
+		Log::debug("link: enabling NAT keepalive polling (each %1s)") << natKeepaliveTimer->interval() / 1000;
 		natKeepaliveTimer->start();
 	} else {
 		self = wrapNode(QHostAddress(joinPing.addr), joinPing.port);
