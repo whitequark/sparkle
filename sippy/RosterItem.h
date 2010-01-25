@@ -43,7 +43,7 @@ signals:
 	void menuRequested(QPoint point);
 
 private slots:
-	void update();
+	void refresh();
 	void processStateChange(SparkleAddress node);
 
 private:

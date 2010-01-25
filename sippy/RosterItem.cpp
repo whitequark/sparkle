@@ -63,18 +63,18 @@ RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, 
 
 	_listItem->setSizeHint(QSize(0, layout()->minimumSize().height() + 2));
 
-	connect(contact, SIGNAL(updated()), SLOT(update()));
+	connect(contact, SIGNAL(updated()), SLOT(refresh()));
 	connect(&appLayer, SIGNAL(peerStateChanged(SparkleAddress)), SLOT(processStateChange(SparkleAddress)));
 
-	update();
+	refresh();
 }
 
 void RosterItem::processStateChange(SparkleAddress address) {
 	if(address == contact->address())
-		update();
+		refresh();
 }
 
-void RosterItem::update() {
+void RosterItem::refresh() {
 	QString nameText, infoText;
 	QPixmap pixmap;
 
