@@ -521,8 +521,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 			origNode->setAuthKey(key);
 			node = origNode;
 
-			//if(_router.getSelfNode() != NULL && !_router.getSelfNode()->isMaster())
-			//	sendLocalRewritePacket(node);
+			sendLocalRewritePacket(node);
 		}
 
 		sendSessionKeyExchange(node, true);
@@ -551,7 +550,7 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 	QByteArray key = payload.mid(sizeof(key_exchange_t));
 	node->setHisSessionKey(key);
 
-	Log::debug("link: stored session key for [%1]:%2 (reply; %3)") << *node << ke->needOthersKey;
+	Log::debug("link: stored session key for [%1]:%2") << *node;
 
 	if(ke->needOthersKey) {
 		sendSessionKeyExchange(node, false);
