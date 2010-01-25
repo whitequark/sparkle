@@ -28,11 +28,12 @@ class StatusBox : public QComboBox
 public:
 	StatusBox(QWidget *parent);
 
-	QString defaultStatusText(Messaging::Status);
-
 public slots:
 	void setStatusText(QString);
 	void setStatus(Messaging::Status);
+
+private slots:
+	void updateStatus(int index);
 
 signals:
 	void statusTextChanged(QString);
@@ -41,6 +42,9 @@ signals:
 protected:
 	void focusOutEvent(QFocusEvent *e);
 	void keyPressEvent(QKeyEvent *e);
+
+private:
+	QString cachedStatusText;
 };
 
 #endif // STATUSBOX_H

@@ -88,21 +88,6 @@ void RosterItem::update() {
 	switch(state) {
 		case Messaging::Present:
 		infoText = contact->statusText();
-		if(infoText == "") {
-			switch(contact->status()) {
-				case Messaging::Online:
-				infoText = tr("Online");
-				break;
-
-				case Messaging::Away:
-				infoText = tr("Away");
-				break;
-
-				case Messaging::Busy:
-				infoText = tr("Busy");
-				break;
-			}
-		}
 		break;
 
 		case Messaging::NotPresent:

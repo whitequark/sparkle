@@ -68,6 +68,12 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	connect(&contactList, SIGNAL(contactRemoved(Contact*)), SLOT(removeContact(Contact*)));
 
 	appLayer.connect(statusBox, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
+	appLayer.connect(statusBox, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
+	statusBox->connect(&appLayer, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
+	statusBox->connect(&appLayer, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
+	config->connect(&appLayer, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
+	config->connect(&appLayer, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
+
 	connect(&appLayer, SIGNAL(authorizationRequested(SparkleAddress,QString,QString)), SLOT(offerAuthorization(SparkleAddress,QString,QString)));
 
 	connect(actionAbout, SIGNAL(triggered()), SLOT(about()));
@@ -77,6 +83,8 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	connectStateChanged(Disconnected);
 
 	contactList.load();
+	appLayer.setStatus(config->status());
+	appLayer.setStatusText(config->statusText());
 }
 
 void Roster::connectStateChanged(connect_state_t state) {

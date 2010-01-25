@@ -22,6 +22,7 @@
 #include <QObject>
 #include <QList>
 #include "Singleton.h"
+#include "MessagingApplicationLayer.h"
 
 class QSettings;
 class Contact;
@@ -36,22 +37,27 @@ public:
 	QString getKeyName();
 
 	bool createNetwork();
-	void setCreateNetwork(bool create);
-
 	QString address();
-	void setAddress(QString address);
-
 	quint16 port();
-	void setPort(quint16 port);
-
 	bool behindNat();
-	void setBehindNat(bool behind);
-
 	bool autoLogin();
-	void setAutoLogin(bool login);
 
 	QList<Contact*> contacts();
+
+	QString statusText();
+	Messaging::Status status();
+
+public slots:
+	void setCreateNetwork(bool create);
+	void setAddress(QString address);
+	void setPort(quint16 port);
+	void setBehindNat(bool behind);
+	void setAutoLogin(bool login);
+
 	void setContacts(QList<Contact*> list);
+
+	void setStatusText(QString statusText);
+	void setStatus(Messaging::Status status);
 
 private:
 	QSettings *settings;

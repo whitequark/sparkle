@@ -82,16 +82,20 @@ void MessagingApplicationLayer::fetchAllContacts() {
 }
 
 void MessagingApplicationLayer::sendPresence() {
+	if(!linkLayer.isJoined())
+		return;
+
 	Log::debug("mesg: sending presence");
 	foreach(Contact* contact, contactList.contacts())
 		sendPresenceNotify(contact->address());
 }
 
 void MessagingApplicationLayer::fetchContact(Contact* contact) {
-	if(linkLayer.isJoined()) {
-		sendPresenceRequest(contact->address());
-		sendPresenceNotify(contact->address());
-	}
+	if(!linkLayer.isJoined())
+		return;
+
+	sendPresenceRequest(contact->address());
+	sendPresenceNotify(contact->address());
 }
 
 void MessagingApplicationLayer::cleanup() {

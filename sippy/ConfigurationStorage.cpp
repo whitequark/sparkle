@@ -67,6 +67,22 @@ void ConfigurationStorage::setBehindNat(bool behind) {
 	settings->setValue("network/behind_nat", behind);
 }
 
+QString ConfigurationStorage::statusText() {
+	return settings->value("status/text", tr("Online")).toString();
+}
+
+void ConfigurationStorage::setStatusText(QString statusText) {
+	settings->setValue("status/text", statusText);
+}
+
+Messaging::Status ConfigurationStorage::status() {
+	return (Messaging::Status) settings->value("status/value", Messaging::Online).toInt();
+}
+
+void ConfigurationStorage::setStatus(Messaging::Status status) {
+	settings->setValue("status/value", status);
+}
+
 bool ConfigurationStorage::autoLogin() {
 	return settings->value("sippy/auto_login", false).toBool();
 }

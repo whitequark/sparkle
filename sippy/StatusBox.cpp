@@ -16,38 +16,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "StatusBox.h"
 #include <QKeyEvent>
+#include "StatusBox.h"
+#include "pixmaps.h"
 
 StatusBox::StatusBox(QWidget *parent) :
 	QComboBox(parent)
 {
-}
+	addItem(QPixmap(PIXMAP_LARGE_ONLINE), tr("Online"), Messaging::Online);
+	addItem(QPixmap(PIXMAP_LARGE_AWAY),   tr("Away"),   Messaging::Away);
+	addItem(QPixmap(PIXMAP_LARGE_BUSY),   tr("Busy"),   Messaging::Busy);
 
-QString StatusBox::defaultStatusText(Messaging::Status status) {
-	switch(status) {
-		default:
-		case Messaging::Online:
-		return tr("Online");
-
-		case Messaging::Away:
-		return tr("Away");
-
-		case Messaging::Busy:
-		return tr("Busy");
-	}
+	connect(this, SIGNAL(activated(int)), SLOT(updateStatus(int)));
 }
 
 void StatusBox::setStatusText(QString text) {
 	setEditText(text);
+	cachedStatusText = text;
 }
 
-void StatusBox::setStatus(Messaging::Status) {
+void StatusBox::setStatus(Messaging::Status status) {
+	setCurrentIndex(findData(status));
+	setEditText(cachedStatusText);
+}
 
+void StatusBox::updateStatus(int index) {
+	if(cachedStatusText != "" && findText(cachedStatusText) == -1)
+		setEditText(cachedStatusText);
+	focusNextChild();
+	emit statusChanged((Messaging::Status) itemData(currentIndex()).toInt());
 }
 
 void StatusBox::focusOutEvent(QFocusEvent *e) {
-	emit statusTextChanged(currentText());
+	if(currentText() == "")
+		setEditText(itemText(currentIndex()));
+	if(cachedStatusText != currentText()) {
+		cachedStatusText = currentText();
+		emit statusTextChanged(currentText());
+	}
 	QComboBox::focusOutEvent(e);
 }
 
