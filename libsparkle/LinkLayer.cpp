@@ -913,7 +913,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	}
 
 	foreach(SparkleNode* node, _router.nodes()) {
-		if(node->sparkleMAC() == route->sparkleMAC) {
+		if(node->sparkleMAC() == route->sparkleMAC && *node != *target) {
 			Log::debug("link: endpoint [%1]:%2 is obsolete in favor of [%3]:%4") << *node << *target;
 			_router.removeNode(node);
 		}
