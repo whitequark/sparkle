@@ -71,10 +71,11 @@ private slots:
 	void pingTimeout();
 	void negotiationTimeout(SparkleNode* node);
 	void joinTimeout();
+	void keepNATAlive();
 
 private:
 	enum {
-		ProtocolVersion	= 11,
+		ProtocolVersion	= 12,
 	};
 
 	enum packet_type_t {
@@ -108,6 +109,8 @@ private:
 		RoleUpdate			= 23,
 
 		ExitNotification		= 24,
+
+		KeepalivePacket		= 25,
 
 		DataPacket			= 30,
 	};
@@ -272,6 +275,9 @@ private:
 	void sendRoleUpdate(SparkleNode* node, bool isMasterNow);
 	void handleRoleUpdate(QByteArray &payload, SparkleNode* node);
 
+	void sendKeepalive(SparkleNode* node);
+	void handleKeepalive(QByteArray &payload, SparkleNode* node);
+
 	void sendExitNotification(SparkleNode* node);
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);
 	void reincarnateSomeone();
@@ -296,7 +302,7 @@ private:
 	bool joined;
 	join_step_t joinStep;
 
-	QTimer *pingTimer, *joinTimer;
+	QTimer *pingTimer, *joinTimer, *natKeepaliveTimer;
 	SparkleNode* joinMaster;
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;

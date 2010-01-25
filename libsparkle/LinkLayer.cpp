@@ -51,6 +51,11 @@ LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_h
 	joinTimer->setInterval(15000);
 	connect(joinTimer, SIGNAL(timeout()), SLOT(joinTimeout()));
 
+	natKeepaliveTimer = new QTimer(this);
+	natKeepaliveTimer->setSingleShot(false);
+	natKeepaliveTimer->setInterval(10000);
+	connect(natKeepaliveTimer, SIGNAL(timeout()), SLOT(keepNATAlive()));
+
 	_transport.connect(this, SIGNAL(leavedNetwork()), SLOT(endReceiving()));
 
 	Log::debug("link layer (protocol version %1) is ready") << ProtocolVersion;
@@ -231,6 +236,12 @@ void LinkLayer::negotiationTimeout(SparkleNode* node) {
 	}
 }
 
+void LinkLayer::keepNATAlive() {
+	foreach(SparkleNode* node, _router.otherNodes()) {
+		sendKeepalive(node);
+	}
+}
+
 SparkleAddress LinkLayer::findPartialRoute(QByteArray mac) {
 	foreach(SparkleNode* node, _router.nodes()) {
 		if(node->sparkleMAC().bytes().left(mac.size()) == mac)
@@ -363,6 +374,10 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 
 		case RoleUpdate:
 			handleRoleUpdate(decPayload, node);
+			return;
+
+		case KeepalivePacket:
+			handleKeepalive(decPayload, node);
 			return;
 
 		case ExitNotification:
@@ -503,10 +518,10 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 			origNode->setRealPort(node->realPort());
 			origNode->setAuthKey(key);
 			node = origNode;
-		}
 
-		if(_router.getSelfNode() != NULL && !_router.getSelfNode()->isMaster())
-			sendLocalRewritePacket(node);
+			if(_router.getSelfNode() != NULL && !_router.getSelfNode()->isMaster())
+				sendLocalRewritePacket(node);
+		}
 
 		sendSessionKeyExchange(node, true);
 	}
@@ -863,6 +878,9 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 		Log::debug("link: external endpoint was assigned by NAT passthrough");
 		self = wrapNode(QHostAddress(reply->realIP), reply->realPort);
 		self->setBehindNAT(true);
+
+		Log::debug("link: enabling NAT keepalive polling (each %1s)") << natKeepaliveTimer->interval();
+		natKeepaliveTimer->start();
 	} else {
 		self = wrapNode(QHostAddress(joinPing.addr), joinPing.port);
 		self->setBehindNAT(false);
@@ -1085,6 +1103,19 @@ void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
 	_router.getSelfNode()->setMaster(update->isMasterNow);
 }
 
+/* Keepalive */
+
+void LinkLayer::sendKeepalive(SparkleNode* node) {
+	sendEncryptedPacket(KeepalivePacket, QByteArray(), node);
+}
+
+void LinkLayer::handleKeepalive(QByteArray& payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, 0, node, "Keepalive"))
+		return;
+
+	// nothing currently
+}
+
 /* ExitNotification */
 
 void LinkLayer::sendExitNotification(SparkleNode* node) {
@@ -1190,6 +1221,8 @@ void LinkLayer::cleanup() {
 	awaitingNegotiation.clear();
 	cookies.clear();
 	joinTimer->stop();
+	pingTimer->stop();
+	natKeepaliveTimer->stop();
 	joined = false;
 }
 
