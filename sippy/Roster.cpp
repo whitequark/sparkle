@@ -187,12 +187,18 @@ void Roster::removeContact(Contact *contact) {
 
 void Roster::selectItem(QListWidgetItem *current, QListWidgetItem *previous) {
 	RosterItem* rcurrent = static_cast<RosterItem*>(contactView->itemWidget(current));
-	if(rcurrent) delete rcurrent;
-	if(current)  createRosterItem(contactViewItems.key(current), true);
+	if(rcurrent)
+		contactView->removeItemWidget(current);
+	if(current)
+		createRosterItem(contactViewItems.key(current), true);
 
 	RosterItem* rprevious = static_cast<RosterItem*>(contactView->itemWidget(previous));
-	if(rprevious) delete rprevious;
-	if(previous)  createRosterItem(contactViewItems.key(previous), false);
+	if(rprevious)
+		contactView->removeItemWidget(previous);
+	if(previous)
+		createRosterItem(contactViewItems.key(previous), false);
+
+	contactView->update();
 }
 
 void Roster::editItem() {
@@ -229,7 +235,7 @@ void Roster::offerAuthorization(SparkleAddress addr, QString nick, QString reaso
 void Roster::showMenu(QPoint point) {
 	Contact* contact = contactViewItems.key(contactView->currentItem());
 	actionRequestAuthorization->setEnabled(appLayer.peerState(contact->address()) == Messaging::Unauthorized);
-	contactMenu->exec(point);
+	contactMenu->popup(point);
 }
 
 void Roster::about() {
