@@ -32,8 +32,7 @@ MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, 
 	connect(&_router, SIGNAL(peerAdded(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
 	connect(&_router, SIGNAL(peerRemoved(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
 
-	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(pollPresence()));
-	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(sendPresence()));
+	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode*)), SLOT(fetchAllContacts()));
 	connect(&linkLayer, SIGNAL(routeMissing(SparkleAddress)), SLOT(peerAbsent(SparkleAddress)));
 	connect(&linkLayer, SIGNAL(leavedNetwork()), SLOT(cleanup()));
 
@@ -55,6 +54,10 @@ QString MessagingApplicationLayer::statusText() const {
 	return _statusText;
 }
 
+QString MessagingApplicationLayer::nick() const {
+	return _nick;
+}
+
 void MessagingApplicationLayer::setStatus(Messaging::Status newStatus) {
 	_status = newStatus;
 	emit statusChanged(_status);
@@ -65,24 +68,29 @@ void MessagingApplicationLayer::setStatusText(QString newStatusText) {
 	emit statusTextChanged(_statusText);
 }
 
+void MessagingApplicationLayer::setNick(QString newNick) {
+	_nick = newNick;
+	emit nickChanged(_nick);
+}
+
 /* ===== NETWORKING ===== */
 
-void MessagingApplicationLayer::pollPresence() {
-	Log::debug("mesg: polling for presence");
+void MessagingApplicationLayer::fetchAllContacts() {
+	Log::debug("mesg: fetching all contacts");
 	foreach(Contact* contact, contactList.contacts())
-		sendPresenceRequest(contact->address());
+		fetchContact(contact);
 }
 
 void MessagingApplicationLayer::sendPresence() {
-	Log::debug("mesg: sending presence update");
+	Log::debug("mesg: sending presence");
 	foreach(Contact* contact, contactList.contacts())
 		sendPresenceNotify(contact->address());
 }
 
 void MessagingApplicationLayer::fetchContact(Contact* contact) {
 	if(linkLayer.isJoined()) {
-		Log::debug("mesg: fetching contact %1") << contact->address().pretty();
 		sendPresenceRequest(contact->address());
+		sendPresenceNotify(contact->address());
 	}
 }
 
@@ -136,6 +144,10 @@ void MessagingApplicationLayer::handleDataPacket(QByteArray &packet, SparkleAddr
 
 		case PresenceNotify:
 		handlePresenceNotify(payload, address);
+		break;
+
+		case AuthorizationRequest:
+		handleAuthorizationRequest(payload, address);
 		break;
 
 		default:
@@ -195,6 +207,32 @@ void MessagingApplicationLayer::handlePresenceNotify(QByteArray& packet, Sparkle
 		contact->setStatus(peerStatus);
 		contact->setStatusText(peerStatusText);
 	} else {
-		Log::warn("mesg: received presence for unknown contact %1") << addr.pretty();
+		Log::debug("mesg: received presence for unknown contact %1") << addr.pretty();
 	}
 }
+
+/* AuthorizationRequest */
+
+void MessagingApplicationLayer::sendAuthorizationRequest(SparkleAddress addr, QString reason) {
+	QByteArray packet;
+	QDataStream stream(&packet, QIODevice::WriteOnly);
+
+	stream << _nick;
+	stream << reason;
+
+	sendPacket(AuthorizationRequest, packet, addr);
+}
+
+void MessagingApplicationLayer::handleAuthorizationRequest(QByteArray& packet, SparkleAddress addr) {
+	QDataStream stream(&packet, QIODevice::ReadOnly);
+
+	QString peerNick, peerReason;
+
+	stream >> peerNick;
+	stream >> peerReason;
+
+	Log::debug("authorization request from %1 (%2): '%3'") << addr.pretty() << peerNick << peerReason;
+
+	emit authorizationRequested(addr, peerNick, peerReason);
+}
+

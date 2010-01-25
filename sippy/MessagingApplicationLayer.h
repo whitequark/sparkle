@@ -43,7 +43,7 @@ namespace Messaging {
 		Unknown,
 		Online,
 		Away,
-		DoNotDisturb
+		Busy
 	};
 }
 
@@ -61,9 +61,15 @@ public:
 	Messaging::Status status() const;
 	QString statusText() const;
 
+	QString nick() const;
+
+	void sendAuthorizationRequest(SparkleAddress addr, QString reason);
+
 public slots:
 	void setStatus(Messaging::Status newStatus);
 	void setStatusText(QString newStatusText);
+
+	void setNick(QString newNick);
 
 signals:
 	void peerStateChanged(SparkleAddress address);
@@ -71,8 +77,12 @@ signals:
 	void statusChanged(Messaging::Status status);
 	void statusTextChanged(QString statusText);
 
+	void nickChanged(QString nick);
+
+	void authorizationRequested(SparkleAddress address, QString nick, QString reason);
+
 private slots:
-	void pollPresence();
+	void fetchAllContacts();
 	void sendPresence();
 	void fetchContact(Contact* contact);
 
@@ -86,8 +96,9 @@ private:
 	};
 
 	enum packet_type_t {
-		PresenceRequest	= 1,
-		PresenceNotify	= 2,
+		PresenceRequest	     = 1,
+		PresenceNotify	     = 2,
+		AuthorizationRequest = 3,
 	};
 
 	struct packet_header_t {
@@ -103,6 +114,9 @@ private:
 	void sendPresenceNotify(SparkleAddress addr);
 	void handlePresenceNotify(QByteArray& payload, SparkleAddress addr);
 
+	/* public sendAuthorizationRequest */
+	void handleAuthorizationRequest(QByteArray& payload, SparkleAddress addr);
+
 	ContactList &contactList;
 	LinkLayer &linkLayer;
 	Router &_router;
@@ -111,6 +125,7 @@ private:
 
 	Messaging::Status _status;
 	QString _statusText;
+	QString _nick;
 };
 
 #endif

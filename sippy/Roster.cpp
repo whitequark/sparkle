@@ -17,6 +17,7 @@
  */
 
 #include <QMessageBox>
+#include <QInputDialog>
 #include <QApplication>
 #include "Roster.h"
 #include "ui_Roster.h"
@@ -35,6 +36,7 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 
 	actionContactInfo = new QAction(tr("Contact &info"), this);
 	actionChat = new QAction(tr("Begin &chat"), this);
+	actionRequestAuthorization = new QAction(tr("&Request authorization"), this);
 	actionEditContact = new QAction(tr("&Edit contact..."), this);
 	actionRemoveContact = new QAction(tr("&Remove contact"), this);
 
@@ -42,6 +44,7 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	contactMenu->addAction(actionContactInfo);
 	contactMenu->addAction(actionChat);
 	contactMenu->addSeparator();
+	contactMenu->addAction(actionRequestAuthorization);
 	contactMenu->addAction(actionEditContact);
 	contactMenu->addAction(actionRemoveContact);
 
@@ -50,6 +53,7 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 
 	addContactDialog.connect(actionAddContact, SIGNAL(triggered()), SLOT(show()));
 	connect(contactView, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)), SLOT(selectItem(QListWidgetItem*,QListWidgetItem*)));
+	connect(actionRequestAuthorization, SIGNAL(triggered()), SLOT(requestAuthorization()));
 	connect(actionEditContact, SIGNAL(triggered()), SLOT(editItem()));
 	connect(actionRemoveContact, SIGNAL(triggered()), SLOT(removeItem()));
 
@@ -64,6 +68,7 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	connect(&contactList, SIGNAL(contactRemoved(Contact*)), SLOT(removeContact(Contact*)));
 
 	appLayer.connect(statusBox, SIGNAL(statusTextChanged(QString)), SLOT(setStatusText(QString)));
+	connect(&appLayer, SIGNAL(authorizationRequested(SparkleAddress,QString,QString)), SLOT(offerAuthorization(SparkleAddress,QString,QString)));
 
 	connect(actionAbout, SIGNAL(triggered()), SLOT(about()));
 
@@ -186,9 +191,29 @@ void Roster::removeItem() {
 	contactList.removeContact(contact);
 }
 
-void Roster::showMenu(QPoint point) {
+void Roster::requestAuthorization() {
 	Contact* contact = contactViewItems.key(contactView->currentItem());
 
+	bool ok;
+	QString reason = QInputDialog::getText(this, tr("Authorization request"), tr("Enter authorization reason (optionally):"), QLineEdit::Normal, "", &ok);
+	if(ok) appLayer.sendAuthorizationRequest(contact->address(), reason);
+}
+
+void Roster::offerAuthorization(SparkleAddress addr, QString nick, QString reason) {
+	if(nick != "")
+		nick = QString(" (%1)").arg(nick);
+	if(reason != "")
+		reason = tr("Reason: %1").arg(reason);
+	if(QMessageBox::question(this, tr("Authorization request"), tr("Peer %1%2 asks you for an authorization. %3\nAdd him/her to your contact list?").arg(addr.pretty(), nick, reason), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes) {
+		Contact* contact = new Contact(addr.pretty());
+		contact->setDisplayName(nick);
+		contactList.addContact(contact);
+	}
+}
+
+void Roster::showMenu(QPoint point) {
+	Contact* contact = contactViewItems.key(contactView->currentItem());
+	actionRequestAuthorization->setEnabled(appLayer.peerState(contact->address()) == Messaging::Unauthorized);
 	contactMenu->exec(point);
 }
 

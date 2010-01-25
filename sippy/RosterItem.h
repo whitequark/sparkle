@@ -52,8 +52,7 @@ private:
 	QLabel *icon, *name, *info;
 	QListWidgetItem *_listItem;
 	MessagingApplicationLayer &appLayer;
-
-	static QPixmap iconOffline, iconBusy, iconAway, iconOnline;
+	bool detailed;
 };
 
 #endif // ROSTERITEM_H

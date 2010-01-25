@@ -55,6 +55,8 @@ private slots:
 	void selectItem(QListWidgetItem *current, QListWidgetItem *previous);
 	void editItem();
 	void removeItem();
+	void requestAuthorization();
+	void offerAuthorization(SparkleAddress addr, QString nick, QString reason);
 	void showMenu(QPoint point);
 
 	void addContact(Contact* contact);
@@ -87,6 +89,7 @@ private:
 	QMenu* contactMenu;
 	QAction* actionChat;
 	QAction* actionContactInfo;
+	QAction* actionRequestAuthorization;
 	QAction* actionEditContact;
 	QAction* actionRemoveContact;
 };

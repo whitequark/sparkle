@@ -33,8 +33,8 @@ QString StatusBox::defaultStatusText(Messaging::Status status) {
 		case Messaging::Away:
 		return tr("Away");
 
-		case Messaging::DoNotDisturb:
-		return tr("Do not disturb");
+		case Messaging::Busy:
+		return tr("Busy");
 	}
 }
 

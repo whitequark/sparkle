@@ -19,7 +19,8 @@ HEADERS += ConfigurationStorage.h \
     Contact.h \
     ContactList.h \
     EditContactDialog.h \
-    StatusBox.h
+    StatusBox.h \
+    pixmaps.h
 SOURCES += main.cpp \
     ConfigurationStorage.cpp \
     ConnectDialog.cpp \

@@ -27,15 +27,14 @@
 #include "Log.h"
 #include "MessagingApplicationLayer.h"
 #include "SparkleNode.h"
+#include "pixmaps.h"
 
-RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, QListWidgetItem* listItem, bool detailed) : contact(_contact), _listItem(listItem), appLayer(_appLayer)
+RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, QListWidgetItem* listItem, bool _detailed) : contact(_contact), _listItem(listItem), appLayer(_appLayer), detailed(_detailed)
 {
 	if(!detailed) {
 		icon = new QLabel();
 		name = new QLabel();
 		info = NULL;
-
-		icon->setPixmap(QPixmap("pixmaps/status/11/offline.png"));
 
 		QBoxLayout* layout = new QHBoxLayout();
 		layout->setContentsMargins(3, 0, 10, 0);
@@ -48,8 +47,6 @@ RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, 
 		name = new QLabel();
 		info = new QLabel();
 		info->setIndent(5);
-
-		icon->setPixmap(QPixmap("pixmaps/status/16/offline.png"));
 
 		QBoxLayout* innerLayout = new QVBoxLayout();
 		innerLayout->setSpacing(0);
@@ -80,6 +77,7 @@ void RosterItem::processStateChange(SparkleAddress address) {
 
 void RosterItem::update() {
 	QString nameText, infoText;
+	QPixmap pixmap;
 
 	if(contact->displayName().isEmpty())
 		nameText = contact->textAddress();
@@ -90,6 +88,21 @@ void RosterItem::update() {
 	switch(state) {
 		case Messaging::Present:
 		infoText = contact->statusText();
+		if(infoText == "") {
+			switch(contact->status()) {
+				case Messaging::Online:
+				infoText = tr("Online");
+				break;
+
+				case Messaging::Away:
+				infoText = tr("Away");
+				break;
+
+				case Messaging::Busy:
+				infoText = tr("Busy");
+				break;
+			}
+		}
 		break;
 
 		case Messaging::NotPresent:
@@ -109,8 +122,47 @@ void RosterItem::update() {
 		break;
 	}
 
+	if(!detailed) {
+		if(state == Messaging::Present) {
+			switch(contact->status()) {
+				case Messaging::Online:
+				pixmap = QPixmap(PIXMAP_SMALL_ONLINE);
+				break;
+
+				case Messaging::Away:
+				pixmap = QPixmap(PIXMAP_SMALL_AWAY);
+				break;
+
+				case Messaging::Busy:
+				pixmap = QPixmap(PIXMAP_SMALL_BUSY);
+				break;
+			}
+		} else {
+			pixmap = QPixmap(PIXMAP_SMALL_OFFLINE);
+		}
+	} else {
+		if(state == Messaging::Present) {
+			switch(contact->status()) {
+				case Messaging::Online:
+				pixmap = QPixmap(PIXMAP_LARGE_ONLINE);
+				break;
+
+				case Messaging::Away:
+				pixmap = QPixmap(PIXMAP_LARGE_AWAY);
+				break;
+
+				case Messaging::Busy:
+				pixmap = QPixmap(PIXMAP_LARGE_BUSY);
+				break;
+			}
+		} else {
+			pixmap = QPixmap(PIXMAP_LARGE_OFFLINE);
+		}
+	}
+
 	name->setText(nameText);
 	if(info) info->setText(infoText);
+	icon->setPixmap(pixmap);
 }
 
 QListWidgetItem* RosterItem::listItem() const {
