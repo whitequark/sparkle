@@ -29,6 +29,8 @@ public:
 		Messaging	= 2,
 	};
 
+	virtual ~ApplicationLayer() { }
+
 	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address) = 0;
 };
 
