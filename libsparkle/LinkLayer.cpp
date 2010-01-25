@@ -589,17 +589,13 @@ void LinkLayer::handleLocalRewritePacket(QByteArray &payload, SparkleNode* node)
 		return;
 	}
 
-	QHostAddress phantomIP = target->realIP();
-	quint16 phantomPort = target->realPort();
+	target->setPhantomIP(node->phantomIP());
+	target->setPhantomPort(node->phantomPort());
 
-	target->setRealIP(node->realIP());
-	target->setRealPort(node->realPort());
-	target->setPhantomIP(phantomIP);
-	target->setPhantomPort(phantomPort);
+	nodeSpool.removeOne(node);
+	delete node;
 
-	_router.removeNode(node);
-
-	Log::debug("link: [%3]:%4 is rewritten as local [%1]:%2") << *node << *target;
+	Log::debug("link: associated [%1]:%2 to link-local [%3]:%4") << *target << target->phantomIP() << target->phantomPort();
 }
 
 /* MasterNodeRequest */
