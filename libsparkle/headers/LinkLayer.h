@@ -75,7 +75,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 12,
+		ProtocolVersion	= 13,
 	};
 
 	enum packet_type_t {
@@ -111,6 +111,8 @@ private:
 		ExitNotification		= 24,
 
 		KeepalivePacket		= 25,
+
+		BacklinkRedirect		= 26,
 
 		DataPacket			= 30,
 	};
@@ -187,6 +189,11 @@ private:
 
 	struct role_update_t {
 		quint8		isMasterNow;
+	};
+
+	struct backlink_redirect_t {
+		quint32		realIP;
+		quint16		realPort;
 	};
 
 	struct data_packet_t {
@@ -277,6 +284,9 @@ private:
 
 	void sendKeepalive(SparkleNode* node);
 	void handleKeepalive(QByteArray &payload, SparkleNode* node);
+
+	void sendBacklinkRedirect(SparkleNode* node);
+	void handleBacklinkRedirect(QByteArray &payload, SparkleNode* node);
 
 	void sendExitNotification(SparkleNode* node);
 	void handleExitNotification(QByteArray &payload, SparkleNode* node);

@@ -216,6 +216,8 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
 			sendPublicKeyExchange(node, &hostKeyPair, true);
+			if(!_router.getSelfNode()->isMaster())
+				sendBacklinkRedirect(node);
 		}
 	} else {
 		encryptAndSend(data, node);
@@ -382,6 +384,10 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 
 		case KeepalivePacket:
 			handleKeepalive(decPayload, node);
+			return;
+
+		case BacklinkRedirect:
+			handleBacklinkRedirect(decPayload, node);
 			return;
 
 		case ExitNotification:
@@ -970,6 +976,11 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	SparkleAddress addr(target->sparkleMAC());
 
+	if(!target->areKeysNegotiated() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
+		// estabilishing a tunnel through NAT
+		sendKeepalive(target);
+	}
+
 	// two checks to prevent automatic list creation
 	if(queuedData.contains(addr) && queuedData[addr].count() > 0) {
 		Log::debug("link: sending %1 packets in %2 queue") << queuedData[addr].count() << addr.pretty();
@@ -1105,6 +1116,47 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 		Log::warn("link: request of invalidating unexistent route [%1]:%2 because of command from [%3]:%4")
 			<< QHostAddress(inv->realIP) << inv->realPort << *node;
 	}
+}
+
+/* BacklinkRedirect */
+
+void LinkLayer::sendBacklinkRedirect(SparkleNode* node) {
+	backlink_redirect_t redirect;
+	redirect.realIP = node->realIP().toIPv4Address();
+	redirect.realPort = node->realPort();
+
+	sendPacket(BacklinkRedirect, QByteArray((const char*) &redirect, sizeof(backlink_redirect_t)), _router.selectMaster());
+}
+
+void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
+	if(!checkPacketSize(payload, sizeof(backlink_redirect_t), node, "BacklinkRedirect"))
+		return;
+
+	if(!_router.getSelfNode()->isMaster()) {
+		Log::warn("link: got backlink redirect from [%1]:%2 while slave") << *node;
+		return;
+	}
+
+	if(node->isMaster()) {
+		Log::warn("link: got backlink redirect from master [%1]:%2") << *node;
+		return;
+	}
+
+	const backlink_redirect_t* redirect = (const backlink_redirect_t*) payload.constData();
+
+	SparkleNode* target = wrapNode(QHostAddress(redirect->realIP), redirect->realPort);
+
+	if(target->isMaster()) {
+		Log::warn("link: got backlink redirect from [%1]:%2 for master node [%3]:%4; this is useless") << *node << *target;
+		return;
+	}
+
+	if(!target->areKeysNegotiated()) {
+		Log::error("link: got backlink redirect from [%1]:%2 for non-negotiated slave [%3]:%4") << *node << *target;
+		Log::error("link: will try to negotiate, but it'll probably fail");
+	}
+
+	sendRoute(target, node); // slave will automagically send a KeepAlive packet thus penetrating NAT
 }
 
 /* RoleUpdate */
