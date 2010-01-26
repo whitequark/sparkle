@@ -73,6 +73,8 @@ public:
 	void setHisSessionKey(const QByteArray &keyBytes);
 	bool areKeysNegotiated();
 
+	void cloneKeys(SparkleNode* node);
+
 	void setMaster(bool isMaster);
 	bool isMaster();
 

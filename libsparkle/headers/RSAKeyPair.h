@@ -26,7 +26,7 @@ class RSAKeyPair: public QObject {
 	Q_OBJECT
 
 public:
-	RSAKeyPair(QObject *parent = 0);
+	RSAKeyPair();
 	virtual ~RSAKeyPair();
 
 	bool generate(int bits);

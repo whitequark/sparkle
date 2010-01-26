@@ -97,6 +97,12 @@ bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 	return true;
 }
 
+void SparkleNode::cloneKeys(SparkleNode *node) {
+	setAuthKey(node->authKey()->publicKey());
+	setHisSessionKey(node->hisSessionKey()->bytes());
+	_mySessionKey.setBytes(node->mySessionKey()->bytes());
+}
+
 SparkleAddress SparkleNode::addressFromKey(const RSAKeyPair *keyPair) {
 	QByteArray mac = SHA1Digest::calculateSHA1(keyPair->publicKey()).left(SPARKLE_ADDRESS_SIZE);
 	mac[0] = (mac[0] & ~0x03) | 0x02; // make address local and unicast

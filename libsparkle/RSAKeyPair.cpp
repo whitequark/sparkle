@@ -25,7 +25,7 @@
 #include "random.h"
 #include "Log.h"
 
-RSAKeyPair::RSAKeyPair(QObject *parent) : QObject(parent) {
+RSAKeyPair::RSAKeyPair() {
 	rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);
 }
 
