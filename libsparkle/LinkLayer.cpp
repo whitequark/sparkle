@@ -175,6 +175,8 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
 
+	Log::debug("link: added [%1]:%2 to node spool") << host << port;
+
 	connect(node, SIGNAL(negotiationTimedOut(SparkleNode*)), SLOT(negotiationTimeout(SparkleNode*)));
 
 	return node;
