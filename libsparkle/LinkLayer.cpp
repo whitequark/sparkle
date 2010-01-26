@@ -520,7 +520,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 
 			origNode->setPhantomIP(node->phantomIP());
 			origNode->setPhantomPort(node->phantomPort());
-			origNode->cloneKeys(node);
+			origNode->setAuthKey(node->authKey()->publicKey());
 
 			nodeSpool.removeOne(node);
 			delete node;
@@ -597,6 +597,7 @@ void LinkLayer::handleLocalRewritePacket(QByteArray &payload, SparkleNode* node)
 
 	target->setPhantomIP(node->phantomIP());
 	target->setPhantomPort(node->phantomPort());
+	target->cloneKeys(node);
 
 	SparkleNode* orphan = NULL;
 
