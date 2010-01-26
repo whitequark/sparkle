@@ -99,8 +99,9 @@ bool SparkleNode::setAuthKey(const QByteArray &publicKey) {
 
 void SparkleNode::cloneKeys(SparkleNode *node) {
 	setAuthKey(node->authKey()->publicKey());
-	setHisSessionKey(node->hisSessionKey()->bytes());
 	_mySessionKey.setBytes(node->mySessionKey()->bytes());
+	if(node->areKeysNegotiated())
+		setHisSessionKey(node->hisSessionKey()->bytes());
 }
 
 SparkleAddress SparkleNode::addressFromKey(const RSAKeyPair *keyPair) {
