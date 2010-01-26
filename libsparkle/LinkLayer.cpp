@@ -594,8 +594,24 @@ void LinkLayer::handleLocalRewritePacket(QByteArray &payload, SparkleNode* node)
 	target->setPhantomIP(node->phantomIP());
 	target->setPhantomPort(node->phantomPort());
 
-	nodeSpool.removeOne(node);
-	delete node;
+	SparkleNode* orphan = NULL;
+
+	foreach(SparkleNode* i, nodeSpool) {
+		if(i->realIP() == target->phantomIP() && i->realPort() == target->phantomPort() && i != target) {
+			orphan = i;
+			break;
+		}
+	}
+
+	if(orphan != NULL) {
+		nodeSpool.removeOne(orphan);
+		delete orphan;
+	}
+
+	if(node != orphan) {
+		nodeSpool.removeOne(node);
+		delete node;
+	}
 
 	Log::debug("link: associated [%1]:%2 to link-local [%3]:%4") << *target << target->phantomIP() << target->phantomPort();
 }
@@ -609,10 +625,6 @@ void LinkLayer::sendMasterNodeRequest(SparkleNode* node) {
 void LinkLayer::handleMasterNodeRequest(QByteArray &payload, SparkleNode* node) {
 	if(!checkPacketSize(payload, 0, node, "MasterNodeRequest"))
 		return;
-
-	SparkleNode* orphan = _router.findNode(node->realIP(), node->realPort());
-	if(orphan != NULL)
-		_router.removeNode(orphan);
 
 	// scatter load over the whole network
 	SparkleNode* master = _router.selectJoinMaster(node->realIP());
