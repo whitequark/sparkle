@@ -171,11 +171,11 @@ SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 			return node;
 	}
 
+	Log::debug("link: adding [%1]:%2 to node spool") << host << port;
+
 	SparkleNode* node = new SparkleNode(_router, host, port);
 	Q_CHECK_PTR(node);
 	nodeSpool.append(node);
-
-	Log::debug("link: added [%1]:%2 to node spool") << host << port;
 
 	connect(node, SIGNAL(negotiationTimedOut(SparkleNode*)), SLOT(negotiationTimeout(SparkleNode*)));
 
@@ -528,6 +528,7 @@ void LinkLayer::handlePublicKeyExchange(QByteArray &payload, SparkleNode* node) 
 			origNode->setPhantomPort(node->phantomPort());
 			origNode->setAuthKey(node->authKey()->publicKey());
 
+			Log::debug("link: removing [%1]:%2 from node spool [nat]") << *node;
 			nodeSpool.removeOne(node);
 			delete node;
 
@@ -615,11 +616,13 @@ void LinkLayer::handleLocalRewritePacket(QByteArray &payload, SparkleNode* node)
 	}
 
 	if(orphan != NULL) {
+		Log::debug("link: removing [%1]:%2 from node spool [orphan]") << *orphan;
 		nodeSpool.removeOne(orphan);
 		delete orphan;
 	}
 
 	if(node != orphan) {
+		Log::debug("link: removing [%1]:%2 from node spool [rewrite]") << *node;
 		nodeSpool.removeOne(node);
 		delete node;
 	}
@@ -1110,6 +1113,9 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 			<< *target << *node << node->sparkleMAC().pretty();
 
 		_router.removeNode(target);
+
+		Log::debug("link: removing [%1]:%2 from node spool [iroute]") << *target;
+
 		nodeSpool.removeOne(target);
 		delete target;
 	} else {
@@ -1217,6 +1223,8 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 
 	foreach(SparkleNode* target, _router.otherNodes())
 		sendRouteInvalidate(target, node);
+
+	Log::debug("link: removing [%1]:%2 from node spool [exit]") << *node;
 
 	nodeSpool.removeOne(node);
 	delete node;
