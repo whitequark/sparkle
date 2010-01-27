@@ -200,7 +200,7 @@ void LinkLayer::sendPacket(packet_type_t type, QByteArray data, SparkleNode* nod
 	transport.sendPacket(data, node->phantomIP(), node->phantomPort());
 }
 
-void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, SparkleNode *node) {
+void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, SparkleNode *node, bool skipTunnel) {
 	packet_header_t hdr;
 	hdr.length = sizeof(packet_header_t) + data.size();
 	hdr.type = type;
@@ -216,7 +216,8 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
-			if(isJoined() && _router.getSelfNode()->isBehindNAT() && node->isBehindNAT()) {
+			if(isJoined() && _router.getSelfNode()->isBehindNAT() && node->isBehindNAT() && !skipTunnel) {
+				Log::debug("link: estabilishing slave-slave link");
 				sendPlainKeepalive(node);
 				sendBacklinkRedirect(node);
 			} else {
@@ -989,7 +990,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	if(isJoined() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
 		// estabilishing a tunnel through NAT
-		sendKeepalive(target);
+		sendKeepalive(target, true);
 	}
 
 	// two checks to prevent automatic list creation
@@ -1204,8 +1205,8 @@ void LinkLayer::sendPlainKeepalive(SparkleNode* node) {
 	sendPacket(KeepalivePacket, QByteArray(), node);
 }
 
-void LinkLayer::sendKeepalive(SparkleNode* node) {
-	sendEncryptedPacket(KeepalivePacket, QByteArray(), node);
+void LinkLayer::sendKeepalive(SparkleNode* node, bool skipTunnel) {
+	sendEncryptedPacket(KeepalivePacket, QByteArray(), node, skipTunnel);
 }
 
 void LinkLayer::handleKeepalive(QByteArray& payload, SparkleNode* node) {

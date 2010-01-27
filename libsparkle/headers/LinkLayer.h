@@ -215,7 +215,7 @@ private:
 	bool isMaster();
 
 	void sendPacket(packet_type_t type, QByteArray data, SparkleNode* node);
-	void sendEncryptedPacket(packet_type_t type, QByteArray data, SparkleNode *node);
+	void sendEncryptedPacket(packet_type_t type, QByteArray data, SparkleNode *node, bool skipTunnel = false);
 	void encryptAndSend(QByteArray data, SparkleNode *node);
 
 	enum packet_size_class_t {
@@ -283,7 +283,7 @@ private:
 	void handleRoleUpdate(QByteArray &payload, SparkleNode* node);
 
 	void sendPlainKeepalive(SparkleNode* node);
-	void sendKeepalive(SparkleNode* node);
+	void sendKeepalive(SparkleNode* node, bool skipTunnel = false);
 	void handleKeepalive(QByteArray &payload, SparkleNode* node);
 
 	void sendBacklinkRedirect(SparkleNode* node);
