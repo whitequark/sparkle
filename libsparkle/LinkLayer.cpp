@@ -216,7 +216,7 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
 			sendPublicKeyExchange(node, &hostKeyPair, true);
-			if(isJoined() && !isMaster())
+			if(isJoined() && !isMaster() && !node->isMaster())
 				sendBacklinkRedirect(node);
 		}
 	} else {
