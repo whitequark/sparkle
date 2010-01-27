@@ -936,13 +936,14 @@ void LinkLayer::handleRegisterReply(QByteArray &payload, SparkleNode* node) {
 
 /* Route */
 
-void LinkLayer::sendRoute(SparkleNode* node, SparkleNode* target)
+void LinkLayer::sendRoute(SparkleNode* node, SparkleNode* target, bool tunnelRequest)
 {
 	route_t route;
 	route.realIP = target->realIP().toIPv4Address();
 	route.realPort = target->realPort();
 	route.isMaster = target->isMaster();
 	route.isBehindNAT = target->isBehindNAT();
+	route.tunnelRequest = tunnelRequest;
 
 	Q_ASSERT(!node->sparkleMAC().isNull());
 	memcpy(route.sparkleMAC, target->sparkleMAC().rawBytes(), SPARKLE_ADDRESS_SIZE);
@@ -988,7 +989,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	SparkleAddress addr(target->sparkleMAC());
 
-	if(isJoined() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
+	if(isJoined() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT() && route->tunnelRequest) {
 		// estabilishing a tunnel through NAT
 		sendKeepalive(target, true);
 	}
@@ -1170,7 +1171,7 @@ void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
 		return;
 	}
 
-	sendRoute(target, node); // slave will automagically send a KeepAlive packet thus penetrating NAT
+	sendRoute(target, node, true);
 }
 
 /* RoleUpdate */

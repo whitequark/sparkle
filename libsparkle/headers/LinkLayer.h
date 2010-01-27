@@ -75,7 +75,7 @@ private slots:
 
 private:
 	enum {
-		ProtocolVersion	= 13,
+		ProtocolVersion	= 14,
 	};
 
 	enum packet_type_t {
@@ -166,6 +166,7 @@ private:
 		quint16		realPort;
 		quint8		isMaster;
 		quint8		isBehindNAT;
+		quint8		tunnelRequest;
 	};
 
 	struct route_request_t {
@@ -267,7 +268,7 @@ private:
 	void sendRegisterReply(SparkleNode* node);
 	void handleRegisterReply(QByteArray &payload, SparkleNode* node);
 
-	void sendRoute(SparkleNode* node, SparkleNode* target);
+	void sendRoute(SparkleNode* node, SparkleNode* target, bool tunnelRequest = false);
 	void handleRoute(QByteArray &payload, SparkleNode* node);
 
 	void sendRouteRequest(SparkleAddress mac);
