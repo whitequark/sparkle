@@ -74,8 +74,11 @@ private slots:
 	void keepNATAlive();
 
 private:
+	/* History:
+	 *  - v15: endianness compatibility
+	 */
 	enum {
-		ProtocolVersion	= 14,
+		ProtocolVersion	= 15,
 	};
 
 	enum packet_type_t {
