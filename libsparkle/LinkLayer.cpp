@@ -615,13 +615,13 @@ void LinkLayer::handleLocalRewritePacket(QByteArray &payload, SparkleNode* node)
 		}
 	}
 
-	if(orphan != NULL) {
+	if(orphan != NULL && !_router.nodes().contains(orphan)) {
 		Log::debug("link: removing [%1]:%2 from node spool [orphan]") << *orphan;
 		nodeSpool.removeOne(orphan);
 		delete orphan;
 	}
 
-	if(node != orphan) {
+	if(node != orphan && !_router.nodes().contains(node)) {
 		Log::debug("link: removing [%1]:%2 from node spool [rewrite]") << *node;
 		nodeSpool.removeOne(node);
 		delete node;
