@@ -1131,7 +1131,7 @@ void LinkLayer::sendBacklinkRedirect(SparkleNode* node) {
 	redirect.realIP = node->realIP().toIPv4Address();
 	redirect.realPort = node->realPort();
 
-	sendPacket(BacklinkRedirect, QByteArray((const char*) &redirect, sizeof(backlink_redirect_t)), _router.selectMaster());
+	sendEncryptedPacket(BacklinkRedirect, QByteArray((const char*) &redirect, sizeof(backlink_redirect_t)), _router.selectMaster());
 }
 
 void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
