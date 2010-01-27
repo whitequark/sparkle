@@ -215,10 +215,12 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
-			sendPublicKeyExchange(node, &hostKeyPair, true);
-
-			if(isJoined() && _router.getSelfNode()->isBehindNAT() && node->isBehindNAT())
+			if(isJoined() && _router.getSelfNode()->isBehindNAT() && node->isBehindNAT()) {
+				sendPlainKeepalive(node);
 				sendBacklinkRedirect(node);
+			} else {
+				sendPublicKeyExchange(node, &hostKeyPair, true);
+			}
 		}
 	} else {
 		encryptAndSend(data, node);
@@ -984,9 +986,9 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	SparkleAddress addr(target->sparkleMAC());
 
-	if(isJoined() && !target->areKeysNegotiated() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
+	if(isJoined() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
 		// estabilishing a tunnel through NAT
-		sendPlainKeepalive(target);
+		sendKeepalive(target);
 	}
 
 	// two checks to prevent automatic list creation
@@ -1163,7 +1165,7 @@ void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
 
 	if(!target->areKeysNegotiated()) {
 		Log::error("link: got backlink redirect from [%1]:%2 for non-negotiated slave [%3]:%4") << *node << *target;
-		Log::error("link: will try to negotiate, but it'll probably fail");
+		return;
 	}
 
 	sendRoute(target, node); // slave will automagically send a KeepAlive packet thus penetrating NAT
