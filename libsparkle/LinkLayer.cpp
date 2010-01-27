@@ -1162,6 +1162,11 @@ void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
 
 	SparkleNode* target = wrapNode(QHostAddress(redirect->realIP), redirect->realPort);
 
+	if(!_router.nodes().contains(target)) {
+		Log::debug("link: got backlink redirect from [%1]:%2 for non-peered [%1]:%2; probably network error") << *node << *target;
+		return;
+	}
+
 	if(!target->isBehindNAT()) {
 		Log::warn("link: got backlink redirect from [%1]:%2 for white node [%3]:%4; this is useless") << *node << *target;
 	}
