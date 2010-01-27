@@ -215,12 +215,10 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
-			if(isJoined() && !isMaster() && !node->isMaster()) {
-				sendPlainKeepalive(node);
+			sendPublicKeyExchange(node, &hostKeyPair, true);
+
+			if(isJoined() && _router.getSelfNode()->isBehindNAT() && node->isBehindNAT())
 				sendBacklinkRedirect(node);
-			} else {
-				sendPublicKeyExchange(node, &hostKeyPair, true);
-			}
 		}
 	} else {
 		encryptAndSend(data, node);
@@ -988,7 +986,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	if(isJoined() && !target->areKeysNegotiated() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
 		// estabilishing a tunnel through NAT
-		sendKeepalive(target);
+		sendPlainKeepalive(target);
 	}
 
 	// two checks to prevent automatic list creation
@@ -1159,9 +1157,8 @@ void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
 
 	SparkleNode* target = wrapNode(QHostAddress(redirect->realIP), redirect->realPort);
 
-	if(target->isMaster()) {
-		Log::warn("link: got backlink redirect from [%1]:%2 for master node [%3]:%4; this is useless") << *node << *target;
-		return;
+	if(!target->isBehindNAT()) {
+		Log::warn("link: got backlink redirect from [%1]:%2 for white node [%3]:%4; this is useless") << *node << *target;
 	}
 
 	if(!target->areKeysNegotiated()) {
