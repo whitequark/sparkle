@@ -216,7 +216,7 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
-			if(isJoined() && _router.getSelfNode()->isBehindNAT() && node->isBehindNAT() && !skipTunnel) {
+			if(isJoined() && !isMaster() && node->isBehindNAT() && !skipTunnel) {
 				Log::debug("link: estabilishing slave-slave link");
 				sendPlainKeepalive(node);
 				sendBacklinkRedirect(node);
