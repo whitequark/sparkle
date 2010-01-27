@@ -215,9 +215,12 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
-			sendPublicKeyExchange(node, &hostKeyPair, true);
-			if(isJoined() && !isMaster() && !node->isMaster())
+			if(isJoined() && !isMaster() && !node->isMaster()) {
+				sendPlainKeepalive(node);
 				sendBacklinkRedirect(node);
+			} else {
+				sendPublicKeyExchange(node, &hostKeyPair, true);
+			}
 		}
 	} else {
 		encryptAndSend(data, node);
@@ -296,6 +299,10 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 
 		case Ping:
 			handlePing(payload, node);
+			return;
+
+		case KeepalivePacket:
+			//do nothing, it's for NAT on other side
 			return;
 
 		case EncryptedPacket:
@@ -1192,6 +1199,10 @@ void LinkLayer::handleRoleUpdate(QByteArray& payload, SparkleNode* node) {
 }
 
 /* Keepalive */
+
+void LinkLayer::sendPlainKeepalive(SparkleNode* node) {
+	sendPacket(KeepalivePacket, QByteArray(), node);
+}
 
 void LinkLayer::sendKeepalive(SparkleNode* node) {
 	sendEncryptedPacket(KeepalivePacket, QByteArray(), node);

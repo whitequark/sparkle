@@ -282,6 +282,7 @@ private:
 	void sendRoleUpdate(SparkleNode* node, bool isMasterNow);
 	void handleRoleUpdate(QByteArray &payload, SparkleNode* node);
 
+	void sendPlainKeepalive(SparkleNode* node);
 	void sendKeepalive(SparkleNode* node);
 	void handleKeepalive(QByteArray &payload, SparkleNode* node);
 
