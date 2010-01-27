@@ -216,7 +216,7 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
-			if(isJoined() && !isMaster() && node->isBehindNAT() && !skipTunnel) {
+			if(isJoined() && !_router.getSelfNode()->isMaster() && !node->isMaster() && !skipTunnel) {
 				Log::debug("link: estabilishing slave-slave link");
 				sendPlainKeepalive(node);
 				sendBacklinkRedirect(node);
@@ -1167,12 +1167,12 @@ void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
 		return;
 	}
 
-	if(!target->isBehindNAT()) {
-		Log::warn("link: got backlink redirect from [%1]:%2 for white node [%3]:%4; this is useless") << *node << *target;
+	if(target->isMaster()) {
+		Log::warn("link: got backlink redirect from [%1]:%2 for master node [%3]:%4; this is useless") << *node << *target;
 	}
 
 	if(!target->areKeysNegotiated()) {
-		Log::error("link: got backlink redirect from [%1]:%2 for non-negotiated slave [%3]:%4") << *node << *target;
+		Log::error("link: got backlink redirect from [%1]:%2 for non-negotiated node [%3]:%4") << *node << *target;
 		return;
 	}
 
