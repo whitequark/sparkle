@@ -576,17 +576,17 @@ void LinkLayer::handleSessionKeyExchange(QByteArray &payload, SparkleNode* node)
 
 	if(ke->needOthersKey) {
 		sendSessionKeyExchange(node, false);
-	} else {
-		node->negotiationFinished();
-		awaitingNegotiation.removeOne(node);
+	}
 
-		while(!node->isQueueEmpty())
-			encryptAndSend(node->popQueue(), node);
+	node->negotiationFinished();
+	awaitingNegotiation.removeOne(node);
 
-		if(awaitingNegotiation.count() == 0 && preparingForShutdown) {
-			cleanup();
-			emit leavedNetwork();
-		}
+	while(!node->isQueueEmpty())
+		encryptAndSend(node->popQueue(), node);
+
+	if(awaitingNegotiation.count() == 0 && preparingForShutdown) {
+		cleanup();
+		emit leavedNetwork();
 	}
 }
 
