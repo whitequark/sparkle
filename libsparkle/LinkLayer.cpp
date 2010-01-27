@@ -216,7 +216,7 @@ void LinkLayer::sendEncryptedPacket(packet_type_t type, QByteArray data, Sparkle
 			node->negotiationStart();
 			awaitingNegotiation.append(node);
 			sendPublicKeyExchange(node, &hostKeyPair, true);
-			if(!_router.getSelfNode()->isMaster())
+			if(isJoined() && !isMaster())
 				sendBacklinkRedirect(node);
 		}
 	} else {
@@ -976,7 +976,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 
 	SparkleAddress addr(target->sparkleMAC());
 
-	if(!target->areKeysNegotiated() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
+	if(isJoined() && !target->areKeysNegotiated() && _router.getSelfNode()->isBehindNAT() && target->isBehindNAT()) {
 		// estabilishing a tunnel through NAT
 		sendKeepalive(target);
 	}
