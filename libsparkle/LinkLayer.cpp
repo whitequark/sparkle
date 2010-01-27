@@ -167,7 +167,8 @@ bool LinkLayer::isMaster() {
 
 SparkleNode* LinkLayer::wrapNode(QHostAddress host, quint16 port) {
 	foreach(SparkleNode* node, nodeSpool) {
-		if(node->phantomIP() == host && node->phantomPort() == port)
+		if((node->phantomIP() == host && node->phantomPort() == port) ||
+				(node->realIP() == host && node->realPort() == port))
 			return node;
 	}
 
