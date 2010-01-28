@@ -982,7 +982,7 @@ void LinkLayer::handleRoute(QByteArray &payload, SparkleNode* node) {
 	}
 
 	if(target == NULL) {
-		target = wrapNode(QHostAddress(route->realIP), route->realPort);
+		target = wrapNode(newIP, newPort);
 		target->setSparkleMAC(route->sparkleMAC);
 	}
 
