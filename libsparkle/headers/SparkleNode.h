@@ -43,8 +43,8 @@ public:
 	QHostAddress realIP() const		{ return _realIP; }
 	quint16 realPort() const		{ return _realPort; }
 
-	QHostAddress phantomIP() const	{ return _phantomIP; }
-	quint16 phantomPort() const		{ return _phantomPort; }
+	QHostAddress phantomIP() const;
+	quint16 phantomPort() const;
 
 	SparkleAddress sparkleMAC() const	{ return _sparkleMAC; }
 
