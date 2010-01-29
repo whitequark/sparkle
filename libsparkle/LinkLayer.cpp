@@ -1291,6 +1291,11 @@ void LinkLayer::reincarnateSomeone() {
 /* DataPacket */
 
 void LinkLayer::sendDataPacket(SparkleAddress address, ApplicationLayer::Encapsulation encap, QByteArray &payload) {
+	if(address.isNull()) {
+		Log::debug("link: refusing to send packets<%1> to null MAC.") << encap;
+		return;
+	}
+
 	data_packet_t info;
 	info.encapsulation = htons(encap);
 
