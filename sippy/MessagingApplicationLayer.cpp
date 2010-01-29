@@ -24,7 +24,7 @@
 #include "Contact.h"
 #include "Log.h"
 
-class PresenceRequest;
+using namespace Messaging;
 
 MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, LinkLayer &_linkLayer) : contactList(_contactList), linkLayer(_linkLayer), _router(_linkLayer.router()), _status(Messaging::Online) {
 	linkLayer.attachApplicationLayer(Messaging, this);
@@ -241,3 +241,83 @@ void MessagingApplicationLayer::handleAuthorizationRequest(QByteArray& packet, S
 	emit authorizationRequested(addr, peerNick, peerReason);
 }
 
+/* Message */
+
+void MessagingApplicationLayer::sendMessage(Message &message) {
+	QByteArray packet;
+	QDataStream stream(&packet, QIODevice::WriteOnly);
+
+	messageQueue.append(message);
+
+	stream << message.id();
+	stream << message.timestamp();
+	stream << message.text();
+
+	sendPacket(MessagePacket, packet, message.peer());
+}
+
+void MessagingApplicationLayer::handleMessage(QByteArray& packet, SparkleAddress addr) {
+	QDataStream stream(&packet, QIODevice::ReadOnly);
+
+	quint32 id;
+	QTime timestamp;
+	QString text;
+
+	stream >> id;
+
+	if(!messageCache.contains(id)) {
+		stream >> timestamp;
+		stream >> text;
+
+		Message message(text, timestamp, addr, id);
+		emit messageReceived(message);
+
+		messageCache.insert(id);
+	}
+
+	sendMessageBounce(addr, id);
+}
+
+/* MessageBounce */
+
+void MessagingApplicationLayer::sendMessageBounce(SparkleAddress addr, quint32 id) {
+	QByteArray packet;
+	QDataStream stream(&packet, QIODevice::WriteOnly);
+
+	stream << id;
+
+	sendPacket(MessageBounce, packet, addr);
+}
+
+void MessagingApplicationLayer::handleMessageBounce(QByteArray& packet, SparkleAddress addr) {
+	QDataStream stream(&packet, QIODevice::ReadOnly);
+
+	quint32 id;
+
+	stream >> id;
+
+	foreach(const Message& message, messageQueue) {
+		if(message.id() == id) {
+			if(message.peer() != addr) {
+				Log::warn("mesg: message bounce from node %1 that did not sent it (expected %2); how this can ever happen?") << addr.pretty() << message.peer().pretty();
+				return;
+			}
+
+			messageQueue.removeOne(message);
+		}
+	}
+}
+
+/*
+void MessagingApplicationLayer::send(SparkleAddress addr) {
+	QByteArray packet;
+	QDataStream stream(&packet, QIODevice::WriteOnly);
+
+	sendPacket(, packet, addr);
+}
+
+void MessagingApplicationLayer::handle(QByteArray& packet, SparkleAddress addr) {
+	QDataStream stream(&packet, QIODevice::ReadOnly);
+
+}
+*/

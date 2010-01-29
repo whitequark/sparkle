@@ -21,6 +21,7 @@
 
 #include <QObject>
 #include <QSet>
+#include <QTime>
 #include <ApplicationLayer.h>
 #include "SparkleAddress.h"
 
@@ -44,6 +45,26 @@ namespace Messaging {
 		Away,
 		Busy
 	};
+
+	class Message
+	{
+	public:
+		Message(QString text, QTime timestamp, SparkleAddress peer, quint32 id = 0) : _id(id), _timestamp(timestamp), _text(text), _peer(peer)
+			{ if(_id == 0) _id = qrand(); }
+
+		quint32 id() const		{ return _id; }
+		QTime timestamp() const	{ return _timestamp; }
+		QString text() const	{ return _text; }
+		SparkleAddress peer() const	{ return _peer; }
+
+		bool operator==(Message other) { return _id == other.id(); }
+
+	private:
+		quint32 _id;
+		QTime _timestamp;
+		QString _text;
+		SparkleAddress _peer;
+	};
 }
 
 class MessagingApplicationLayer: public QObject, public ApplicationLayer {
@@ -63,6 +84,7 @@ public:
 	QString nick() const;
 
 	void sendAuthorizationRequest(SparkleAddress addr, QString reason);
+	void sendMessage(Messaging::Message& message);
 
 public slots:
 	void setStatus(Messaging::Status newStatus);
@@ -80,6 +102,9 @@ signals:
 
 	void authorizationRequested(SparkleAddress address, QString nick, QString reason);
 
+	void messageReceived(Messaging::Message& message);
+	void messageTimedOut(quint32 id);
+
 private slots:
 	void fetchAllContacts();
 	void sendPresence();
@@ -95,9 +120,12 @@ private:
 	};
 
 	enum packet_type_t {
-		PresenceRequest	     = 1,
-		PresenceNotify	     = 2,
-		AuthorizationRequest = 3,
+		PresenceRequest	      = 1,
+		PresenceNotify	      = 2,
+		AuthorizationRequest  = 3,
+
+		MessagePacket         = 4,
+		MessageBounce         = 5,
 	};
 
 	struct packet_header_t {
@@ -116,11 +144,20 @@ private:
 	/* public sendAuthorizationRequest */
 	void handleAuthorizationRequest(QByteArray& payload, SparkleAddress addr);
 
+	/* public sendMessage */
+	void handleMessage(QByteArray& payload, SparkleAddress addr);
+
+	void sendMessageBounce(SparkleAddress addr, quint32 cookie);
+	void handleMessageBounce(QByteArray& payload, SparkleAddress addr);
+
 	ContactList &contactList;
 	LinkLayer &linkLayer;
 	Router &_router;
 
 	QSet<SparkleAddress> absentPeers, authorizedPeers;
+
+	QList<Messaging::Message> messageQueue; // transmitted
+	QSet<quint32> messageCache;  // received
 
 	Messaging::Status _status;
 	QString _statusText;
