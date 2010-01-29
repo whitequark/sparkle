@@ -20,7 +20,7 @@
 #include "SparkleNode.h"
 #include "Log.h"
 
-SparkleNode::SparkleNode(Router &router, QHostAddress realIP, quint16 realPort) : QObject(&router), _router(router), _realIP(realIP), _phantomIP(realIP), _realPort(realPort), _phantomPort(realPort), authKeyPresent(false), keysNegotiated(false) {
+SparkleNode::SparkleNode(Router &router, QHostAddress realIP, quint16 realPort) : QObject(&router), _router(router), _realIP(realIP), _realPort(realPort), _phantomPort(0), authKeyPresent(false), keysNegotiated(false) {
 	_mySessionKey.generate();
 
 	negotiationTimer.setSingleShot(true);
@@ -42,12 +42,12 @@ void SparkleNode::setSparkleMAC(const SparkleAddress& mac) {
 }
 
 void SparkleNode::setRealIP(const QHostAddress& ip) {
-	_realIP = _phantomIP = ip;
+	_realIP = ip;
 	_router.notifyNodeUpdated(this);
 }
 
 void SparkleNode::setRealPort(quint16 port) {
-	_realPort = _phantomPort = port;
+	_realPort = port;
 	_router.notifyNodeUpdated(this);
 }
 
@@ -57,6 +57,18 @@ void SparkleNode::setPhantomIP(const QHostAddress& ip) {
 
 void SparkleNode::setPhantomPort(quint16 port) {
 	_phantomPort = port;
+}
+
+QHostAddress SparkleNode::phantomIP() const {
+	if(_phantomIP.isNull())
+		return _realIP;
+	return _phantomIP;
+}
+
+quint16 SparkleNode::phantomPort() const {
+	if(_phantomPort == 0)
+		return _realPort;
+	return _phantomPort;
 }
 
 void SparkleNode::setBehindNAT(bool behindNAT) {

@@ -471,11 +471,13 @@ void LinkLayer::handleProtocolVersionReply(QByteArray &payload, SparkleNode* nod
 	if(!checkPacketExpection(node, "ProtocolVersionReply", JoinVersionRequest))
 		return;
 
-	const protocol_version_reply_t *ver = (const protocol_version_reply_t *) payload.data();
-	Log::debug("link: remote protocol version: %1") << ver->version;
+	const protocol_version_reply_t *reply = (const protocol_version_reply_t *) payload.data();
+	quint32 version = ntohl(reply->version);
 
-	if(ntohl(ver->version) != ProtocolVersion) {
-		Log::error("link: protocol version mismatch: got %1, expected %2") << ver->version << ProtocolVersion;
+	Log::debug("link: remote protocol version: %1") << version;
+
+	if(version != ProtocolVersion) {
+		Log::error("link: protocol version mismatch: got %1, expected %2") << version << ProtocolVersion;
 
 		cleanup();
 		emit joinFailed();
