@@ -21,14 +21,14 @@
 #include <QListWidgetItem>
 #include <QContextMenuEvent>
 #include <QImage>
-#include "RosterItem.h"
+#include "ContactWidget.h"
 #include "Contact.h"
 #include "Log.h"
 #include "MessagingApplicationLayer.h"
 #include "SparkleNode.h"
 #include "pixmaps.h"
 
-RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, QListWidgetItem* listItem, bool _detailed) : contact(_contact), _listItem(listItem), appLayer(_appLayer), detailed(_detailed)
+ContactWidget::ContactWidget(MessagingApplicationLayer &_appLayer, Contact* _contact, bool _detailed) : contact(_contact), appLayer(_appLayer), detailed(_detailed)
 {
 	if(!detailed) {
 		icon = new QLabel();
@@ -61,20 +61,22 @@ RosterItem::RosterItem(MessagingApplicationLayer &_appLayer, Contact* _contact, 
 		setLayout(layout);
 	}
 
-	_listItem->setSizeHint(QSize(0, layout()->minimumSize().height() + 2));
-
 	connect(contact, SIGNAL(updated()), SLOT(refresh()));
 	connect(&appLayer, SIGNAL(peerStateChanged(SparkleAddress)), SLOT(processStateChange(SparkleAddress)));
 
 	refresh();
 }
 
-void RosterItem::processStateChange(SparkleAddress address) {
+QSize ContactWidget::sizeHint() const {
+	return QSize(0, layout()->minimumSize().height() + 2);
+}
+
+void ContactWidget::processStateChange(SparkleAddress address) {
 	if(address == contact->address())
 		refresh();
 }
 
-void RosterItem::refresh() {
+void ContactWidget::refresh() {
 	QString nameText, infoText;
 	QPixmap pixmap;
 
@@ -149,10 +151,6 @@ void RosterItem::refresh() {
 	icon->setPixmap(pixmap);
 }
 
-QListWidgetItem* RosterItem::listItem() const {
-	return _listItem;
-}
-
-void RosterItem::contextMenuEvent(QContextMenuEvent *e) {
+void ContactWidget::contextMenuEvent(QContextMenuEvent *e) {
 	emit menuRequested(e->globalPos());
 }

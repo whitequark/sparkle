@@ -30,12 +30,13 @@
 #include "SparkleNode.h"
 #include "Contact.h"
 #include "ContactList.h"
+#include "ChatWindow.h"
 
 class LinkLayer;
 class Router;
 class MessagingApplicationLayer;
 class ConfigurationStorage;
-class RosterItem;
+class ContactWidget;
 
 class Roster : public QMainWindow, private Ui_Roster {
 	Q_OBJECT

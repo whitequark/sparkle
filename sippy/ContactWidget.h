@@ -29,12 +29,12 @@ class QListWidgetItem;
 class MessagingApplicationLayer;
 class SparkleNode;
 
-class RosterItem : public QWidget {
+class ContactWidget : public QWidget {
 	Q_OBJECT
 public:
-	RosterItem(MessagingApplicationLayer &appLayer, Contact* contact, QListWidgetItem* listItem, bool detailed = false);
+	ContactWidget(MessagingApplicationLayer &appLayer, Contact* contact, bool detailed = false);
 
-	QListWidgetItem *listItem() const;
+	virtual QSize sizeHint() const;
 
 protected:
 	void contextMenuEvent(QContextMenuEvent *e);
@@ -48,11 +48,10 @@ private slots:
 
 private:
 	Contact* contact;
-
-	QLabel *icon, *name, *info;
-	QListWidgetItem *_listItem;
 	MessagingApplicationLayer &appLayer;
 	bool detailed;
+
+	QLabel *icon, *name, *info;
 };
 
 #endif // ROSTERITEM_H

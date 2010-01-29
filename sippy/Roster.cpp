@@ -21,7 +21,7 @@
 #include <QApplication>
 #include "Roster.h"
 #include "ui_Roster.h"
-#include "RosterItem.h"
+#include "ContactWidget.h"
 #include "ConfigurationStorage.h"
 #include "Log.h"
 #include "LinkLayer.h"
@@ -168,10 +168,11 @@ void Roster::leaved() {
 
 void Roster::createRosterItem(Contact* contact, bool detailed) {
 	QListWidgetItem* item = contactViewItems[contact];
-	RosterItem* rosterItem = new RosterItem(appLayer, contact, item, detailed);
-	connect(rosterItem, SIGNAL(menuRequested(QPoint)), SLOT(showMenu(QPoint)));
+	ContactWidget* widget = new ContactWidget(appLayer, contact, detailed);
+	connect(widget, SIGNAL(menuRequested(QPoint)), SLOT(showMenu(QPoint)));
 	contactView->addItem(item);
-	contactView->setItemWidget(item, rosterItem);
+	contactView->setItemWidget(item, widget);
+	item->setSizeHint(widget->sizeHint());
 }
 
 void Roster::addContact(Contact* contact) {
@@ -186,13 +187,13 @@ void Roster::removeContact(Contact *contact) {
 }
 
 void Roster::selectItem(QListWidgetItem *current, QListWidgetItem *previous) {
-	RosterItem* rcurrent = static_cast<RosterItem*>(contactView->itemWidget(current));
+	ContactWidget* rcurrent = static_cast<ContactWidget*>(contactView->itemWidget(current));
 	if(rcurrent)
 		contactView->removeItemWidget(current);
 	if(current)
 		createRosterItem(contactViewItems.key(current), true);
 
-	RosterItem* rprevious = static_cast<RosterItem*>(contactView->itemWidget(previous));
+	ContactWidget* rprevious = static_cast<ContactWidget*>(contactView->itemWidget(previous));
 	if(rprevious)
 		contactView->removeItemWidget(previous);
 	if(previous)
