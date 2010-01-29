@@ -22,6 +22,7 @@
 #include <QObject>
 #include <QSet>
 #include <QTime>
+#include <QTimer>
 #include <ApplicationLayer.h>
 #include "SparkleAddress.h"
 
@@ -111,6 +112,7 @@ private slots:
 	void fetchContact(Contact* contact);
 
 	void peerAbsent(SparkleAddress address);
+	void resendMessages();
 
 	void cleanup();
 
@@ -162,6 +164,8 @@ private:
 	Messaging::Status _status;
 	QString _statusText;
 	QString _nick;
+
+	QTimer messageResendTimer;
 };
 
 #endif

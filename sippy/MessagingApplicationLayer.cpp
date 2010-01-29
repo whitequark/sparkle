@@ -29,6 +29,10 @@ using namespace Messaging;
 MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, LinkLayer &_linkLayer) : contactList(_contactList), linkLayer(_linkLayer), _router(_linkLayer.router()), _status(Messaging::Online) {
 	linkLayer.attachApplicationLayer(Messaging, this);
 
+	messageResendTimer.setInterval(10000);
+	messageResendTimer.setSingleShot(true);
+	connect(&messageResendTimer, SIGNAL(timeout()), SLOT(resendMessages()));
+
 	connect(&_router, SIGNAL(peerAdded(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
 	connect(&_router, SIGNAL(peerRemoved(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
 
@@ -247,13 +251,21 @@ void MessagingApplicationLayer::sendMessage(Message &message) {
 	QByteArray packet;
 	QDataStream stream(&packet, QIODevice::WriteOnly);
 
-	messageQueue.append(message);
+	if(!messageQueue.contains(message))
+		messageQueue.append(message);
 
 	stream << message.id();
 	stream << message.timestamp();
 	stream << message.text();
 
 	sendPacket(MessagePacket, packet, message.peer());
+}
+
+void MessagingApplicationLayer::resendMessages() {
+	foreach(Message message, messageQueue) {
+		Log::debug("mesg: resending message to %1") << message.peer().pretty();
+		sendMessage(message);
+	}
 }
 
 void MessagingApplicationLayer::handleMessage(QByteArray& packet, SparkleAddress addr) {
