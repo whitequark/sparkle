@@ -40,6 +40,10 @@ bool SparkleAddress::operator==(SparkleAddress other) const {
 	return !memcmp(_bytes, other._bytes, SPARKLE_ADDRESS_SIZE);
 }
 
+bool SparkleAddress::operator!=(SparkleAddress other) const {
+	return !(*this == other);
+}
+
 QString SparkleAddress::pretty() const {
 	return QString(bytes().toHex()).toUpper().replace(QRegExp("(..)"), "\\1:").left(SPARKLE_ADDRESS_SIZE * 3 - 1);
 }

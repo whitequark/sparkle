@@ -18,6 +18,7 @@ public:
 	const quint8* rawBytes() const;
 
 	bool operator==(SparkleAddress) const;
+	bool operator!=(SparkleAddress) const;
 
 	QString pretty() const;
 	static QString makePrettyMAC(QByteArray mac);
