@@ -26,6 +26,7 @@
 #include "Log.h"
 #include "LinkLayer.h"
 #include "Router.h"
+#include "CallWindow.h"
 
 Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplicationLayer &_app) :
 		config(ConfigurationStorage::instance()), linkLayer(_link),  router(_link.router()), appLayer(_app), contactList(_contactList), connectDialog(this), addContactDialog(contactList, this), preferencesDialog(appLayer, this)
@@ -34,15 +35,17 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 
 	setupUi(this);
 
-	actionContactInfo = new QAction(tr("Contact &info"), this);
-	actionChat = new QAction(tr("Begin &chat"), this);
+	actionContactInfo = new QAction(tr("Contact &info..."), this);
+	actionChat = new QAction(tr("Begin &chat..."), this);
+	actionCall = new QAction(tr("C&all..."), this);
 	actionRequestAuthorization = new QAction(tr("&Request authorization"), this);
 	actionEditContact = new QAction(tr("&Edit contact..."), this);
-	actionRemoveContact = new QAction(tr("&Remove contact"), this);
+	actionRemoveContact = new QAction(tr("Re&move contact"), this);
 
 	contactMenu = new QMenu(this);
 	contactMenu->addAction(actionContactInfo);
 	contactMenu->addAction(actionChat);
+	contactMenu->addAction(actionCall);
 	contactMenu->addSeparator();
 	contactMenu->addAction(actionRequestAuthorization);
 	contactMenu->addAction(actionEditContact);
@@ -54,6 +57,7 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	addContactDialog.connect(actionAddContact, SIGNAL(triggered()), SLOT(show()));
 	connect(contactView, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)), SLOT(selectItem(QListWidgetItem*,QListWidgetItem*)));
 	connect(actionChat, SIGNAL(triggered()), SLOT(beginChat()));
+	connect(actionCall, SIGNAL(triggered()), SLOT(beginCall()));
 	connect(actionRequestAuthorization, SIGNAL(triggered()), SLOT(requestAuthorization()));
 	connect(actionEditContact, SIGNAL(triggered()), SLOT(editItem()));
 	connect(actionRemoveContact, SIGNAL(triggered()), SLOT(removeItem()));
@@ -206,22 +210,18 @@ void Roster::selectItem(QListWidgetItem *current, QListWidgetItem *previous) {
 }
 
 void Roster::editItem() {
-	Contact* contact = contactViewItems.key(contactView->currentItem());
-	editContactDialog.showFor(contact);
+	editContactDialog.showFor(selectedContact());
 }
 
 void Roster::removeItem() {
-	Contact* contact = contactViewItems.key(contactView->currentItem());
-	contactList.removeContact(contact);
+	contactList.removeContact(selectedContact());
 }
 
 void Roster::requestAuthorization() {
-	Contact* contact = contactViewItems.key(contactView->currentItem());
-
 	bool ok;
 	QString reason = QInputDialog::getText(this, tr("Authorization request"), tr("Enter authorization reason (optionally):"), QLineEdit::Normal, "", &ok);
 	if(ok) {
-		Messaging::Authorization* req = new Messaging::Authorization(appLayer.nick(), reason, contact->address());
+		Messaging::Authorization* req = new Messaging::Authorization(appLayer.nick(), reason, selectedContact()->address());
 		appLayer.sendControlPacket(req);
 	}
 }
@@ -244,8 +244,9 @@ void Roster::offerAuthorization() {
 }
 
 void Roster::showMenu(QPoint point) {
-	Contact* contact = contactViewItems.key(contactView->currentItem());
-	actionRequestAuthorization->setEnabled(appLayer.peerState(contact->address()) == Messaging::Unauthorized);
+	Messaging::PeerState status = appLayer.peerState(selectedContact()->address());
+	actionRequestAuthorization->setEnabled(status == Messaging::Unauthorized);
+	actionCall->setEnabled(status == Messaging::Present || status == Messaging::NotPresent);
 	contactMenu->popup(point);
 }
 
@@ -257,8 +258,16 @@ ChatWindow* Roster::chatFor(SparkleAddress peer) {
 }
 
 void Roster::beginChat() {
-	Contact* contact = contactViewItems.key(contactView->currentItem());
-	chatFor(contact->address())->show();
+	chatFor(selectedContact()->address())->show();
+}
+
+void Roster::beginCall() {
+	CallWindow* call = new CallWindow(appLayer, selectedContact());
+	call->show();
+}
+
+Contact* Roster::selectedContact() {
+	return contactViewItems.key(contactView->currentItem());
 }
 
 void Roster::handleMessage(SparkleAddress peer) {

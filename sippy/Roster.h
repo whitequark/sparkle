@@ -60,6 +60,7 @@ private slots:
 	void requestAuthorization();
 	void offerAuthorization();
 	void beginChat();
+	void beginCall();
 	void showMenu(QPoint point);
 
 	void addContact(Contact* contact);
@@ -76,6 +77,7 @@ private:
 
 	void connectStateChanged(connect_state_t state);
 	void createRosterItem(Contact* contact, bool detailed = false);
+	Contact* selectedContact();
 
 	ChatWindow* chatFor(SparkleAddress peer);
 
@@ -98,6 +100,7 @@ private:
 
 	QMenu* contactMenu;
 	QAction* actionChat;
+	QAction* actionCall;
 	QAction* actionContactInfo;
 	QAction* actionRequestAuthorization;
 	QAction* actionEditContact;

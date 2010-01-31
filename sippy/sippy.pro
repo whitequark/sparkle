@@ -24,7 +24,8 @@ HEADERS += ConfigurationStorage.h \
     PreferencesDialog.h \
     ChatWindow.h \
     ChatMessageEdit.h \
-    Messaging.h
+    Messaging.h \
+    CallWindow.h
 SOURCES += main.cpp \
     ConfigurationStorage.cpp \
     ConnectDialog.cpp \
@@ -39,17 +40,20 @@ SOURCES += main.cpp \
     PreferencesDialog.cpp \
     ChatWindow.cpp \
     ChatMessageEdit.cpp \
-    Messaging.cpp
+    Messaging.cpp \
+    CallWindow.cpp
 QMAKE_LIBS += -lsparkle
-win32:{
+win32: { 
     release:QMAKE_LFLAGS += -L../libsparkle/release
     debug:QMAKE_LFLAGS += -L../libsparkle/debug
-} else:QMAKE_LFLAGS += -L../libsparkle
+}
+else:QMAKE_LFLAGS += -L../libsparkle
 FORMS += Roster.ui \
     ConnectDialog.ui \
     AddContactDialog.ui \
     EditContactDialog.ui \
-    PreferencesDialog.ui
+    PreferencesDialog.ui \
+    CallWindow.ui
 equals(QT_MAJOR_VERSION, "4"):lessThan(QT_MINOR_VERSION, "6") { 
     warning("Using bundled QtMultimedia from Qt 4.6.1")
     include("multimedia/audio.pri")
