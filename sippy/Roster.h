@@ -61,6 +61,7 @@ private slots:
 	void offerAuthorization();
 	void beginChat();
 	void beginCall();
+	void offerCall(SparkleAddress peer);
 	void showMenu(QPoint point);
 
 	void addContact(Contact* contact);

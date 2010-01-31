@@ -41,6 +41,12 @@ ControlPacket* ControlPacket::demarshall(QByteArray bytes, SparkleAddress peer) 
 
 		case MessagePacket:
 		return new Message(stream, peer);
+
+		case CallRequestPacket:
+		return new CallRequest(stream, peer);
+
+		case CallOperatePacket:
+		return new CallOperate(stream, peer);
 	}
 
 	return NULL;
@@ -82,6 +88,19 @@ QByteArray Message::marshall() const {
 
 	stream << _timestamp;
 	stream << _text;
+
+	return bytes;
+}
+
+CallOperate::CallOperate(QDataStream& stream, SparkleAddress peer) : ControlPacket(stream, CallOperatePacket, peer) {
+	stream >> (quint16&) _action;
+}
+
+QByteArray CallOperate::marshall() const {
+	QByteArray bytes = ControlPacket::marshall();
+	QDataStream stream(&bytes, QIODevice::Append);
+
+	stream << (quint16) _action;
 
 	return bytes;
 }

@@ -244,11 +244,19 @@ void MessagingApplicationLayer::handleControlPacket(QByteArray& packet, SparkleA
 
 	switch(controlPacket->type()) {
 		case Messaging::AuthorizationPacket:
-		emit authorizationAvailable();
+		emit authorizationAvailable(addr);
 		return;
 
 		case Messaging::MessagePacket:
 		emit messageAvailable(addr);
+		return;
+
+		case Messaging::CallRequestPacket:
+		emit callRequestAvailable(addr);
+		return;
+
+		case Messaging::CallOperatePacket:
+		emit callOperateAvailable(addr);
 		return;
 	}
 }

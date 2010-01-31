@@ -25,6 +25,14 @@ Contact::Contact(QString textAddress) {
 Contact::Contact(SparkleAddress address) : _address(address) {
 }
 
+QString Contact::fallbackName() const {
+	if(_displayName != "") {
+		return _displayName;
+	} else {
+		return textAddress();
+	}
+}
+
 SparkleAddress Contact::address() const {
 	return _address;
 }

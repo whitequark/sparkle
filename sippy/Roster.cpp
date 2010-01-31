@@ -84,8 +84,9 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	config->connect(&appLayer, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
 	config->connect(&appLayer, SIGNAL(nickChanged(QString)), SLOT(setNick(QString)));
 
-	connect(&appLayer, SIGNAL(authorizationAvailable()), SLOT(offerAuthorization()));
+	connect(&appLayer, SIGNAL(authorizationAvailable(SparkleAddress)), SLOT(offerAuthorization()));
 	connect(&appLayer, SIGNAL(messageAvailable(SparkleAddress)), SLOT(handleMessage(SparkleAddress)));
+	connect(&appLayer, SIGNAL(callRequestAvailable(SparkleAddress)), SLOT(offerCall(SparkleAddress)));
 
 	connect(actionAbout, SIGNAL(triggered()), SLOT(about()));
 
@@ -263,7 +264,23 @@ void Roster::beginChat() {
 
 void Roster::beginCall() {
 	CallWindow* call = new CallWindow(appLayer, selectedContact());
+	call->call();
 	call->show();
+}
+
+void Roster::offerCall(SparkleAddress peer) {
+	Contact* contact = contactList.findByAddress(peer);
+	if(contact != NULL) {
+		if(QMessageBox::question(this, tr("Incoming call"), tr("Contact %1 calls you. Reply?").arg(contact->fallbackName()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes) {
+			CallWindow* call = new CallWindow(appLayer, contact);
+			call->accept();
+			call->show();
+			return;
+		}
+	}
+
+	Messaging::CallOperate* op = new Messaging::CallOperate(Messaging::RejectCall, peer);
+	appLayer.sendControlPacket(op);
 }
 
 Contact* Roster::selectedContact() {

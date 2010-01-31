@@ -30,6 +30,8 @@ public:
 	Contact(QString address);
 	Contact(SparkleAddress address);
 
+	QString fallbackName() const;
+
 	SparkleAddress address() const;
 	QString textAddress() const;
 

@@ -68,8 +68,10 @@ signals:
 
 	void nickChanged(QString nick);
 
-	void authorizationAvailable();
+	void authorizationAvailable(SparkleAddress peer);
 	void messageAvailable(SparkleAddress peer);
+	void callRequestAvailable(SparkleAddress peer);
+	void callOperateAvailable(SparkleAddress peer);
 
 	void controlTimedOut(quint32 id);
 

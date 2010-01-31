@@ -42,6 +42,14 @@ namespace Messaging {
 	enum PacketType {
 		AuthorizationPacket = 1,
 		MessagePacket       = 2,
+		CallRequestPacket   = 3,
+		CallOperatePacket   = 4,
+	};
+
+	enum CallAction {
+		AcceptCall = 1,
+		HangupCall = 2,
+		RejectCall = 3,
 	};
 
 	class ControlPacket : public QObject
@@ -103,6 +111,31 @@ namespace Messaging {
 	private:
 		QDateTime _timestamp;
 		QString _text;
+	};
+
+	class CallRequest : public ControlPacket
+	{
+		Q_OBJECT
+
+	public:
+		CallRequest(SparkleAddress peer) : ControlPacket(CallRequestPacket, peer) {}
+		CallRequest(QDataStream& stream, SparkleAddress peer) : ControlPacket(stream, CallRequestPacket, peer) {}
+	};
+
+	class CallOperate : public ControlPacket
+	{
+		Q_OBJECT
+
+	public:
+		CallOperate(CallAction action, SparkleAddress peer) : ControlPacket(CallOperatePacket, peer), _action(action) {}
+
+		CallOperate(QDataStream& stream, SparkleAddress peer);
+		virtual QByteArray marshall() const;
+
+		CallAction action() { return _action; }
+
+	private:
+		CallAction _action;
 	};
 
 	QString filterHTML(QString text);

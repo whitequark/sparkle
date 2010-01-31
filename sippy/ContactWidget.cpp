@@ -86,10 +86,7 @@ void ContactWidget::refresh() {
 	QString nameText, infoText;
 	QPixmap pixmap;
 
-	if(contact->displayName().isEmpty())
-		nameText = contact->textAddress();
-	else
-		nameText = contact->displayName();
+	nameText = contact->fallbackName();
 
 	Messaging::PeerState state = appLayer.peerState(contact->address());
 	switch(state) {
