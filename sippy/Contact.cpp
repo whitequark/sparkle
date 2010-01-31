@@ -22,6 +22,9 @@ Contact::Contact(QString textAddress) {
 	_address = QByteArray::fromHex(textAddress.replace(':', "").toLocal8Bit());
 }
 
+Contact::Contact(SparkleAddress address) : _address(address) {
+}
+
 SparkleAddress Contact::address() const {
 	return _address;
 }

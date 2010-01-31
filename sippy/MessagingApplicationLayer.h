@@ -21,52 +21,17 @@
 
 #include <QObject>
 #include <QSet>
-#include <QTime>
+#include <QDateTime>
 #include <QTimer>
 #include <ApplicationLayer.h>
 #include "SparkleAddress.h"
+#include "Messaging.h"
 
 class QHostAddress;
 class LinkLayer;
 class Router;
 class ContactList;
 class Contact;
-
-namespace Messaging {
-	enum PeerState { /* an insider joke */
-		Present       = 200,
-		Unauthorized  = 403,
-		NotPresent    = 404,
-		InternalError = 500,
-		Unavailable   = 503,
-	};
-
-	enum Status {
-		Online,
-		Away,
-		Busy
-	};
-
-	class Message
-	{
-	public:
-		Message(QString text, QTime timestamp, SparkleAddress peer, quint32 id = 0) : _id(id), _timestamp(timestamp), _text(text), _peer(peer)
-			{ if(_id == 0) _id = qrand(); }
-
-		quint32 id() const		{ return _id; }
-		QTime timestamp() const	{ return _timestamp; }
-		QString text() const	{ return _text; }
-		SparkleAddress peer() const	{ return _peer; }
-
-		bool operator==(Message other) { return _id == other.id(); }
-
-	private:
-		quint32 _id;
-		QTime _timestamp;
-		QString _text;
-		SparkleAddress _peer;
-	};
-}
 
 class MessagingApplicationLayer: public QObject, public ApplicationLayer {
 	Q_OBJECT
@@ -77,6 +42,8 @@ public:
 
 	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address);
 
+	ContactList& contactList() const;
+
 	Messaging::PeerState peerState(SparkleAddress address);
 
 	Messaging::Status status() const;
@@ -84,8 +51,8 @@ public:
 
 	QString nick() const;
 
-	void sendAuthorizationRequest(SparkleAddress addr, QString reason);
-	void sendMessage(Messaging::Message& message);
+	void sendControlPacket(Messaging::ControlPacket* packet);
+	template<typename T> T* getControlPacket();
 
 public slots:
 	void setStatus(Messaging::Status newStatus);
@@ -101,10 +68,10 @@ signals:
 
 	void nickChanged(QString nick);
 
-	void authorizationRequested(SparkleAddress address, QString nick, QString reason);
+	void authorizationAvailable();
+	void messageAvailable(SparkleAddress peer);
 
-	void messageReceived(Messaging::Message& message);
-	void messageTimedOut(quint32 id);
+	void controlTimedOut(quint32 id);
 
 private slots:
 	void fetchAllContacts();
@@ -112,7 +79,7 @@ private slots:
 	void fetchContact(Contact* contact);
 
 	void peerAbsent(SparkleAddress address);
-	void resendMessages();
+	void resendControlPackets();
 
 	void cleanup();
 
@@ -122,12 +89,11 @@ private:
 	};
 
 	enum packet_type_t {
-		PresenceRequest	      = 1,
-		PresenceNotify	      = 2,
-		AuthorizationRequest  = 3,
+		PresenceRequest		= 1,
+		PresenceNotify		= 2,
 
-		MessagePacket         = 4,
-		MessageBounce         = 5,
+		ControlPacket		= 3,
+		ControlBounce		= 4,
 	};
 
 	struct packet_header_t {
@@ -143,30 +109,40 @@ private:
 	void sendPresenceNotify(SparkleAddress addr);
 	void handlePresenceNotify(QByteArray& payload, SparkleAddress addr);
 
-	/* public sendAuthorizationRequest */
-	void handleAuthorizationRequest(QByteArray& payload, SparkleAddress addr);
+	/* public sendControlPacket */
+	void handleControlPacket(QByteArray& payload, SparkleAddress addr);
 
-	/* public sendMessage */
-	void handleMessage(QByteArray& payload, SparkleAddress addr);
+	void sendControlBounce(SparkleAddress addr, quint32 id);
+	void handleControlBounce(QByteArray& payload, SparkleAddress addr);
 
-	void sendMessageBounce(SparkleAddress addr, quint32 cookie);
-	void handleMessageBounce(QByteArray& payload, SparkleAddress addr);
-
-	ContactList &contactList;
+	ContactList &_contactList;
 	LinkLayer &linkLayer;
 	Router &_router;
 
 	QSet<SparkleAddress> absentPeers, authorizedPeers;
 
-	QList<Messaging::Message> messageQueue; // transmitted
-	QSet<quint32> messageCache;  // received
+	QList<Messaging::ControlPacket*> controlOutputQueue;
+	QList<Messaging::ControlPacket*> controlInputQueue;
+	QSet<quint32> controlInputCache;
 
 	Messaging::Status _status;
 	QString _statusText;
 	QString _nick;
 
-	QTimer messageResendTimer;
+	QTimer controlPacketResendTimer;
 };
+
+template<typename T>
+T* MessagingApplicationLayer::getControlPacket() {
+	foreach(Messaging::ControlPacket* packet, controlInputQueue) {
+		T* req = qobject_cast<T*>(packet);
+		if(req != NULL) {
+			controlInputQueue.removeOne(req);
+			return req;
+		}
+	}
+	return NULL;
+}
 
 #endif
 

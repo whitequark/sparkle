@@ -26,12 +26,11 @@
 
 using namespace Messaging;
 
-MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, LinkLayer &_linkLayer) : contactList(_contactList), linkLayer(_linkLayer), _router(_linkLayer.router()), _status(Messaging::Online) {
+MessagingApplicationLayer::MessagingApplicationLayer(ContactList& contactList, LinkLayer &_linkLayer) : _contactList(contactList), linkLayer(_linkLayer), _router(_linkLayer.router()), _status(Messaging::Online) {
 	linkLayer.attachApplicationLayer(Messaging, this);
 
-	messageResendTimer.setInterval(10000);
-	messageResendTimer.setSingleShot(true);
-	connect(&messageResendTimer, SIGNAL(timeout()), SLOT(resendMessages()));
+	controlPacketResendTimer.setInterval(5000);
+	connect(&controlPacketResendTimer, SIGNAL(timeout()), SLOT(resendControlPackets()));
 
 	connect(&_router, SIGNAL(peerAdded(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
 	connect(&_router, SIGNAL(peerRemoved(SparkleAddress)), SIGNAL(peerStateChanged(SparkleAddress)));
@@ -43,11 +42,16 @@ MessagingApplicationLayer::MessagingApplicationLayer(ContactList& _contactList, 
 	connect(this, SIGNAL(statusChanged(Messaging::Status)), SLOT(sendPresence()));
 	connect(this, SIGNAL(statusTextChanged(QString)), SLOT(sendPresence()));
 
-	connect(&contactList, SIGNAL(contactAdded(Contact*)), SLOT(fetchContact(Contact*)));
+	connect(&_contactList, SIGNAL(contactAdded(Contact*)), SLOT(fetchContact(Contact*)));
 
+	controlPacketResendTimer.start();
 }
 
 MessagingApplicationLayer::~MessagingApplicationLayer() {
+}
+
+ContactList& MessagingApplicationLayer::contactList() const {
+	return _contactList;
 }
 
 Messaging::Status MessagingApplicationLayer::status() const {
@@ -81,7 +85,7 @@ void MessagingApplicationLayer::setNick(QString newNick) {
 
 void MessagingApplicationLayer::fetchAllContacts() {
 	Log::debug("mesg: fetching all contacts");
-	foreach(Contact* contact, contactList.contacts())
+	foreach(Contact* contact, _contactList.contacts())
 		fetchContact(contact);
 }
 
@@ -90,7 +94,7 @@ void MessagingApplicationLayer::sendPresence() {
 		return;
 
 	Log::debug("mesg: sending presence");
-	foreach(Contact* contact, contactList.contacts())
+	foreach(Contact* contact, _contactList.contacts())
 		sendPresenceNotify(contact->address());
 }
 
@@ -106,7 +110,7 @@ void MessagingApplicationLayer::cleanup() {
 	Log::debug("mesg: cleanup");
 	absentPeers.clear();
 	authorizedPeers.clear();
-	foreach(Contact* contact, contactList.contacts())
+	foreach(Contact* contact, _contactList.contacts())
 		emit peerStateChanged(contact->address());
 }
 
@@ -155,8 +159,12 @@ void MessagingApplicationLayer::handleDataPacket(QByteArray &packet, SparkleAddr
 		handlePresenceNotify(payload, address);
 		break;
 
-		case AuthorizationRequest:
-		handleAuthorizationRequest(payload, address);
+		case ControlPacket:
+		handleControlPacket(payload, address);
+		break;
+
+		case ControlBounce:
+		handleControlBounce(payload, address);
 		break;
 
 		default:
@@ -183,7 +191,7 @@ void MessagingApplicationLayer::sendPresenceRequest(SparkleAddress addr) {
 }
 
 void MessagingApplicationLayer::handlePresenceRequest(QByteArray&, SparkleAddress addr) {
-	if(contactList.hasAddress(addr))
+	if(_contactList.hasAddress(addr))
 		sendPresenceNotify(addr);
 }
 
@@ -210,7 +218,7 @@ void MessagingApplicationLayer::handlePresenceNotify(QByteArray& packet, Sparkle
 
 	authorizedPeers.insert(addr);
 
-	Contact* contact = contactList.findByAddress(addr);
+	Contact* contact = _contactList.findByAddress(addr);
 	if(contact) {
 		Log::debug("mesg: received presence for %1: %2[%3]") << addr.pretty() << peerStatus << peerStatusText;
 		contact->setStatus(peerStatus);
@@ -220,102 +228,65 @@ void MessagingApplicationLayer::handlePresenceNotify(QByteArray& packet, Sparkle
 	}
 }
 
-/* AuthorizationRequest */
+/* ControlPacket */
 
-void MessagingApplicationLayer::sendAuthorizationRequest(SparkleAddress addr, QString reason) {
-	QByteArray packet;
-	QDataStream stream(&packet, QIODevice::WriteOnly);
-
-	stream << _nick;
-	stream << reason;
-
-	sendPacket(AuthorizationRequest, packet, addr);
+void MessagingApplicationLayer::sendControlPacket(Messaging::ControlPacket* packet) {
+	controlOutputQueue.append(packet);
+	sendPacket(ControlPacket, packet->marshall(), packet->peer());
 }
 
-void MessagingApplicationLayer::handleAuthorizationRequest(QByteArray& packet, SparkleAddress addr) {
-	QDataStream stream(&packet, QIODevice::ReadOnly);
+void MessagingApplicationLayer::handleControlPacket(QByteArray& packet, SparkleAddress addr) {
+	Messaging::ControlPacket* controlPacket = Messaging::ControlPacket::demarshall(packet, addr);
+	Q_ASSERT(controlPacket != NULL);
 
-	QString peerNick, peerReason;
+	controlInputQueue.append(controlPacket);
+	sendControlBounce(controlPacket->peer(), controlPacket->id());
 
-	stream >> peerNick;
-	stream >> peerReason;
+	switch(controlPacket->type()) {
+		case Messaging::AuthorizationPacket:
+		emit authorizationAvailable();
+		return;
 
-	Log::debug("authorization request from %1 (%2): '%3'") << addr.pretty() << peerNick << peerReason;
-
-	emit authorizationRequested(addr, peerNick, peerReason);
-}
-
-/* Message */
-
-void MessagingApplicationLayer::sendMessage(Message &message) {
-	QByteArray packet;
-	QDataStream stream(&packet, QIODevice::WriteOnly);
-
-	if(!messageQueue.contains(message))
-		messageQueue.append(message);
-
-	stream << message.id();
-	stream << message.timestamp();
-	stream << message.text();
-
-	sendPacket(MessagePacket, packet, message.peer());
-}
-
-void MessagingApplicationLayer::resendMessages() {
-	foreach(Message message, messageQueue) {
-		Log::debug("mesg: resending message to %1") << message.peer().pretty();
-		sendMessage(message);
+		case Messaging::MessagePacket:
+		emit messageAvailable(addr);
+		return;
 	}
 }
 
-void MessagingApplicationLayer::handleMessage(QByteArray& packet, SparkleAddress addr) {
-	QDataStream stream(&packet, QIODevice::ReadOnly);
-
-	quint32 id;
-	QTime timestamp;
-	QString text;
-
-	stream >> id;
-
-	if(!messageCache.contains(id)) {
-		stream >> timestamp;
-		stream >> text;
-
-		Message message(text, timestamp, addr, id);
-		emit messageReceived(message);
-
-		messageCache.insert(id);
+void MessagingApplicationLayer::resendControlPackets() {
+	foreach(Messaging::ControlPacket* packet, controlOutputQueue) {
+		Log::debug("mesg: resending control<%1> to %2") << packet->type() << packet->peer().pretty();
+		emit controlTimedOut(packet->id());
+		sendPacket(ControlPacket, packet->marshall(), packet->peer());
 	}
-
-	sendMessageBounce(addr, id);
 }
 
-/* MessageBounce */
+/* ControlBounce */
 
-void MessagingApplicationLayer::sendMessageBounce(SparkleAddress addr, quint32 id) {
+void MessagingApplicationLayer::sendControlBounce(SparkleAddress addr, quint32 id) {
 	QByteArray packet;
 	QDataStream stream(&packet, QIODevice::WriteOnly);
 
 	stream << id;
 
-	sendPacket(MessageBounce, packet, addr);
+	sendPacket(ControlBounce, packet, addr);
 }
 
-void MessagingApplicationLayer::handleMessageBounce(QByteArray& packet, SparkleAddress addr) {
-	QDataStream stream(&packet, QIODevice::ReadOnly);
-
+void MessagingApplicationLayer::handleControlBounce(QByteArray& packet, SparkleAddress addr) {
+	QDataStream stream(packet);
 	quint32 id;
 
 	stream >> id;
 
-	foreach(const Message& message, messageQueue) {
-		if(message.id() == id) {
-			if(message.peer() != addr) {
-				Log::warn("mesg: message bounce from node %1 that did not sent it (expected %2); how this can ever happen?") << addr.pretty() << message.peer().pretty();
+	foreach(Messaging::ControlPacket* packet, controlOutputQueue) {
+		if(packet->id() == id) {
+			if(packet->peer() != addr) {
+				Log::warn("mesg: control bounce from node %1 that did not sent it (expected %2); how this can ever happen?") << addr.pretty() << packet->peer().pretty();
 				return;
 			}
 
-			messageQueue.removeOne(message);
+			controlOutputQueue.removeOne(packet);
+			delete packet;
 		}
 	}
 }

@@ -28,6 +28,7 @@ class Contact : public QObject {
 	Q_OBJECT
 public:
 	Contact(QString address);
+	Contact(SparkleAddress address);
 
 	SparkleAddress address() const;
 	QString textAddress() const;

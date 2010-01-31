@@ -53,6 +53,7 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 
 	addContactDialog.connect(actionAddContact, SIGNAL(triggered()), SLOT(show()));
 	connect(contactView, SIGNAL(currentItemChanged(QListWidgetItem*,QListWidgetItem*)), SLOT(selectItem(QListWidgetItem*,QListWidgetItem*)));
+	connect(actionChat, SIGNAL(triggered()), SLOT(beginChat()));
 	connect(actionRequestAuthorization, SIGNAL(triggered()), SLOT(requestAuthorization()));
 	connect(actionEditContact, SIGNAL(triggered()), SLOT(editItem()));
 	connect(actionRemoveContact, SIGNAL(triggered()), SLOT(removeItem()));
@@ -79,7 +80,8 @@ Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplication
 	config->connect(&appLayer, SIGNAL(statusChanged(Messaging::Status)), SLOT(setStatus(Messaging::Status)));
 	config->connect(&appLayer, SIGNAL(nickChanged(QString)), SLOT(setNick(QString)));
 
-	connect(&appLayer, SIGNAL(authorizationRequested(SparkleAddress,QString,QString)), SLOT(offerAuthorization(SparkleAddress,QString,QString)));
+	connect(&appLayer, SIGNAL(authorizationAvailable()), SLOT(offerAuthorization()));
+	connect(&appLayer, SIGNAL(messageAvailable(SparkleAddress)), SLOT(handleMessage(SparkleAddress)));
 
 	connect(actionAbout, SIGNAL(triggered()), SLOT(about()));
 
@@ -217,18 +219,25 @@ void Roster::requestAuthorization() {
 
 	bool ok;
 	QString reason = QInputDialog::getText(this, tr("Authorization request"), tr("Enter authorization reason (optionally):"), QLineEdit::Normal, "", &ok);
-	if(ok) appLayer.sendAuthorizationRequest(contact->address(), reason);
+	if(ok) {
+		Messaging::Authorization* req = new Messaging::Authorization(appLayer.nick(), reason, contact->address());
+		appLayer.sendControlPacket(req);
+	}
 }
 
-void Roster::offerAuthorization(SparkleAddress addr, QString nick, QString reason) {
-	QString displayedNick;
-	if(nick != "")
-		displayedNick = QString(" (%1)").arg(nick);
-	if(reason != "")
-		reason = tr("\nReason: %1").arg(reason);
-	if(QMessageBox::question(this, tr("Authorization request"), tr("Peer %1%2 asks you for an authorization.%3\nAdd him/her to your contact list?").arg(addr.pretty(), displayedNick, reason), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes) {
-		Contact* contact = new Contact(addr.pretty());
-		contact->setDisplayName(nick);
+void Roster::offerAuthorization() {
+	Messaging::Authorization* req = appLayer.getControlPacket<Messaging::Authorization>();
+	Q_ASSERT(req != NULL);
+
+	QString displayedNick, reason;
+	if(req->nick() != "")
+		displayedNick = QString(" (%1)").arg(req->nick());
+	if(req->reason() != "")
+		reason = tr("\nReason: %1").arg(req->reason());
+
+	if(QMessageBox::question(this, tr("Authorization request"), tr("Peer %1%2 asks you for an authorization.%3\nAdd him/her to your contact list?").arg(req->peer().pretty(), displayedNick, reason), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes) {
+		Contact* contact = new Contact(req->peer());
+		contact->setDisplayName(req->nick());
 		contactList.addContact(contact);
 	}
 }
@@ -237,6 +246,24 @@ void Roster::showMenu(QPoint point) {
 	Contact* contact = contactViewItems.key(contactView->currentItem());
 	actionRequestAuthorization->setEnabled(appLayer.peerState(contact->address()) == Messaging::Unauthorized);
 	contactMenu->popup(point);
+}
+
+ChatWindow* Roster::chatFor(SparkleAddress peer) {
+	if(!chatWindows.contains(peer))
+		chatWindows[peer] = new ChatWindow(appLayer, peer);
+
+	return chatWindows[peer];
+}
+
+void Roster::beginChat() {
+	Contact* contact = contactViewItems.key(contactView->currentItem());
+	chatFor(contact->address())->show();
+}
+
+void Roster::handleMessage(SparkleAddress peer) {
+	ChatWindow* window = chatFor(peer);
+	window->show();
+	window->activateWindow();
 }
 
 void Roster::about() {

@@ -64,6 +64,9 @@ ContactWidget::ContactWidget(MessagingApplicationLayer &_appLayer, Contact* _con
 	connect(contact, SIGNAL(updated()), SLOT(refresh()));
 	connect(&appLayer, SIGNAL(peerStateChanged(SparkleAddress)), SLOT(processStateChange(SparkleAddress)));
 
+	setMinimumHeight(sizeHint().height());
+	setMaximumHeight(sizeHint().height());
+
 	refresh();
 }
 

@@ -58,11 +58,14 @@ private slots:
 	void editItem();
 	void removeItem();
 	void requestAuthorization();
-	void offerAuthorization(SparkleAddress addr, QString nick, QString reason);
+	void offerAuthorization();
+	void beginChat();
 	void showMenu(QPoint point);
 
 	void addContact(Contact* contact);
 	void removeContact(Contact* contact);
+
+	void handleMessage(SparkleAddress peer);
 
 	void about();
 
@@ -74,6 +77,8 @@ private:
 	void connectStateChanged(connect_state_t state);
 	void createRosterItem(Contact* contact, bool detailed = false);
 
+	ChatWindow* chatFor(SparkleAddress peer);
+
 	ConfigurationStorage* config;
 	LinkLayer &linkLayer;
 	Router& router;
@@ -81,6 +86,8 @@ private:
 
 	ContactList	&contactList;
 	QHash<Contact*, QListWidgetItem*> contactViewItems;
+
+	QHash<SparkleAddress, ChatWindow*> chatWindows;
 
 	/* UI elements */
 
