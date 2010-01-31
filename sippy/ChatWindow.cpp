@@ -5,9 +5,12 @@
 #include "ContactList.h"
 #include "ContactWidget.h"
 #include "ChatMessageEdit.h"
+#include "Messaging.h"
 #include <QTextBrowser>
 #include <QVBoxLayout>
 #include <Log.h>
+
+using namespace Messaging;
 
 ChatWindow::ChatWindow(MessagingApplicationLayer& _appLayer, SparkleAddress _peer) : appLayer(_appLayer), peer(_peer) {
 	QVBoxLayout* layout = new QVBoxLayout();
@@ -54,8 +57,11 @@ void ChatWindow::show() {
 }
 
 void ChatWindow::sendMessage() {
-	Messaging::Message *message = new Messaging::Message(editor->toPlainText().replace("\n", "<br>"), QDateTime::currentDateTime(), peer);
-	print(message->timestamp(), QString("<b>%1</b>: %2").arg(appLayer.nick(), message->text()));
+	if(editor->toPlainText() == "")
+		return;
+
+	Message *message = new Message(editor->toPlainText(), QDateTime::currentDateTime(), peer);
+	print(message->timestamp(), QString("<b>%1</b>: %2").arg(filterHTML(appLayer.nick()), filterHTML(message->text())).replace("\n", "<br>"));
 
 	appLayer.sendControlPacket(message);
 
@@ -70,12 +76,14 @@ void ChatWindow::handleMessage() {
 		if(contact != NULL && contact->displayName() != "")
 			nick = contact->displayName();
 
-		QString text = message->text(); // htmlspecialchars ;)
-		text = text.replace("<", "&lt;");
-		text = text.replace(">", "&gt;");
-		text = text.replace("&", "&amp;");
+		QString text;
+		if(message->text().startsWith("/me ")) {
+			text = QString("<b>* %1</b> %2").arg(filterHTML(nick), filterHTML(message->text()));
+		} else {
+			text = QString("<b>%1</b>: %2").arg(filterHTML(nick), filterHTML(message->text()));
+		}
 
-		print(message->timestamp(), QString("<b>%1</b>: %2").arg(nick, text));
+		print(message->timestamp(), text.replace("\n", "<br>"));
 	}
 }
 

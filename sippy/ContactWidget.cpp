@@ -27,6 +27,7 @@
 #include "MessagingApplicationLayer.h"
 #include "SparkleNode.h"
 #include "pixmaps.h"
+#include "Messaging.h"
 
 ContactWidget::ContactWidget(MessagingApplicationLayer &_appLayer, Contact* _contact, bool _detailed) : contact(_contact), appLayer(_appLayer), detailed(_detailed)
 {
@@ -61,6 +62,8 @@ ContactWidget::ContactWidget(MessagingApplicationLayer &_appLayer, Contact* _con
 		setLayout(layout);
 	}
 
+	name->setTextFormat(Qt::PlainText);
+
 	connect(contact, SIGNAL(updated()), SLOT(refresh()));
 	connect(&appLayer, SIGNAL(peerStateChanged(SparkleAddress)), SLOT(processStateChange(SparkleAddress)));
 
@@ -91,7 +94,7 @@ void ContactWidget::refresh() {
 	Messaging::PeerState state = appLayer.peerState(contact->address());
 	switch(state) {
 		case Messaging::Present:
-		infoText = contact->statusText();
+		infoText = Messaging::filterHTML(contact->statusText());
 		break;
 
 		case Messaging::NotPresent:

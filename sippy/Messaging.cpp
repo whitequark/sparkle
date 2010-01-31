@@ -68,3 +68,9 @@ QByteArray Message::marshall() const {
 	return bytes;
 }
 
+QString Messaging::filterHTML(QString text) {
+	text = text.replace("&", "&amp;");
+	text = text.replace("<", "&lt;");
+	text = text.replace(">", "&gt;");
+	return text;
+}

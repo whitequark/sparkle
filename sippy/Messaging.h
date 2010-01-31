@@ -86,6 +86,8 @@ namespace Messaging {
 		QDateTime _timestamp;
 		QString _text;
 	};
+
+	QString filterHTML(QString text);
 }
 
 #endif // MESSAGING_H
