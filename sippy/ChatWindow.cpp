@@ -37,6 +37,11 @@ ChatWindow::ChatWindow(MessagingApplicationLayer& _appLayer, SparkleAddress _pee
 	setMinimumSize(250, 150);
 	resize(500, 350);
 
+	QString nick = peer.pretty();
+	if(contact != NULL && contact->displayName() != "")
+		nick = contact->displayName();
+	setWindowTitle(tr("Chat with %1").arg(nick));
+
 	connect(editor, SIGNAL(dispatchRequested()), SLOT(sendMessage()));
 	connect(&appLayer, SIGNAL(messageAvailable(SparkleAddress)), SLOT(handleMessage()));
 
