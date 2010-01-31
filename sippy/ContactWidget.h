@@ -38,9 +38,11 @@ public:
 
 protected:
 	void contextMenuEvent(QContextMenuEvent *e);
+	void mouseDoubleClickEvent(QMouseEvent *e);
 
 signals:
 	void menuRequested(QPoint point);
+	void invoked();
 
 private slots:
 	void refresh();

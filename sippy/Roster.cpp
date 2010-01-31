@@ -172,6 +172,7 @@ void Roster::createRosterItem(Contact* contact, bool detailed) {
 	QListWidgetItem* item = contactViewItems[contact];
 	ContactWidget* widget = new ContactWidget(appLayer, contact, detailed);
 	connect(widget, SIGNAL(menuRequested(QPoint)), SLOT(showMenu(QPoint)));
+	connect(widget, SIGNAL(invoked()), SLOT(beginChat()));
 	contactView->addItem(item);
 	contactView->setItemWidget(item, widget);
 	item->setSizeHint(widget->sizeHint());

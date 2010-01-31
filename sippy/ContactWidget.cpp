@@ -157,3 +157,7 @@ void ContactWidget::refresh() {
 void ContactWidget::contextMenuEvent(QContextMenuEvent *e) {
 	emit menuRequested(e->globalPos());
 }
+
+void ContactWidget::mouseDoubleClickEvent(QMouseEvent*) {
+	emit invoked();
+}
