@@ -26,6 +26,7 @@ ChatMessageEdit::ChatMessageEdit(QWidget *parent) :
 	QTextEdit(parent)
 {
 	setMinimumHeight(sizeHint().height()); // empty
+	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 }
 
 QSize ChatMessageEdit::sizeHint() const {
