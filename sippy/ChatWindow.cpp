@@ -27,6 +27,7 @@
 #include <QTextBrowser>
 #include <QVBoxLayout>
 #include <Log.h>
+#include <QScrollBar>
 
 using namespace Messaging;
 
@@ -106,6 +107,11 @@ void ChatWindow::handleMessage() {
 }
 
 void ChatWindow::print(QDateTime timestamp, QString str) {
-	html += QString("<span style='color:gray;'>[%1]</span> %2<br>").arg(timestamp.toLocalTime().time().toString(), str);
+	if(html != "")
+		html += "<br>";
+	html += QString("<span style='color:gray;'>[%1]</span> %2").arg(timestamp.toLocalTime().time().toString(), str);
 	log->setHtml(html);
+
+	QScrollBar* vertScroll = log->verticalScrollBar();
+	vertScroll->setValue(vertScroll->maximum());
 }
