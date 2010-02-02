@@ -36,6 +36,11 @@ QSize ChatMessageEdit::minimumSizeHint() const {
 	return sizeHint();
 }
 
+void ChatMessageEdit::clear() {
+	QTextEdit::clear();
+	updateGeometry();
+}
+
 void ChatMessageEdit::keyPressEvent(QKeyEvent *e) {
 	if(e->key() == Qt::Key_Return && !e->modifiers().testFlag(Qt::ShiftModifier)) {
 		emit dispatchRequested();

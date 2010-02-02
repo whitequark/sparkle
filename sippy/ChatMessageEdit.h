@@ -30,6 +30,9 @@ public:
 	virtual QSize sizeHint() const;
 	virtual QSize minimumSizeHint() const;
 
+public slots:
+	virtual void clear();
+
 signals:
 	void dispatchRequested();
 
