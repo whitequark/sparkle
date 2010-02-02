@@ -20,6 +20,7 @@
 #define MESSAGING_H
 
 #include <Qt>
+#include <QObject>
 #include <QString>
 #include <QDateTime>
 #include <SparkleAddress.h>
