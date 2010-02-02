@@ -80,7 +80,12 @@ void ChatWindow::sendMessage() {
 		return;
 
 	Message *message = new Message(editor->toPlainText(), QDateTime::currentDateTime(), peer);
-	print(message->timestamp(), QString("<b>%1</b>: %2").arg(filterHTML(appLayer.nick()), filterHTML(message->text())).replace("\n", "<br>"));
+
+	QString nick = appLayer.nick();
+	if(nick == "")
+		nick = tr("me");
+
+	print(message->timestamp(), QString("<b>%1</b>: %2").arg(filterHTML(nick), filterHTML(message->text())).replace("\n", "<br>"));
 
 	appLayer.sendControlPacket(message);
 
