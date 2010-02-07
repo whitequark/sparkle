@@ -1,2 +1,2 @@
 TEMPLATE = subdirs
-SUBDIRS = libsparkle sippy sparkgap
+SUBDIRS = libsparkle qtspeex sippy sparkgap

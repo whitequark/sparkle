@@ -1,0 +1,3 @@
+[submodule "qtspeex"]
+	path = qtspeex
+	url = git://git.whitequark.ru/qtspeex.git
