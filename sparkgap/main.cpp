@@ -49,6 +49,11 @@ QHostAddress checkoutAddress(QString strAddr) {
 			Log::warn("cannot lookup address for host %1") << strAddr;
 		} else {
 			QList<QHostAddress> list = hostInfo.addresses();
+
+			for(int i = 0; i < list.count(); i++)
+				if(list[i].protocol() != QAbstractSocket::IPv4Protocol)
+					list.removeAt(i); // IPv4 externals only now, sorry folks
+
 			if(list.size() > 1)
 				Log::warn("there are more than one IP address for host %1, using first (%2)")
 						<< strAddr << list[0].toString();
