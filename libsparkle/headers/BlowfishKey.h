@@ -20,7 +20,6 @@
 #define __BLOWFISH__H__
 
 #include <QObject>
-#include <stdint.h>
 
 class BlowfishKey: public QObject
 {
@@ -42,9 +41,9 @@ private:
 	QByteArray rawKey;
 
 	size_t keylen, blocksize, contextsize;
-	int (*cb_setkey)(void *c, const uint8_t *key, unsigned keylen);
-	void (*cb_encrypt)(void *c, uint8_t *outbuf, const uint8_t *inbuf);
-	void (*cb_decrypt)(void *c, uint8_t *outbuf, const uint8_t *inbuf);
+	int (*cb_setkey)(void *c, const quint8 *key, unsigned keylen);
+	void (*cb_encrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
+	void (*cb_decrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
 };
 
 #endif

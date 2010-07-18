@@ -51,11 +51,12 @@ private:
 	static QHostAddress makeIPv4Address(SparkleAddress mac);
 
 private:
+#pragma pack(push,1)
 	struct ethernet_header_t {
 		quint8		dest[6];
 		quint8		src[6];
 		quint16		type;
-	} __attribute__((packed));
+	};
 
 	struct arp_packet_t {
 		quint16		htype;
@@ -67,7 +68,7 @@ private:
 		quint32		spa;
 		quint8		tha[6];
 		quint32		tpa;
-	} __attribute__((packed));
+	};
 
 	struct ipv4_header_t {
 		quint8		version;
@@ -80,8 +81,8 @@ private:
 		quint16		checksum;
 		quint32		src;
 		quint32		dest;
-	} __attribute__((packed));
-
+	};
+#pragma pack(pop)
 private:
 	Router &router;
 	LinkLayer &linkLayer;

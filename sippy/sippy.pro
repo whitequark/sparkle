@@ -40,10 +40,15 @@ SOURCES += main.cpp \
     ChatWindow.cpp \
     ChatMessageEdit.cpp \
     Messaging.cpp
-QMAKE_LIBS += -lsparkle
+LIBS += -lsparkle
 win32:{
-    release:QMAKE_LFLAGS += -L../libsparkle/release
-    debug:QMAKE_LFLAGS += -L../libsparkle/debug
+	contains(QMAKESPEC,msvc) {
+		release:QMAKE_LFLAGS += -L../libsparkle/release
+		debug:QMAKE_LFLAGS += -L../libsparkle/debug
+	} else {
+		release:QMAKE_LFLAGS += /LIBPATH:../libsparkle/release
+		debug:QMAKE_LFLAGS += /LIBPATH:../libsparkle/debug
+	}
 } else:QMAKE_LFLAGS += -L../libsparkle
 FORMS += Roster.ui \
     ConnectDialog.ui \

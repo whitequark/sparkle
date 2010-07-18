@@ -32,7 +32,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
+#ifndef WIN32
+
 #include <stdint.h>
+
+#else
+
+#include <windows.h>
+
+typedef DWORD uint32_t;
+typedef BYTE uint8_t;
+
+#endif
+
 
 #define CIPHER_ALGO_BLOWFISH	 4  /* blowfish 128 bit key */
 

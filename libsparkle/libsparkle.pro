@@ -13,8 +13,8 @@ INCLUDEPATH += . \
 CONFIG += staticlib
 QT -= gui
 QT += network
-QMAKE_CFLAGS += -Wconversion
-
+contains(QMAKESPEC,g++):QMAKE_CFLAGS += -Wconversion
+contains(QMAKESPEC,msvc):DEFINES += CRT_SECURE_NO_WARNINGS
 # Input
 HEADERS += headers/BlowfishKey.h \
 	headers/LinkLayer.h \

@@ -23,6 +23,8 @@
 
 #include "timing.h"
 
+#define POLARSSL_HAVE_ASM
+
 #if defined(WIN32)
 
 #include <windows.h>

@@ -4,9 +4,6 @@ DEPENDPATH += . ../libsparkle/headers
 INCLUDEPATH += . ../libsparkle/headers
 unix:PRE_TARGETDEPS += ../libsparkle/libsparkle.a
 
-CONFIG -= debug
-CONFIG += release
-
 QT -= gui
 QT += network
 
@@ -14,13 +11,16 @@ HEADERS += ArgumentParser.h EthernetApplicationLayer.h TapInterface.h
 
 SOURCES += main.cpp ArgumentParser.cpp EthernetApplicationLayer.cpp
 
-QMAKE_LIBS += -lsparkle
-
-win32 {
-	QMAKE_LFLAGS += -L../libsparkle/release
-} else {
-	QMAKE_LFLAGS += -L../libsparkle
-}
+LIBS += -lsparkle
+win32:{
+	contains(QMAKESPEC,msvc) {
+		release:QMAKE_LFLAGS += -L../libsparkle/release
+		debug:QMAKE_LFLAGS += -L../libsparkle/debug
+	} else {
+		release:QMAKE_LFLAGS += /LIBPATH:../libsparkle/release
+		debug:QMAKE_LFLAGS += /LIBPATH:../libsparkle/debug
+	}
+} else:QMAKE_LFLAGS += -L../libsparkle
 
 unix {
 	SOURCES += LinuxTAP.cpp SignalHandler.cpp
@@ -28,8 +28,6 @@ unix {
 }
 
 win32 {
-	QMAKE_LIBS += -lws2_32
-
 	CONFIG -= windows
 	CONFIG += console
 }

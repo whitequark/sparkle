@@ -137,7 +137,7 @@ QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
 	int rsize = key.len;
 
 	int flen = rsize - 11;
-	unsigned char chunk[rsize];
+	unsigned char *chunk = new unsigned char[rsize];
 
 	for(; plaintext.size() > 0; ) {
 		int dlen = qMin<int>(flen, plaintext.length());
@@ -149,6 +149,8 @@ QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
 		plaintext = plaintext.right(plaintext.size() - dlen);
 	}
 
+	delete chunk;
+
 	return output;
 }
 
@@ -157,7 +159,7 @@ QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
 
 	int rsize = key.len;
 
-	unsigned char chunk[rsize];
+	unsigned char *chunk = new unsigned char[rsize];
 
 	for(; cryptotext.size() > 0; ) {
 		int dlen = qMin<int>(rsize, cryptotext.size());
@@ -170,6 +172,8 @@ QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
 
 		cryptotext = cryptotext.right(cryptotext.size() - rsize);
 	}
+	
+	delete chunk;
 
 	return output;
 }

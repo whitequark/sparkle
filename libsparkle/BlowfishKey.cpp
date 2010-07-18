@@ -24,9 +24,9 @@
 
 extern "C" const char *
 blowfish_get_info(int algo, size_t *keylen, size_t *blocksize, size_t *contextsize,
-		  int (**r_setkey)(void *c, const uint8_t *key, unsigned keylen),
-		  void (**r_encrypt)(void *c, uint8_t *outbuf, const uint8_t *inbuf),
-		  void (**r_decrypt)( void *c, uint8_t *outbuf, const uint8_t *inbuf));
+		  int (**r_setkey)(void *c, const quint8 *key, unsigned keylen),
+		  void (**r_encrypt)(void *c, quint8 *outbuf, const quint8 *inbuf),
+		  void (**r_decrypt)( void *c, quint8 *outbuf, const quint8 *inbuf));
 
 BlowfishKey::BlowfishKey(QObject *parent) : QObject(parent)
 {
@@ -60,7 +60,7 @@ void BlowfishKey::setBytes(QByteArray raw) {
 }
 
 QByteArray BlowfishKey::encrypt(QByteArray data) const {
-	unsigned char chunk[blocksize];
+	unsigned char *chunk = new unsigned char[blocksize];
 
 	QByteArray output;
 
@@ -73,12 +73,14 @@ QByteArray BlowfishKey::encrypt(QByteArray data) const {
 		output += QByteArray((char *) chunk, blocksize);
 	}
 
+	delete chunk;
+
 	return output;
 }
 
 QByteArray BlowfishKey::decrypt(QByteArray data) const {
-	unsigned char chunk[blocksize];
-
+	unsigned char *chunk = new unsigned char[blocksize];
+	
 	QByteArray output;
 
 	for(; data.size() > 0; data = data.right(data.size() - blocksize)) {
@@ -86,6 +88,8 @@ QByteArray BlowfishKey::decrypt(QByteArray data) const {
 
 		output += QByteArray((char *) chunk, blocksize);
 	}
+	
+	delete chunk;
 
 	return output;
 }

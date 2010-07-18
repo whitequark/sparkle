@@ -253,20 +253,23 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&linkLayer, SIGNAL(joinFailed()), &linkLayer, SLOT(exitNetwork()));
 
 	EthernetApplicationLayer* appLayer;
-
-	if(!noTap) {
 #ifdef Q_OS_LINUX
+	if(!noTap) {
+
 		LinuxTAP *tap = new LinuxTAP(linkLayer);
 
 		if(tap->createInterface("sparkle%d") == false)
 			Log::fatal("cannot initialize TAP");
 
 		tap = tap;
-#endif
+
 		appLayer = new EthernetApplicationLayer(linkLayer, tap);
 	} else {
 		appLayer = new EthernetApplicationLayer(linkLayer, NULL); //dummy
 	}
+#else
+		appLayer = new EthernetApplicationLayer(linkLayer, NULL);
+#endif	
 
 	if(createNetwork) {
 		if(!linkLayer.createNetwork(localAddress, networkDivisor))

@@ -17,17 +17,12 @@
  */
 
 #include <QtDebug>
+#include <QtEndian>
 
 #include <LinkLayer.h>
 #include <Router.h>
 #include <Log.h>
 #include <SparkleAddress.h>
-
-#ifndef Q_OS_WIN
-#include <arpa/inet.h>
-#else
-#include <wininet.h>
-#endif
 
 #include "EthernetApplicationLayer.h"
 #include "TapInterface.h"
@@ -45,7 +40,7 @@ EthernetApplicationLayer::~EthernetApplicationLayer() {
 }
 
 QHostAddress EthernetApplicationLayer::makeIPv4Address(SparkleAddress mac) {
-	return QHostAddress(htonl(*((const quint32*) (QByteArray("\x0E") + mac.bytes().left(3)).constData())));
+	return QHostAddress(qToBigEndian<quint32>(*((const quint32*) (QByteArray("\x0E") + mac.bytes().left(3)).constData())));
 }
 
 void EthernetApplicationLayer::initialize(SparkleNode *self) {
@@ -73,21 +68,21 @@ void EthernetApplicationLayer::handleDataPacket(QByteArray &packet, SparkleAddre
 		return;
 	}
 
-	if(ntohs(eth->type) != 0x0800) { // IP
+	if(qFromBigEndian<quint16>(eth->type) != 0x0800) { // IP
 		Log::warn("ethernet: remote %1 non-IP (%2) packet") << mac.pretty()
-			<< QString::number(ntohs(eth->type), 16).rightJustified(4, '0');
+			<< QString::number(qFromBigEndian<quint16>(eth->type), 16).rightJustified(4, '0');
 		return;
 	}
 
 	QByteArray payload = packet.right(packet.size() - sizeof(ethernet_header_t));
 	const ipv4_header_t* ip = (const ipv4_header_t*) payload.constData();
 
-	if(ntohl(ip->src) != makeIPv4Address(mac).toIPv4Address()) {
+	if(qFromBigEndian<quint32>(ip->src) != makeIPv4Address(mac).toIPv4Address()) {
 		Log::warn("eth: received IPv4 packet with malformed source address");
 		return;
 	}
 
-	if(ntohl(ip->dest) != selfIPv4.toIPv4Address()) {
+	if(qFromBigEndian<quint32>(ip->dest) != selfIPv4.toIPv4Address()) {
 		Log::warn("eth: received IPv4 packet with malformed destination address");
 		return;
 	}
@@ -104,7 +99,7 @@ void EthernetApplicationLayer::haveTapPacket(QByteArray packet) {
 	}
 
 	QByteArray payload = packet.right(packet.size() - sizeof(ethernet_header_t));
-	switch(ntohs(eth->type)) {
+	switch(qFromBigEndian<quint16>(eth->type)) {
 		case 0x0806: { // ARP
 			if(memcmp(eth->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) != 0) {
 				Log::warn("eth: non-broadcasted local ARP packet");
@@ -112,24 +107,24 @@ void EthernetApplicationLayer::haveTapPacket(QByteArray packet) {
 			}
 
 			const arp_packet_t* arp = (const arp_packet_t*) payload.constData();
-			if(!(ntohs(arp->htype) == 1 /* ethernet */ && ntohs(arp->ptype) == 0x0800 /* ipv4 */ &&
+			if(!(qFromBigEndian<quint16>(arp->htype) == 1 /* ethernet */ && qFromBigEndian<quint16>(arp->ptype) == 0x0800 /* ipv4 */ &&
 				arp->hlen == 6 && arp->plen == 4 &&
-					ntohl(arp->spa) == selfIPv4.toIPv4Address() &&
+					qFromBigEndian<quint32>(arp->spa) == selfIPv4.toIPv4Address() &&
 					!memcmp(arp->sha, eth->src, 6))) {
 				Log::warn("eth: invalid local arp packet received");
 				return;
 			}
 
-			if(ntohs(arp->oper) == 1 /* request */) {
+			if(qFromBigEndian<quint16>(arp->oper) == 1 /* request */) {
 				quint32 dest = arp->tpa;
 				SparkleAddress route = linkLayer.findPartialRoute(QByteArray((const char*) &dest, sizeof(dest)).right(3));
 				if(route.isNull()) {
-					Log::info("eth: no route to %1") << QHostAddress(ntohl(arp->tpa));
+					Log::info("eth: no route to %1") << QHostAddress(qFromBigEndian<quint32>(arp->tpa));
 				} else {
 					sendARPReply(route);
 				}
 			} else {
-				Log::info("eth: ARP packet with unexpected OPER=%1 received") << ntohs(arp->oper);
+				Log::info("eth: ARP packet with unexpected OPER=%1 received") << qFromBigEndian<quint16>(arp->oper);
 				return;
 			}
 
@@ -138,7 +133,7 @@ void EthernetApplicationLayer::haveTapPacket(QByteArray packet) {
 
 		case 0x0800: { // IPv4
 			const ipv4_header_t* ip = (const ipv4_header_t*) payload.constData();
-			if(ntohl(ip->src) != selfIPv4.toIPv4Address()) {
+			if(qFromBigEndian<quint32>(ip->src) != selfIPv4.toIPv4Address()) {
 				Log::warn("eth: received local IPv4 packet with malformed source address");
 				return;
 			}
@@ -147,11 +142,11 @@ void EthernetApplicationLayer::haveTapPacket(QByteArray packet) {
 			SparkleAddress route = linkLayer.findPartialRoute(QByteArray((const char*) &dest, sizeof(dest)).right(3));
 			if(!route.isNull()) {
 				linkLayer.sendDataPacket(route, Ethernet, packet);
-			} else if(htonl(ip->dest) == 0x0effffff) { // ignore broadcasta
+			} else if(qToBigEndian<quint32>(ip->dest) == 0x0effffff) { // ignore broadcasta
 				/* do nothing */
-			} else if(htonl(ip->dest) >> 24 != 0xE0) { // avoid link-local
+			} else if(qToBigEndian<quint32>(ip->dest) >> 24 != 0xE0) { // avoid link-local
 				Log::info("eth: received local IPv4 packet for unknown destination [%1]")
-						<< QHostAddress(ntohl(ip->dest));
+						<< QHostAddress(qFromBigEndian<quint32>(ip->dest));
 			}
 			break;
 		}
@@ -163,7 +158,7 @@ void EthernetApplicationLayer::haveTapPacket(QByteArray packet) {
 
 		default: {
 			Log::warn("eth: received local packet of unknown type %1")
-					<< QString::number(ntohs(eth->type), 16).rightJustified(4, '0');
+					<< QString::number(qFromBigEndian<quint16>(eth->type), 16).rightJustified(4, '0');
 		}
 	}
 }
@@ -175,18 +170,18 @@ void EthernetApplicationLayer::sendARPReply(SparkleAddress mac) {
 	ethernet_header_t* eth = (ethernet_header_t*) packet.data();
 	memcpy(eth->dest, self->sparkleMAC().rawBytes(), 6);
 	memcpy(eth->src, mac.rawBytes(), 6);
-	eth->type = htons(0x0806); // ARP
+	eth->type = qToBigEndian<quint16>(0x0806); // ARP
 
 	arp_packet_t* arp = (arp_packet_t*) (packet.data() + sizeof(ethernet_header_t));
-	arp->htype = htons(1); // ethernet
-	arp->ptype = htons(0x0800); // IPv4
+	arp->htype = qToBigEndian<quint16>(1); // ethernet
+	arp->ptype = qToBigEndian<quint16>(0x0800); // IPv4
 	arp->hlen = 6;
 	arp->plen = 4;
-	arp->oper = htons(2); // reply
+	arp->oper = qToBigEndian<quint16>(2); // reply
 	memcpy(arp->sha, eth->src, 6);
-	arp->spa = htonl(makeIPv4Address(mac).toIPv4Address());
+	arp->spa = qToBigEndian<quint32>(makeIPv4Address(mac).toIPv4Address());
 	memcpy(arp->tha, eth->dest, 6);
-	arp->tpa = htonl(selfIPv4.toIPv4Address());
+	arp->tpa = qToBigEndian<quint32>(selfIPv4.toIPv4Address());
 
 	emit sendTapPacket(packet);
 }
