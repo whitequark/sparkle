@@ -25,7 +25,8 @@
 #include <stdlib.h>
 
 #include "crypto/rsa.h"
-#include "random.h"
+
+#include "SparkleRandom.h"
 
 using namespace Sparkle;
 
@@ -41,7 +42,7 @@ public:
 	};
 
 	RSAKeyPairPrivate() {
-		rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);	
+		rsa_init(&key, RSA_PKCS_V15, 0, SparkleRandom::integer, NULL);	
 	}
 	
 	virtual ~RSAKeyPairPrivate() {		

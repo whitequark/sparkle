@@ -20,6 +20,7 @@ win32:{
 		release:QMAKE_LFLAGS += /LIBPATH:../libsparkle/release
 		debug:QMAKE_LFLAGS += /LIBPATH:../libsparkle/debug
 	}
+	LIBS += -ladvapi32
 } else:QMAKE_LFLAGS += -L../libsparkle
 
 unix {

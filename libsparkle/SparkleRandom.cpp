@@ -18,14 +18,15 @@
 
 #include <Sparkle/Log>
 
+#include "SparkleRandom.h"
+
 using namespace Sparkle;
 
-#include "random.h"
 
-int get_random(void *) {
+int SparkleRandom::integer(void *) {
 	int num;
 
-	random_bytes(&num, sizeof(int));
+	bytes(&num, sizeof(int));
 
 	return num;
 }
@@ -37,7 +38,7 @@ int get_random(void *) {
 #include <fcntl.h>
 #include <string.h>
 
-void random_bytes(void *buf, size_t length) {
+void SparkleRandom::bytes(void *buf, size_t length) {
 	int random = open("/dev/urandom", O_RDONLY);
 
 	if(random == -1)
@@ -52,11 +53,12 @@ void random_bytes(void *buf, size_t length) {
 
 #define SystemFunction036 NTAPI SystemFunction036
 
+#include <windows.h>
 #include <ntsecapi.h>
 
 #undef SystemFunction036
 
-void random_bytes(void *buf, size_t length) {
+void SparkleRandom::bytes(void *buf, size_t length) {
 	RtlGenRandom(buf, length);
 }
 

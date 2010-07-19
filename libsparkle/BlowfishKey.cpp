@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 
-#include "random.h"
+#include "SparkleRandom.h"
 
 using namespace Sparkle;
 
@@ -65,7 +65,7 @@ BlowfishKeyPrivate::BlowfishKeyPrivate() {
 
 void BlowfishKeyPrivate::generate() {
 	rawKey.resize(32);
-	random_bytes((unsigned char *) rawKey.data(), rawKey.size());
+	SparkleRandom::bytes((unsigned char *) rawKey.data(), rawKey.size());
 
 	cb_setkey(key, (unsigned char *) rawKey.data(), rawKey.size());
 }

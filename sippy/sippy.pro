@@ -7,6 +7,7 @@ INCLUDEPATH += . \
 QT += network
 debug:DEFINES += DEBUG
 unix:PRE_TARGETDEPS += ../libsparkle/libsparkle.a
+win32:LIBS += -ladvapi32
 
 # Input
 HEADERS += ConfigurationStorage.h \
