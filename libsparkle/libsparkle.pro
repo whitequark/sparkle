@@ -6,10 +6,10 @@ TARGET = sparkle
 DEPENDPATH += . \
 	crypto \
 	headers \
-	headers/crypto
+	crypto
 INCLUDEPATH += . \
 	headers \
-	headers/crypto
+	crypto
 CONFIG += staticlib
 QT -= gui
 QT += network
@@ -25,14 +25,14 @@ HEADERS += headers/BlowfishKey.h \
 	headers/RSAKeyPair.h \
 	headers/SparkleNode.h \
 	headers/UdpPacketTransport.h \
-	headers/crypto/bignum.h \
-	headers/crypto/bn_mul.h \
-	headers/crypto/havege.h \
-	headers/crypto/rsa.h \
-	headers/crypto/sha1.h \
-	headers/crypto/timing.h \
-	headers/ApplicationLayer.h \
-	headers/SparkleAddress.h
+	crypto/bignum.h \
+	crypto/bn_mul.h \
+	crypto/havege.h \
+	crypto/rsa.h \
+	crypto/sha1.h \
+	crypto/timing.h \
+	ApplicationLayer.h \
+	SparkleAddress.h
 SOURCES += BlowfishKey.cpp \
 	LinkLayer.cpp \
 	Log.cpp \

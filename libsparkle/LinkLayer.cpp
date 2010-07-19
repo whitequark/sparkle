@@ -265,7 +265,7 @@ SparkleAddress LinkLayer::findPartialRoute(QByteArray mac) {
 	return SparkleAddress();
 }
 
-void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) {
+void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port, bool isEncrypted) {
 	const packet_header_t *hdr = (packet_header_t *) data.constData();
 
 	if((size_t) data.size() < sizeof(packet_header_t) || qFromBigEndian<quint16>(hdr->length) != data.size()) {
@@ -278,138 +278,47 @@ void LinkLayer::handlePacket(QByteArray &data, QHostAddress host, quint16 port) 
 
 	packet_type_t type = (packet_type_t) qFromBigEndian<quint16>(hdr->type);
 
-	switch(type) {
-		case ProtocolVersionRequest:
-			handleProtocolVersionRequest(payload, node);
-			return;
+	if(type == EncryptedPacket) {
+		if(!isEncrypted) {
+			if(node->areKeysNegotiated()) {
+				QByteArray decData = node->hisSessionKey()->decrypt(payload);
 
-		case ProtocolVersionReply:
-			handleProtocolVersionReply(payload, node);
-			return;
+				const packet_header_t *decHdr = (packet_header_t *) decData.constData();
+				quint16 decLength = qFromBigEndian<quint16>(decHdr->length);
 
-		case PublicKeyExchange:
-			handlePublicKeyExchange(payload, node);
-			return;
+				if((size_t) decData.size() < sizeof(packet_header_t) ||
+						decLength < sizeof(packet_header_t) ||
+						decLength > decData.size()) {
+					Log::warn("link: malformed encrypted payload from [%1]:%2") << host << port;
 
-		case SessionKeyExchange:
-			handleSessionKeyExchange(payload, node);
-			return;
+					return;
+				}
 
-		case Ping:
-			handlePing(payload, node);
-			return;
+				// Blowfish requires 64-bit chunks, here we truncate alignment zeroes at end
+				if(decData.size() > decLength && decData.size() < decLength + 8)
+					decData.resize(decLength);
 
-		case KeepalivePacket:
-			//do nothing, it's for NAT on other side
-			return;
-
-		case EncryptedPacket:
-			break; // will be handled later
-
-		default: {
-			Log::warn("link: packet of unknown type %1 from [%2]:%3") <<
-					type << host << port;
-			return;
+				handlePacket(decData, host, port, true);
+			} else {
+				Log::warn("link: no keys for encrypted packet from [%1]:%2") <<
+					host << port;
+			}
+		} else {
+			Log::warn("link: encrypted 'EncryptedPacket' packet from [%1]:%2") << host << port;
 		}
-	}
 
-	// at this point we have encrypted packet in payload.
-	if(!node->areKeysNegotiated()) {
-		Log::warn("link: no keys for encrypted packet from [%1]:%2") <<
-				host << port;
 		return;
-	}
+	} else {
+		for(int i = 0; packetHandlers[i].handler != NULL; i++) {
+			if(packetHandlers[i].type == type && packetHandlers[i].encrypted == isEncrypted) {
+				(this->*packetHandlers[i].handler)(payload, node);
 
-	// don't call handlePacket again to prevent receiving of unencrypted packet
-	//   of types that imply encryption
-
-	QByteArray decData = node->hisSessionKey()->decrypt(payload);
-	const packet_header_t *decHdr = (packet_header_t *) decData.constData();
-	quint16 decLength = qFromBigEndian<quint16>(decHdr->length);
-
-	if((size_t) decData.size() < sizeof(packet_header_t) ||
-			decLength < sizeof(packet_header_t) ||
-			decLength > decData.size()) {
-		Log::warn("link: malformed encrypted payload from [%1]:%2") << host << port;
-		return;
-	}
-
-	// Blowfish requires 64-bit chunks, here we truncate alignment zeroes at end
-	if(decData.size() > decLength && decData.size() < decLength + 8)
-		decData.resize(decLength);
-
-	QByteArray decPayload = decData.right(decData.size() - sizeof(packet_header_t));
-	packet_type_t decType = (packet_type_t) qFromBigEndian<quint16>(decHdr->type);
-
-	switch(decType) {
-		case LocalRewritePacket:
-			handleLocalRewritePacket(decPayload, node);
-			return;
-
-		case MasterNodeRequest:
-			handleMasterNodeRequest(decPayload, node);
-			return;
-
-		case MasterNodeReply:
-			handleMasterNodeReply(decPayload, node);
-			return;
-
-		case PingRequest:
-			handlePingRequest(decPayload, node);
-			return;
-
-		case PingInitiate:
-			handlePingInitiate(decPayload, node);
-			return;
-
-		case RegisterRequest:
-			handleRegisterRequest(decPayload, node);
-			return;
-
-		case RegisterReply:
-			handleRegisterReply(decPayload, node);
-			return;
-
-		case Route:
-			handleRoute(decPayload, node);
-			return;
-
-		case RouteRequest:
-			handleRouteRequest(decPayload, node);
-			return;
-
-		case RouteMissing:
-			handleRouteMissing(decPayload, node);
-			return;
-
-		case RouteInvalidate:
-			handleRouteInvalidate(decPayload, node);
-			return;
-
-		case RoleUpdate:
-			handleRoleUpdate(decPayload, node);
-			return;
-
-		case KeepalivePacket:
-			handleKeepalive(decPayload, node);
-			return;
-
-		case BacklinkRedirect:
-			handleBacklinkRedirect(decPayload, node);
-			return;
-
-		case ExitNotification:
-			handleExitNotification(decPayload, node);
-			return;
-
-		case DataPacket:
-			handleDataPacket(decPayload, node);
-			return;
-
-		default: {
-			Log::warn("link: encrypted packet of unknown type %1 from [%2]:%3") <<
-					decType << host << port;
+				return;
+			}
 		}
+
+		Log::warn("link: %4 packet of unknown type %1 from [%2]:%3") <<
+					type << host << port << (isEncrypted ? "plaintext" : "encrypted");
 	}
 }
 
@@ -1344,4 +1253,43 @@ void LinkLayer::cleanup() {
 	natKeepaliveTimer->stop();
 }
 
+const LinkLayer::packet_handler_t LinkLayer::packetHandlers[] = {
+	{ ProtocolVersionRequest, false, &LinkLayer::handleProtocolVersionRequest },
+	{ ProtocolVersionReply,   false, &LinkLayer::handleProtocolVersionReply },
+
+	{ PublicKeyExchange,      false, &LinkLayer::handlePublicKeyExchange },
+	{ SessionKeyExchange,     false, &LinkLayer::handleSessionKeyExchange },
+
+	{ Ping,                   false, &LinkLayer::handlePing },
+
+	{ KeepalivePacket,        false, &LinkLayer::handleKeepalive },
+
+	{ LocalRewritePacket,     true,  &LinkLayer::handleLocalRewritePacket },
+
+	{ MasterNodeRequest,      true,  &LinkLayer::handleMasterNodeRequest },
+	{ MasterNodeReply,        true,  &LinkLayer::handleMasterNodeReply },
+
+	{ PingRequest,            true,  &LinkLayer::handlePingRequest },
+	{ PingInitiate,           true,  &LinkLayer::handlePingInitiate },
+
+	{ RegisterRequest,        true,  &LinkLayer::handleRegisterRequest },
+	{ RegisterReply,          true,  &LinkLayer::handleRegisterReply },
+
+	{ Route,                  true,  &LinkLayer::handleRoute },
+	{ RouteRequest,           true,  &LinkLayer::handleRouteRequest },
+	{ RouteMissing,           true,  &LinkLayer::handleRouteMissing },
+	{ RouteInvalidate,        true,  &LinkLayer::handleRouteInvalidate },
+
+	{ RoleUpdate,             true,  &LinkLayer::handleRoleUpdate },
+	
+	{ KeepalivePacket,        true,  &LinkLayer::handleKeepalive },
+
+	{ BacklinkRedirect,       true,  &LinkLayer::handleBacklinkRedirect },
+
+	{ ExitNotification,       true,  &LinkLayer::handleExitNotification },
+
+	{ DataPacket,             true,  &LinkLayer::handleDataPacket },
+
+	{ (packet_type_t) 0, false, NULL }
+};
 

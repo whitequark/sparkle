@@ -67,7 +67,7 @@ signals:
 	void routeMissing(SparkleAddress addr);
 
 private slots:
-	void handlePacket(QByteArray &data, QHostAddress host, quint16 port);
+	void handlePacket(QByteArray &data, QHostAddress host, quint16 port, bool isEncrypted = false);
 	void pingTimeout();
 	void negotiationTimeout(SparkleNode* node);
 	void joinTimeout();
@@ -204,6 +204,12 @@ private:
 		quint16		encapsulation;
 	};
 
+	typedef struct {
+		packet_type_t type;
+		bool encrypted;
+		void (LinkLayer::*handler)(QByteArray &payload, SparkleNode* node);
+	} packet_handler_t;
+
 	enum join_step_t {
 		JoinVersionRequest,
 		JoinMasterNodeRequest,
@@ -322,6 +328,8 @@ private:
 	unsigned joinPingsEmitted, joinPingsArrived;
 	ping_t joinPing;
 	bool forceBehindNAT, preparingForShutdown;
+
+	static const packet_handler_t packetHandlers[];
 };
 
 #endif
