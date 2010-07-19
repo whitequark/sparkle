@@ -263,7 +263,11 @@ QDataStream & operator >> (QDataStream& stream, mpi &data) {
 
 	stream >> raw;
 	
-	mpi_read_binary(&data, (unsigned char *) raw.data(), raw.size());
+	if(raw.size() == 0) {
+		mpi_free(&data);
+		mpi_init(&data);
+	} else
+		mpi_read_binary(&data, (unsigned char *) raw.data(), raw.size());
 
 	return stream;
 }
