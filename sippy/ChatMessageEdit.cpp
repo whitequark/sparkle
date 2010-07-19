@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ChatMessageEdit.h"
 #include <QKeyEvent>
 #include <QSize>
 #include <QAbstractTextDocumentLayout>
-#include "Log.h"
+
+#include "ChatMessageEdit.h"
 
 ChatMessageEdit::ChatMessageEdit(QWidget *parent) :
 	QTextEdit(parent)

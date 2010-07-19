@@ -17,6 +17,12 @@
  */
 
 #include <QLabel>
+#include <QTextBrowser>
+#include <QVBoxLayout>
+#include <QScrollBar>
+
+#include <Sparkle/Log>
+
 #include "ChatWindow.h"
 #include "MessagingApplicationLayer.h"
 #include "Contact.h"
@@ -24,11 +30,8 @@
 #include "ContactWidget.h"
 #include "ChatMessageEdit.h"
 #include "Messaging.h"
-#include <QTextBrowser>
-#include <QVBoxLayout>
-#include <Log.h>
-#include <QScrollBar>
 
+using namespace Sparkle;
 using namespace Messaging;
 
 ChatWindow::ChatWindow(MessagingApplicationLayer& _appLayer, SparkleAddress _peer) : appLayer(_appLayer), peer(_peer) {

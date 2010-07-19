@@ -16,40 +16,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __UDP_PACKET_TRANSPORT__H__
-#define __UDP_PACKET_TRANSPORT__H__
+#ifndef __APPLICATION_LAYER_H__
+#define __APPLICATION_LAYER_H__
 
-#include "PacketTransport.h"
+class QByteArray;
 
-class UdpPacketTransportPrivate;
+namespace Sparkle {
 
-class UdpPacketTransport : public PacketTransport
-{
-	Q_OBJECT
-	Q_DECLARE_PRIVATE(UdpPacketTransport)
-	
-protected:
-	UdpPacketTransport(UdpPacketTransportPrivate &dd, QObject *parent);
-	
+class SparkleAddress;
+
+class ApplicationLayer {
 public:
-	UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent = 0);
-	virtual ~UdpPacketTransport();
+	enum Encapsulation {
+		Ethernet	= 1,
+		Messaging	= 2,
+	};
 
-	virtual bool beginReceiving();
-	virtual quint16 port();
+	virtual ~ApplicationLayer() { }
 
-public slots:
-	virtual void endReceiving();
-	virtual void sendPacket(QByteArray &packet, QHostAddress host, quint16 port);
+	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address) = 0;
+};
 
-private slots:
-	void haveDatagram();
-
-signals:
-	void receivedPacket(QByteArray &packet, QHostAddress host, quint16 port);
-
-protected:
-	UdpPacketTransportPrivate * const d_ptr;
 };
 
 #endif

@@ -25,10 +25,13 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include <Sparkle/LinkLayer>
+#include <Sparkle/SparkleAddress>
+#include <Sparkle/Log>
+
 #include "LinuxTAP.h"
-#include "LinkLayer.h"
-#include "SparkleAddress.h"
-#include "Log.h"
+
+using namespace Sparkle;
 
 #define MTU 1518
 

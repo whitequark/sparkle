@@ -21,13 +21,16 @@
 #include <QHostInfo>
 #include <QTimer>
 #include <QtEndian>
-#include "LinkLayer.h"
-#include "SparkleNode.h"
-#include "PacketTransport.h"
-#include "Router.h"
-#include "Log.h"
-#include "ApplicationLayer.h"
-#include "BlowfishKey.h"
+
+#include <Sparkle/LinkLayer>
+#include <Sparkle/SparkleNode>
+#include <Sparkle/PacketTransport>
+#include <Sparkle/Router>
+#include <Sparkle/Log>
+#include <Sparkle/ApplicationLayer>
+#include <Sparkle/BlowfishKey>
+
+using namespace Sparkle;
 
 LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
 		: QObject(NULL), hostKeyPair(_hostKeyPair), _router(router), transport(_transport), joined(false), preparingForShutdown(false)

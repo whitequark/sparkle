@@ -18,8 +18,10 @@
 
 #include "Contact.h"
 
+using namespace Sparkle;
+
 Contact::Contact(QString textAddress) {
-	_address = QByteArray::fromHex(textAddress.replace(':', "").toLocal8Bit());
+	_address = SparkleAddress(QByteArray::fromHex(textAddress.replace(':', "").toLocal8Bit()));
 }
 
 Contact::Contact(SparkleAddress address) : _address(address) {

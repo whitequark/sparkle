@@ -1,6 +1,28 @@
+/*
+ * Sparkle - zero-configuration fully distributed self-organizing encrypting VPN
+ * Copyright (C) 2009 Sergey Gridassov, Peter Zotov
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <Sparkle/Log>
+#include <Sparkle/SparkleAddress>
+#include <QHash>
+
 #include <string.h>
-#include "Log.h"
-#include "SparkleAddress.h"
+
+using namespace Sparkle;
 
 SparkleAddress::SparkleAddress() {
 	memset(_bytes, 0, SPARKLE_ADDRESS_SIZE);
@@ -48,6 +70,10 @@ QString SparkleAddress::pretty() const {
 	return QString(bytes().toHex()).toUpper().replace(QRegExp("(..)"), "\\1:").left(SPARKLE_ADDRESS_SIZE * 3 - 1);
 }
 
+namespace Sparkle {
+
 uint qHash(const SparkleAddress &key) {
 	return qHash((const QByteArray &) key.bytes());
+}
+
 }

@@ -22,10 +22,12 @@
 #include <QHostAddress>
 #include <QObject>
 
+namespace Sparkle {
+
 class PacketTransport : public QObject {
 	Q_OBJECT
 public:
-	PacketTransport(QObject *parent = 0) : QObject(parent) { }
+	explicit PacketTransport(QObject *parent = 0) : QObject(parent) { }
 
 	virtual ~PacketTransport() { }
 
@@ -40,5 +42,6 @@ signals:
 	void receivedPacket(QByteArray &packet, QHostAddress host, quint16 port);
 };
 
+}
 
 #endif

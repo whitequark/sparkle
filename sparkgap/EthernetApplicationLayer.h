@@ -21,34 +21,36 @@
 
 #include <QObject>
 #include <QHostAddress>
-#include <SparkleAddress.h>
-#include <ApplicationLayer.h>
+#include <Sparkle/SparkleAddress>
+#include <Sparkle/ApplicationLayer>
 
-class Router;
-class LinkLayer;
+namespace Sparkle {
+	class Router;
+	class LinkLayer;
+	class SparkleNode;
+}
+
 class TapInterface;
-class SparkleNode;
-
-class EthernetApplicationLayer: public QObject, public ApplicationLayer {
+class EthernetApplicationLayer: public QObject, public Sparkle::ApplicationLayer {
 	Q_OBJECT
 
 public:
-	EthernetApplicationLayer(LinkLayer &linkLayer, TapInterface* tap);
+	EthernetApplicationLayer(Sparkle::LinkLayer &linkLayer, TapInterface* tap);
 	virtual ~EthernetApplicationLayer();
 
-	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address);
+	virtual void handleDataPacket(QByteArray &packet, Sparkle::SparkleAddress address);
 
 private slots:
 	void haveTapPacket(QByteArray packet);
-	void initialize(SparkleNode* self);
+	void initialize(Sparkle::SparkleNode* self);
 
 signals:
 	void sendTapPacket(QByteArray packet);
 
 private:
-	void sendARPReply(SparkleAddress address);
+	void sendARPReply(Sparkle::SparkleAddress address);
 
-	static QHostAddress makeIPv4Address(SparkleAddress mac);
+	static QHostAddress makeIPv4Address(Sparkle::SparkleAddress mac);
 
 private:
 #pragma pack(push,1)
@@ -84,11 +86,11 @@ private:
 	};
 #pragma pack(pop)
 private:
-	Router &router;
-	LinkLayer &linkLayer;
+	Sparkle::Router &router;
+	Sparkle::LinkLayer &linkLayer;
 	TapInterface* tap;
 
-	SparkleAddress selfMAC;
+	Sparkle::SparkleAddress selfMAC;
 	QHostAddress selfIPv4;
 };
 

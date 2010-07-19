@@ -19,7 +19,8 @@
 #ifndef CHATWINDOW_H
 #define CHATWINDOW_H
 
-#include <SparkleAddress.h>
+#include <Sparkle/SparkleAddress>
+
 #include <QWidget>
 #include "MessagingApplicationLayer.h"
 
@@ -30,7 +31,7 @@ class ChatWindow : public QWidget {
 	Q_OBJECT
 
 public:
-	ChatWindow(MessagingApplicationLayer& app, SparkleAddress peer);
+	ChatWindow(MessagingApplicationLayer& app, Sparkle::SparkleAddress peer);
 
 public slots:
 	virtual void show();
@@ -43,7 +44,7 @@ private:
 	void print(QDateTime timestamp, QString str);
 
 	MessagingApplicationLayer &appLayer;
-	SparkleAddress peer;
+	Sparkle::SparkleAddress peer;
 	Contact* contact;
 
 	QTextBrowser* log;

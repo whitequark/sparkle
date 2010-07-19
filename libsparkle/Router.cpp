@@ -18,15 +18,21 @@
 
 #include <QtGlobal>
 
-#include "Router.h"
-#include "SparkleNode.h"
-#include "Log.h"
+#include <Sparkle/Router>
+#include <Sparkle/SparkleNode>
+#include <Sparkle/Log>
+
+using namespace Sparkle;
+
+namespace Sparkle {
 
 class RouterPrivate {
 public:
 	SparkleNode *self;
 	QList<SparkleNode *> nodes;
 };
+
+}
 
 Router::Router(QObject *parent) : QObject(parent), d_ptr(new RouterPrivate) {
 

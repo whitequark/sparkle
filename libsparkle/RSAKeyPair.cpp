@@ -16,18 +16,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "RSAKeyPair.h"
+#include <Sparkle/RSAKeyPair>
+#include <Sparkle/Log>
 
-#include <QtDebug>
 #include <QFile>
-#include "crypto/rsa.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "crypto/rsa.h"
 #include "random.h"
-#include "Log.h"
+
+using namespace Sparkle;
 
 QDataStream & operator<< (QDataStream& stream, const mpi &data);
 QDataStream & operator>> (QDataStream& stream, mpi &data);
+
+namespace Sparkle {
 
 class RSAKeyPairPrivate {
 public:
@@ -45,6 +50,8 @@ public:
 
 	rsa_context key;
 };
+
+}
 
 RSAKeyPair::RSAKeyPair() : d_ptr(new RSAKeyPairPrivate) {
 
@@ -86,7 +93,6 @@ bool RSAKeyPair::writeToFile(QString filename) const {
 	stream << d->key.RP;
 	stream << d->key.RQ;
 
-	qDebug() << "writing";
 	QFile keyFile(filename);
 	if(!keyFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
 		return false;

@@ -24,7 +24,10 @@
 
 class Contact;
 class ConfigurationStorage;
-class SparkleAddress;
+
+namespace Sparkle {
+	class SparkleAddress;
+}
 
 class ContactList : public QObject
 {
@@ -36,8 +39,8 @@ public:
 	bool addContact(Contact*);
 	bool removeContact(Contact*);
 
-	Contact* findByAddress(SparkleAddress address);
-	bool hasAddress(SparkleAddress address);
+	Contact* findByAddress(Sparkle::SparkleAddress address);
+	bool hasAddress(Sparkle::SparkleAddress address);
 
 public slots:
 	void load();

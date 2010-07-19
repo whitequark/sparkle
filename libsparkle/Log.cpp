@@ -17,11 +17,13 @@
  */
 
 #include <QCoreApplication>
-#include <cstdio>
-#include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "Log.h"
-#include "SparkleNode.h"
+#include <Sparkle/Log>
+#include <Sparkle/SparkleNode>
+
+using namespace Sparkle;
 
 QString Log::prepare() {
 	QString imm = stream->format;
@@ -47,14 +49,14 @@ void Log::emitMessage(loglevel_t loglevel, QString message) {
 	final += "\n";
 
 	if(loglevel >= Warning) {
-		std::fprintf(stderr, "%s", qPrintable(final));
+		fprintf(stderr, "%s", qPrintable(final));
 	} else {
-		std::fprintf(stdout, "%s", qPrintable(final));
-		std::fflush(stdout);
+		fprintf(stdout, "%s", qPrintable(final));
+		fflush(stdout);
 	}
 
 	if(loglevel == Fatal) {
-		std::fprintf(stderr, "Fatal error encountered, exiting.\n");
+		fprintf(stderr, "Fatal error encountered, exiting.\n");
 		exit(1);
 	}
 }

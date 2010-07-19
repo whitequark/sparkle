@@ -19,13 +19,17 @@
 #include <QMessageBox>
 #include <QInputDialog>
 #include <QApplication>
+
+#include <Sparkle/Log>
+#include <Sparkle/LinkLayer>
+#include <Sparkle/Router>
+
 #include "Roster.h"
 #include "ui_Roster.h"
 #include "ContactWidget.h"
 #include "ConfigurationStorage.h"
-#include "Log.h"
-#include "LinkLayer.h"
-#include "Router.h"
+
+using namespace Sparkle;
 
 Roster::Roster(ContactList &_contactList, LinkLayer &_link, MessagingApplicationLayer &_app) :
 		config(ConfigurationStorage::instance()), linkLayer(_link),  router(_link.router()), appLayer(_app), contactList(_contactList), connectDialog(this), addContactDialog(contactList, this), preferencesDialog(appLayer, this)

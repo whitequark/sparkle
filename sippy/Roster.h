@@ -22,18 +22,22 @@
 #include <QMainWindow>
 #include <QHostInfo>
 #include <QHash>
+#include <Sparkle/SparkleNode>
+
 #include "ui_Roster.h"
 #include "ConnectDialog.h"
 #include "AddContactDialog.h"
 #include "EditContactDialog.h"
 #include "PreferencesDialog.h"
-#include "SparkleNode.h"
 #include "Contact.h"
 #include "ContactList.h"
 #include "ChatWindow.h"
 
-class LinkLayer;
-class Router;
+namespace Sparkle {
+	class LinkLayer;
+	class Router;
+}
+
 class MessagingApplicationLayer;
 class ConfigurationStorage;
 class ContactWidget;
@@ -42,7 +46,7 @@ class Roster : public QMainWindow, private Ui_Roster {
 	Q_OBJECT
 
 public:
-	Roster(ContactList& contactList, LinkLayer &linkLayer, MessagingApplicationLayer &appLayer);
+	Roster(ContactList& contactList, Sparkle::LinkLayer &linkLayer, MessagingApplicationLayer &appLayer);
 
 public slots:
 	void connectToNetwork();
@@ -65,7 +69,7 @@ private slots:
 	void addContact(Contact* contact);
 	void removeContact(Contact* contact);
 
-	void handleMessage(SparkleAddress peer);
+	void handleMessage(Sparkle::SparkleAddress peer);
 
 	void about();
 
@@ -77,17 +81,17 @@ private:
 	void connectStateChanged(connect_state_t state);
 	void createRosterItem(Contact* contact, bool detailed = false);
 
-	ChatWindow* chatFor(SparkleAddress peer);
+	ChatWindow* chatFor(Sparkle::SparkleAddress peer);
 
 	ConfigurationStorage* config;
-	LinkLayer &linkLayer;
-	Router& router;
+	Sparkle::LinkLayer &linkLayer;
+	Sparkle::Router& router;
 	MessagingApplicationLayer &appLayer;
 
 	ContactList	&contactList;
 	QHash<Contact*, QListWidgetItem*> contactViewItems;
 
-	QHash<SparkleAddress, ChatWindow*> chatWindows;
+	QHash<Sparkle::SparkleAddress, ChatWindow*> chatWindows;
 
 	/* UI elements */
 

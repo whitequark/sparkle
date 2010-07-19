@@ -19,13 +19,17 @@
 #include <QApplication>
 #include <QFile>
 
-#include <Log.h>
-#include <Router.h>
-#include <UdpPacketTransport.h>
+#include <Sparkle/Log>
+#include <Sparkle/Router>
+#include <Sparkle/UdpPacketTransport>
+#include <Sparkle/RSAKeyPair>
+#include <Sparkle/LinkLayer>
 
 #include "ConfigurationStorage.h"
 #include "MessagingApplicationLayer.h"
 #include "Roster.h"
+
+using namespace Sparkle;
 
 int main(int argc, char *argv[]) {
 	QApplication app(argc, argv);

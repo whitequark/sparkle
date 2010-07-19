@@ -23,11 +23,13 @@
 
 #define SPARKLE_ADDRESS_SIZE	6
 
+namespace Sparkle {
+
 class SparkleAddress
 {	
 public:
 	SparkleAddress();
-	SparkleAddress(QByteArray);
+	explicit SparkleAddress(QByteArray);
 	SparkleAddress(const quint8[SPARKLE_ADDRESS_SIZE]);
 
 	bool isNull() const;
@@ -46,5 +48,7 @@ private:
 };
 
 uint qHash(const SparkleAddress &key);
+}
+
 
 #endif // SPARKLEADDRESS_H

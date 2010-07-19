@@ -16,10 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Messaging.h"
 #include <QDataStream>
 
+#include "Messaging.h"
+
 using namespace Messaging;
+using namespace Sparkle;
 
 ControlPacket::ControlPacket(PacketType type, SparkleAddress peer) : _type(type), _peer(peer) {
 	_id = qrand();

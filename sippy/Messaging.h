@@ -23,7 +23,7 @@
 #include <QObject>
 #include <QString>
 #include <QDateTime>
-#include <SparkleAddress.h>
+#include <Sparkle/SparkleAddress>
 
 namespace Messaging {
 	enum PeerState { /* an insider joke */
@@ -51,24 +51,24 @@ namespace Messaging {
 
 	public:
 		virtual QByteArray marshall() const;
-		static ControlPacket* demarshall(QByteArray bytes, SparkleAddress peer);
+		static ControlPacket* demarshall(QByteArray bytes, Sparkle::SparkleAddress peer);
 
 		quint32 id() const	{ return _id; }
 		PacketType type() const	{ return _type; }
-		SparkleAddress peer() const	{ return _peer; }
+		Sparkle::SparkleAddress peer() const	{ return _peer; }
 
 		bool operator==(ControlPacket& other) { return _id == other.id(); }
 
 	protected:
-		ControlPacket(PacketType type, SparkleAddress peer);
-		ControlPacket(QDataStream &stream, PacketType type, SparkleAddress peer);
+		ControlPacket(PacketType type, Sparkle::SparkleAddress peer);
+		ControlPacket(QDataStream &stream, PacketType type, Sparkle::SparkleAddress peer);
 
 	private:
 		ControlPacket();
 
 		quint32 _id;
 		PacketType _type;
-		SparkleAddress _peer;
+		Sparkle::SparkleAddress _peer;
 	};
 
 	class Authorization : public ControlPacket
@@ -76,9 +76,9 @@ namespace Messaging {
 		Q_OBJECT
 
 	public:
-		Authorization(QString nick, QString reason, SparkleAddress peer) : ControlPacket(AuthorizationPacket, peer), _nick(nick), _reason(reason) { }
+		Authorization(QString nick, QString reason, Sparkle::SparkleAddress peer) : ControlPacket(AuthorizationPacket, peer), _nick(nick), _reason(reason) { }
 
-		Authorization(QDataStream &stream, SparkleAddress peer);
+		Authorization(QDataStream &stream, Sparkle::SparkleAddress peer);
 		virtual QByteArray marshall() const;
 
 		QString nick() const	{ return _nick;	}
@@ -93,9 +93,9 @@ namespace Messaging {
 		Q_OBJECT
 
 	public:
-		Message(QString text, QDateTime timestamp, SparkleAddress peer) : ControlPacket(MessagePacket, peer), _timestamp(timestamp), _text(text) {}
+		Message(QString text, QDateTime timestamp, Sparkle::SparkleAddress peer) : ControlPacket(MessagePacket, peer), _timestamp(timestamp), _text(text) {}
 
-		Message(QDataStream &stream, SparkleAddress peer);
+		Message(QDataStream &stream, Sparkle::SparkleAddress peer);
 		virtual QByteArray marshall() const;
 
 		QDateTime timestamp() const	{ return _timestamp; }

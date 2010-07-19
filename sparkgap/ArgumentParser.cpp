@@ -19,8 +19,11 @@
 #include <QCoreApplication>
 #include <QtDebug>
 
+#include <Sparkle/Log>
+
 #include "ArgumentParser.h"
-#include "Log.h"
+
+using namespace Sparkle;
 
 static void helpCallback(void *u, QString) {
 	ArgumentParser::help_callback_info_t *t = (ArgumentParser::help_callback_info_t *) u;

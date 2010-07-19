@@ -16,7 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <Log.h>
+#include <Sparkle/Log>
+
+using namespace Sparkle;
 
 #include "random.h"
 

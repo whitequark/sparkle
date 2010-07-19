@@ -16,9 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <Sparkle/UdpPacketTransport>
+#include <Sparkle/Log>
+
 #include <QUdpSocket>
-#include "UdpPacketTransport.h"
-#include "Log.h"
+
+using namespace Sparkle;
+
+namespace Sparkle {
 
 class UdpPacketTransportPrivate {
 public:
@@ -30,6 +35,8 @@ public:
 	quint16 port;
 	QHostAddress addr;
 };
+
+}
 
 UdpPacketTransportPrivate::UdpPacketTransportPrivate(QHostAddress addr, quint16 port) : bound(false), port(port), addr(addr) {
 

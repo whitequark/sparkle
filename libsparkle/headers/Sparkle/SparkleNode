@@ -23,6 +23,8 @@
 #include <QObject>
 #include <QHostAddress>
 
+namespace Sparkle {
+
 class SparkleAddress;
 class SparkleNodePrivate;
 class BlowfishKey;
@@ -100,5 +102,7 @@ private slots:
 protected:
 	SparkleNodePrivate * const d_ptr;
 };
+
+}
 
 #endif

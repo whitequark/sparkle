@@ -24,12 +24,13 @@
 #include <QDir>
 #include <QSocketNotifier>
 
-#include "RSAKeyPair.h"
+#include <Sparkle/RSAKeyPair>
+#include <Sparkle/LinkLayer>
+#include <Sparkle/UdpPacketTransport>
+#include <Sparkle/Log>
+#include <Sparkle/Router>
+
 #include "ArgumentParser.h"
-#include "LinkLayer.h"
-#include "UdpPacketTransport.h"
-#include "Log.h"
-#include "Router.h"
 
 #include "EthernetApplicationLayer.h"
 
@@ -40,6 +41,8 @@
 #ifdef Q_OS_UNIX
 #include "SignalHandler.h"
 #endif
+
+using namespace Sparkle;
 
 QHostAddress checkoutAddress(QString strAddr) {
 	QHostAddress ipAddr;

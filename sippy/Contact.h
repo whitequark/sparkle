@@ -20,17 +20,18 @@
 #define CONTACT_H
 
 #include <QObject>
+#include <Sparkle/SparkleAddress>
+
 #include "Roster.h"
-#include "SparkleAddress.h"
 #include "MessagingApplicationLayer.h"
 
 class Contact : public QObject {
 	Q_OBJECT
 public:
 	Contact(QString address);
-	Contact(SparkleAddress address);
+	Contact(Sparkle::SparkleAddress address);
 
-	SparkleAddress address() const;
+	Sparkle::SparkleAddress address() const;
 	QString textAddress() const;
 
 	QString displayName() const;
@@ -47,7 +48,7 @@ signals:
 
 private:
 	QString _displayName;
-	SparkleAddress _address;
+	Sparkle::SparkleAddress _address;
 	Messaging::Status _status;
 	QString _statusText;
 };

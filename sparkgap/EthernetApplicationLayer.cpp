@@ -19,18 +19,23 @@
 #include <QtDebug>
 #include <QtEndian>
 
-#include <LinkLayer.h>
-#include <Router.h>
-#include <Log.h>
-#include <SparkleAddress.h>
+#include <Sparkle/LinkLayer>
+#include <Sparkle/Router>
+#include <Sparkle/Log>
+#include <Sparkle/SparkleAddress>
+#include <Sparkle/SparkleNode>
 
 #include "EthernetApplicationLayer.h"
 #include "TapInterface.h"
-#include "SparkleNode.h"
+
+using namespace Sparkle;
 
 EthernetApplicationLayer::EthernetApplicationLayer(LinkLayer &_linkLayer, TapInterface* _tap) : router(_linkLayer.router()), linkLayer(_linkLayer), tap(_tap) {
+	
 	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode *)), SLOT(initialize(SparkleNode *)));
+	
 	linkLayer.attachApplicationLayer(Ethernet, this);
+	
 	if(tap) {
 		connect(tap, SIGNAL(havePacket(QByteArray)), SLOT(haveTapPacket(QByteArray)));
 		connect(this, SIGNAL(sendTapPacket(QByteArray)), tap, SLOT(sendPacket(QByteArray)));

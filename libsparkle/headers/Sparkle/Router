@@ -21,9 +21,13 @@
 
 #include <QObject>
 #include <QHostAddress>
-#include "LinkLayer.h"
+
+#include <Sparkle/SparkleAddress>
+
+namespace Sparkle {
 
 class RouterPrivate;
+class SparkleNode;
 
 class Router : public QObject
 {
@@ -34,7 +38,7 @@ protected:
 	Router(RouterPrivate &dd, QObject *parent);
 
 public:
-	Router(QObject *parent = 0);
+	explicit Router(QObject *parent = 0);
 	virtual ~Router();
 	
 	void setSelfNode(SparkleNode* node);
@@ -73,5 +77,7 @@ signals:
 protected:
 	RouterPrivate * const d_ptr;
 };
+
+}
 
 #endif

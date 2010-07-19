@@ -23,28 +23,34 @@
 #include <QSet>
 #include <QDateTime>
 #include <QTimer>
-#include <ApplicationLayer.h>
-#include "SparkleAddress.h"
+#include <Sparkle/ApplicationLayer>
+#include <Sparkle/SparkleAddress>
+
 #include "Messaging.h"
 
 class QHostAddress;
-class LinkLayer;
-class Router;
+
+namespace Sparkle {
+	class LinkLayer;
+	class Router;
+};
+
+
 class ContactList;
 class Contact;
 
-class MessagingApplicationLayer: public QObject, public ApplicationLayer {
+class MessagingApplicationLayer: public QObject, public Sparkle::ApplicationLayer {
 	Q_OBJECT
 
 public:
-	MessagingApplicationLayer(ContactList &contactList, LinkLayer &linkLayer);
+	MessagingApplicationLayer(ContactList &contactList, Sparkle::LinkLayer &linkLayer);
 	virtual ~MessagingApplicationLayer();
 
-	virtual void handleDataPacket(QByteArray &packet, SparkleAddress address);
+	virtual void handleDataPacket(QByteArray &packet, Sparkle::SparkleAddress address);
 
 	ContactList& contactList() const;
 
-	Messaging::PeerState peerState(SparkleAddress address);
+	Messaging::PeerState peerState(Sparkle::SparkleAddress address);
 
 	Messaging::Status status() const;
 	QString statusText() const;
@@ -61,7 +67,7 @@ public slots:
 	void setNick(QString newNick);
 
 signals:
-	void peerStateChanged(SparkleAddress address);
+	void peerStateChanged(Sparkle::SparkleAddress address);
 
 	void statusChanged(Messaging::Status status);
 	void statusTextChanged(QString statusText);
@@ -69,7 +75,7 @@ signals:
 	void nickChanged(QString nick);
 
 	void authorizationAvailable();
-	void messageAvailable(SparkleAddress peer);
+	void messageAvailable(Sparkle::SparkleAddress peer);
 
 	void controlTimedOut(quint32 id);
 
@@ -78,7 +84,7 @@ private slots:
 	void sendPresence();
 	void fetchContact(Contact* contact);
 
-	void peerAbsent(SparkleAddress address);
+	void peerAbsent(Sparkle::SparkleAddress address);
 	void resendControlPackets();
 
 	void cleanup();
@@ -101,25 +107,25 @@ private:
 		quint16 version;
 	};
 
-	void sendPacket(packet_type_t type, QByteArray data, SparkleAddress node, quint16 version = 0);
+	void sendPacket(packet_type_t type, QByteArray data, Sparkle::SparkleAddress node, quint16 version = 0);
 
-	void sendPresenceRequest(SparkleAddress addr);
-	void handlePresenceRequest(QByteArray& payload, SparkleAddress addr);
+	void sendPresenceRequest(Sparkle::SparkleAddress addr);
+	void handlePresenceRequest(QByteArray& payload, Sparkle::SparkleAddress addr);
 
-	void sendPresenceNotify(SparkleAddress addr);
-	void handlePresenceNotify(QByteArray& payload, SparkleAddress addr);
+	void sendPresenceNotify(Sparkle::SparkleAddress addr);
+	void handlePresenceNotify(QByteArray& payload, Sparkle::SparkleAddress addr);
 
 	/* public sendControlPacket */
-	void handleControlPacket(QByteArray& payload, SparkleAddress addr);
+	void handleControlPacket(QByteArray& payload, Sparkle::SparkleAddress addr);
 
-	void sendControlBounce(SparkleAddress addr, quint32 id);
-	void handleControlBounce(QByteArray& payload, SparkleAddress addr);
+	void sendControlBounce(Sparkle::SparkleAddress addr, quint32 id);
+	void handleControlBounce(QByteArray& payload, Sparkle::SparkleAddress addr);
 
 	ContactList &_contactList;
-	LinkLayer &linkLayer;
-	Router &_router;
+	Sparkle::LinkLayer &linkLayer;
+	Sparkle::Router &_router;
 
-	QSet<SparkleAddress> absentPeers, authorizedPeers;
+	QSet<Sparkle::SparkleAddress> absentPeers, authorizedPeers;
 
 	QList<Messaging::ControlPacket*> controlOutputQueue;
 	QList<Messaging::ControlPacket*> controlInputQueue;

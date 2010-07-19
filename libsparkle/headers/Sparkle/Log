@@ -24,6 +24,9 @@
 #include <QStringList>
 
 class QHostAddress;
+
+namespace Sparkle {
+
 class SparkleNode;
 
 class Log {
@@ -48,7 +51,7 @@ class Log {
 	Stream* stream;
 
 public:
-	inline Log(const char* format, loglevel_t loglevel = Info) : stream(new Stream(QString(format), loglevel)) {}
+	explicit inline Log(const char* format, loglevel_t loglevel = Info) : stream(new Stream(QString(format), loglevel)) {}
 	inline ~Log() { Log::emitMessage(stream->loglevel, prepare()); }
 
 	Log& operator<<(short v);
@@ -79,5 +82,7 @@ public:
 
 	static void emitMessage(loglevel_t loglevel, QString message);
 };
+
+}
 
 #endif

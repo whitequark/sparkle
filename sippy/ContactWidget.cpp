@@ -21,13 +21,19 @@
 #include <QListWidgetItem>
 #include <QContextMenuEvent>
 #include <QImage>
+
+#include <Sparkle/SparkleNode>
+#include <Sparkle/Log>
+
 #include "ContactWidget.h"
 #include "Contact.h"
-#include "Log.h"
+
 #include "MessagingApplicationLayer.h"
-#include "SparkleNode.h"
+
 #include "pixmaps.h"
 #include "Messaging.h"
+
+using namespace Sparkle;
 
 ContactWidget::ContactWidget(MessagingApplicationLayer &_appLayer, Contact* _contact, bool _detailed) : contact(_contact), appLayer(_appLayer), detailed(_detailed)
 {

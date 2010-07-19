@@ -16,16 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "BlowfishKey.h"
-#include "Log.h"
-#include "random.h"
+#include <Sparkle/BlowfishKey>
+#include <Sparkle/Log>
+
 #include <stdlib.h>
+
+#include "random.h"
+
+using namespace Sparkle;
 
 extern "C" const char *
 blowfish_get_info(int algo, size_t *keylen, size_t *blocksize, size_t *contextsize,
 		  int (**r_setkey)(void *c, const quint8 *key, unsigned keylen),
 		  void (**r_encrypt)(void *c, quint8 *outbuf, const quint8 *inbuf),
 		  void (**r_decrypt)( void *c, quint8 *outbuf, const quint8 *inbuf));
+
+namespace Sparkle {
 
 class BlowfishKeyPrivate {
 public:
@@ -45,6 +51,8 @@ public:
 	void (*cb_encrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
 	void (*cb_decrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
 };
+
+}
 
 BlowfishKeyPrivate::BlowfishKeyPrivate() {
 	if(blowfish_get_info(4, &keylen, &blocksize, &contextsize, &cb_setkey, &cb_encrypt, &cb_decrypt) == NULL)

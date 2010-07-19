@@ -23,12 +23,15 @@
 #include <QHostInfo>
 #include <QTime>
 
-#include "RSAKeyPair.h"
-#include "SparkleAddress.h"
-#include "ApplicationLayer.h"
+#include <Sparkle/RSAKeyPair>
+#include <Sparkle/SparkleAddress>
+#include <Sparkle/ApplicationLayer>
 
 class QHostAddress;
 class QTimer;
+
+namespace Sparkle {
+
 class SparkleNode;
 class PacketTransport;
 class Router;
@@ -331,5 +334,7 @@ private:
 
 	static const packet_handler_t packetHandlers[];
 };
+
+}
 
 #endif

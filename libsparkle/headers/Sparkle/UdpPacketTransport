@@ -16,35 +16,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __BLOWFISH__H__
-#define __BLOWFISH__H__
+#ifndef __UDP_PACKET_TRANSPORT__H__
+#define __UDP_PACKET_TRANSPORT__H__
 
-#include <QObject>
+#include <Sparkle/PacketTransport>
 
-class BlowfishKeyPrivate;
+namespace Sparkle {
 
-class BlowfishKey: public QObject
+class UdpPacketTransportPrivate;
+
+class UdpPacketTransport : public PacketTransport
 {
 	Q_OBJECT
-	Q_DECLARE_PRIVATE(BlowfishKey)
+	Q_DECLARE_PRIVATE(UdpPacketTransport)
 	
 protected:
-	BlowfishKey(BlowfishKeyPrivate &d, QObject *parent);
+	UdpPacketTransport(UdpPacketTransportPrivate &dd, QObject *parent);
 	
 public:
-	BlowfishKey(QObject *parent = 0);
-	virtual ~BlowfishKey();
+	UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent = 0);
+	virtual ~UdpPacketTransport();
 
-	void generate();
+	virtual bool beginReceiving();
+	virtual quint16 port();
 
-	QByteArray bytes() const;
-	void setBytes(QByteArray raw);
+public slots:
+	virtual void endReceiving();
+	virtual void sendPacket(QByteArray &packet, QHostAddress host, quint16 port);
 
-	QByteArray encrypt(QByteArray data) const;
-	QByteArray decrypt(QByteArray data) const;
+private slots:
+	void haveDatagram();
+
+signals:
+	void receivedPacket(QByteArray &packet, QHostAddress host, quint16 port);
 
 protected:
-	BlowfishKeyPrivate * const d_ptr;
+	UdpPacketTransportPrivate * const d_ptr;
 };
+
+}
 
 #endif

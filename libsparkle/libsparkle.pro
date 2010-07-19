@@ -8,28 +8,27 @@ DEPENDPATH += . \
 	headers \
 	crypto
 INCLUDEPATH += . \
-	headers \
-	crypto
+	headers
 CONFIG += staticlib
 QT -= gui
 QT += network
 contains(QMAKESPEC,g++):QMAKE_CFLAGS += -Wconversion
 contains(QMAKESPEC,msvc):DEFINES += CRT_SECURE_NO_WARNINGS
 # Input
-HEADERS += headers/BlowfishKey.h \
-	headers/LinkLayer.h \
-	headers/Log.h \
-	headers/PacketTransport.h \
+HEADERS += headers/Sparkle/BlowfishKey \
+	headers/Sparkle/LinkLayer \
+	headers/Sparkle/Log \
+	headers/Sparkle/PacketTransport \
 	random.h \
-	headers/Router.h \
-	headers/RSAKeyPair.h \
-	headers/SparkleNode.h \
-	headers/UdpPacketTransport.h \
+	headers/Sparkle/Router \
+	headers/Sparkle/RSAKeyPair \
+	headers/Sparkle/SparkleNode \
+	headers/Sparkle/UdpPacketTransport \
 	crypto/bignum.h \
 	crypto/bn_mul.h \
 	crypto/rsa.h \
-	ApplicationLayer.h \
-	SparkleAddress.h
+	headers/Sparkle/ApplicationLayer \
+	headers/Sparkle/SparkleAddress
 SOURCES += BlowfishKey.cpp \
 	LinkLayer.cpp \
 	Log.cpp \

@@ -20,14 +20,17 @@
 #define ROSTERITEM_H
 
 #include <QWidget>
-#include "SparkleAddress.h"
+#include <Sparkle/SparkleAddress>
 
 class Contact;
 class QLabel;
 class QBoxLayout;
 class QListWidgetItem;
 class MessagingApplicationLayer;
-class SparkleNode;
+
+namespace Sparkle {
+	class SparkleNode;
+}
 
 class ContactWidget : public QWidget {
 	Q_OBJECT
@@ -46,7 +49,7 @@ signals:
 
 private slots:
 	void refresh();
-	void processStateChange(SparkleAddress node);
+	void processStateChange(Sparkle::SparkleAddress node);
 
 private:
 	Contact* contact;

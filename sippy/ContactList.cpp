@@ -20,6 +20,8 @@
 #include "ConfigurationStorage.h"
 #include "Contact.h"
 
+using namespace Sparkle;
+
 ContactList::ContactList() :
 		config(ConfigurationStorage::instance()) {
 }

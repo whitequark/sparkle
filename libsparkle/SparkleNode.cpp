@@ -19,11 +19,16 @@
 #include <QTimer>
 #include <QCryptographicHash>
 
-#include "SparkleNode.h"
-#include "SparkleAddress.h"
-#include "Router.h"
-#include "BlowfishKey.h"
-#include "Log.h"
+#include <Sparkle/SparkleNode>
+#include <Sparkle/SparkleAddress>
+#include <Sparkle/Router>
+#include <Sparkle/BlowfishKey>
+#include <Sparkle/Log>
+#include <Sparkle/RSAKeyPair>
+
+using namespace Sparkle;
+
+namespace Sparkle {
 
 class SparkleNodePrivate {
 public:
@@ -47,6 +52,8 @@ public:
 
 	QTimer negotiationTimer;	
 };
+
+}
 
 SparkleNodePrivate::SparkleNodePrivate(Router &router, QHostAddress realIP, quint16 realPort) : router(router), realIP(realIP), realPort(realPort), phantomPort(0), authKeyPresent(false), keysNegotiated(false) {
 	mySessionKey.generate();
@@ -190,7 +197,7 @@ SparkleAddress SparkleNode::addressFromKey(const RSAKeyPair *keyPair) {
 	
 	mac[0] = (mac[0] & ~0x03) | 0x02; // make address local and unicast
 	
-	return mac;
+	return SparkleAddress(mac);
 }
 
 void SparkleNode::configure() {

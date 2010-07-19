@@ -17,14 +17,16 @@
  */
 
 #include <QDataStream>
+#include <Sparkle/LinkLayer>
+#include <Sparkle/Router>
+#include <Sparkle/Log>
+
 #include "MessagingApplicationLayer.h"
-#include "LinkLayer.h"
-#include "Router.h"
 #include "ContactList.h"
 #include "Contact.h"
-#include "Log.h"
 
 using namespace Messaging;
+using namespace Sparkle;
 
 MessagingApplicationLayer::MessagingApplicationLayer(ContactList& contactList, LinkLayer &_linkLayer) : _contactList(contactList), linkLayer(_linkLayer), _router(_linkLayer.router()), _status(Messaging::Online) {
 	linkLayer.attachApplicationLayer(Messaging, this);
@@ -210,11 +212,14 @@ void MessagingApplicationLayer::sendPresenceNotify(SparkleAddress addr) {
 void MessagingApplicationLayer::handlePresenceNotify(QByteArray& packet, SparkleAddress addr) {
 	QDataStream stream(&packet, QIODevice::ReadOnly);
 
-	Messaging::Status peerStatus;
 	QString peerStatusText;
 
-	stream >> (quint16&) peerStatus;
+	quint16 statusWord;
+
+	stream >> statusWord;
 	stream >> peerStatusText;
+
+	Messaging::Status peerStatus = (Messaging::Status) statusWord;
 
 	authorizedPeers.insert(addr);
 
