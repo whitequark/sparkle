@@ -19,8 +19,11 @@
 #ifndef __RANDOM__H__
 #define __RANDOM__H__
 
-int get_random(void *);
-void random_bytes(void *buf, size_t length);
+class SparkleRandom {
+public:
+	static int integer(void *reserved = 0);
+	static void bytes(void *buf, size_t length);
+};
 
 #endif
 

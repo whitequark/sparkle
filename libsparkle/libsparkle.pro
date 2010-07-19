@@ -12,14 +12,20 @@ INCLUDEPATH += . \
 CONFIG += staticlib
 QT -= gui
 QT += network
-contains(QMAKESPEC,g++):QMAKE_CFLAGS += -Wconversion
-contains(QMAKESPEC,msvc):DEFINES += CRT_SECURE_NO_WARNINGS
+contains(QMAKESPEC,g++) {
+	QMAKE_CFLAGS += -Wconversion
+}
+
+contains(QMAKESPEC,msvc) {
+	DEFINES += CRT_SECURE_NO_WARNINGS
+}
+
 # Input
 HEADERS += headers/Sparkle/BlowfishKey \
 	headers/Sparkle/LinkLayer \
 	headers/Sparkle/Log \
 	headers/Sparkle/PacketTransport \
-	random.h \
+	SparkleRandom.h \
 	headers/Sparkle/Router \
 	headers/Sparkle/RSAKeyPair \
 	headers/Sparkle/SparkleNode \
@@ -32,7 +38,7 @@ HEADERS += headers/Sparkle/BlowfishKey \
 SOURCES += BlowfishKey.cpp \
 	LinkLayer.cpp \
 	Log.cpp \
-	random.cpp \
+	SparkleRandom.cpp \
 	Router.cpp \
 	RSAKeyPair.cpp \
 	SparkleNode.cpp \
