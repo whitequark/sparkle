@@ -18,6 +18,7 @@
 
 #include "RSAKeyPair.h"
 
+#include <QtDebug>
 #include <QFile>
 #include "crypto/rsa.h"
 #include <stdio.h>
@@ -30,14 +31,16 @@ QDataStream & operator>> (QDataStream& stream, mpi &data);
 
 class RSAKeyPairPrivate {
 public:
+	enum {
+		KeyMagic = 0x424D5049	// 'BMPI' (Binary MPI)
+	};
+
 	RSAKeyPairPrivate() {
 		rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);	
 	}
 	
-	virtual ~RSAKeyPairPrivate() {
-		mpi_free(&key.N, &key.E, &key.D, &key.P,
-			&key.Q, &key.DP, &key.DQ, &key.QP,
-			&key.RN, &key.RP, &key.RQ, NULL);
+	virtual ~RSAKeyPairPrivate() {		
+		rsa_free(&key);
 	}
 
 	rsa_context key;
@@ -68,6 +71,7 @@ bool RSAKeyPair::writeToFile(QString filename) const {
 
 	QDataStream stream(&rawKey, QIODevice::WriteOnly);
 
+	stream << (quint32) RSAKeyPairPrivate::KeyMagic;
 	stream << d->key.ver;
 	stream << d->key.len;
 	stream << d->key.N;
@@ -82,10 +86,12 @@ bool RSAKeyPair::writeToFile(QString filename) const {
 	stream << d->key.RP;
 	stream << d->key.RQ;
 
+	qDebug() << "writing";
 	QFile keyFile(filename);
 	if(!keyFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
 		return false;
 	}
+	
 
 	keyFile.write(rawKey.toBase64());
 
@@ -107,12 +113,25 @@ bool RSAKeyPair::readFromFile(QString filename) {
 
 	keyFile.close();
 
-	if(rawdata.left(10) == "-----BEGIN")
-		Log::fatal("Your private key is in wrong format, re-generate it");
+	if(rawdata.left(10) == "-----BEGIN") {
+		Log::error("Your private key is in wrong format, re-generate it");
+		
+		return false;
+	}
 
 	QByteArray data = QByteArray::fromBase64(rawdata);
 
 	QDataStream stream(&data, QIODevice::ReadOnly);
+
+	quint32 magic;
+
+	stream >> magic;
+	
+	if(magic != RSAKeyPairPrivate::KeyMagic) {
+		Log::error("RSAKeyPair::readFromFile: bad RSA key magic: %1") << magic;
+		
+		return false;
+	}
 
 	stream >> d->key.ver;
 	stream >> d->key.len;
@@ -137,7 +156,8 @@ QByteArray RSAKeyPair::publicKey() const {
 	QByteArray rawKey;
 
 	QDataStream stream(&rawKey, QIODevice::WriteOnly);
-
+	
+	stream << (quint32) RSAKeyPairPrivate::KeyMagic;
 	stream << d->key.ver;
 	stream << d->key.len;
 	stream << d->key.N;
@@ -152,6 +172,16 @@ bool RSAKeyPair::setPublicKey(QByteArray data) {
 	
 	QDataStream stream(&data, QIODevice::ReadOnly);
 
+	quint32 magic;
+
+	stream >> magic;
+	
+	if(magic != RSAKeyPairPrivate::KeyMagic) {
+		Log::error("RSAKeyPair::setPublicKey: bad RSA key magic: %1") << magic;
+		
+		return false;
+	}
+	
 	stream >> d->key.ver;
 	stream >> d->key.len;
 	stream >> d->key.N;
@@ -213,23 +243,27 @@ QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
 }
 
 QDataStream & operator<< (QDataStream& stream, const mpi &data) {
-	stream << ((qint32) data.s);
-	stream << ((qint32) data.n);
-
-	for(int i = 0; i < data.n; i++)
-		stream << ((quint32) data.p[i]);
+	QByteArray raw;
+	
+	mpi *mp = (mpi *) &data;
+		
+	if(mp && mp->p != NULL) {
+		raw.resize(mpi_size(mp));
+		
+		mpi_write_binary(mp, (unsigned char *) raw.data(), raw.size());
+	}
+	
+	stream << raw;
 
 	return stream;
 }
 
 QDataStream & operator >> (QDataStream& stream, mpi &data) {
-	stream >> (qint32 &) data.s;
-	stream >> (qint32 &) data.n;
+	QByteArray raw;
 
-	data.p = (t_int *) malloc(sizeof(t_int) * data.n);
-
-	for(int i = 0; i < data.n; i++)
-		stream >> ((quint32 &) data.p[i]);
+	stream >> raw;
+	
+	mpi_read_binary(&data, (unsigned char *) raw.data(), raw.size());
 
 	return stream;
 }

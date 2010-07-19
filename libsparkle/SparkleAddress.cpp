@@ -49,5 +49,5 @@ QString SparkleAddress::pretty() const {
 }
 
 uint qHash(const SparkleAddress &key) {
-	return qHash((QByteArray) key.bytes());
+	return qHash((const QByteArray &) key.bytes());
 }
