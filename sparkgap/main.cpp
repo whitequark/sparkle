@@ -42,6 +42,9 @@
 #include "SignalHandler.h"
 #endif
 
+#include <lwip/tcpip.h>
+#include "LwIPTAP.h"
+
 using namespace Sparkle;
 
 QHostAddress checkoutAddress(QString strAddr) {
@@ -85,7 +88,7 @@ int main(int argc, char *argv[]) {
 	app.setApplicationName("sparkle");
 
 	QString profile = "default", configDir;
-	bool createNetwork = false, noTap = false, forceBehindNAT = false;
+	bool createNetwork = false, noTap = false, forceBehindNAT = false, useLwIP = false;
 	int networkDivisor = 10;
 	QHostAddress localAddress = QHostAddress::Any, remoteAddress, bindAddress = QHostAddress::Any;
 	quint16 localPort = 1801, remotePort = 1801;
@@ -97,7 +100,7 @@ int main(int argc, char *argv[]) {
 
 	{
 		QString createStr, joinStr, endpointStr, bindStr, keyLenStr, getPubkeyStr,
-			noTapStr, behindNatStr, daemonizeStr;
+			noTapStr, behindNatStr, daemonizeStr, lwipStr;
 
 		ArgumentParser parser(app.arguments());
 
@@ -132,6 +135,9 @@ int main(int argc, char *argv[]) {
 
 		parser.registerOption(QChar::Null, "no-tap", ArgumentParser::NoArgument,
 			&noTapStr, NULL, NULL, "\tdo not create TAP interface (`headless' mode)", NULL);
+
+		parser.registerOption(QChar::Null, "lwip", ArgumentParser::NoArgument,
+			&lwipStr, NULL, NULL, "\tuse usermode network stack", NULL);
 
 		if(!parser.parse()) { // help was displayed
 			return 0;
@@ -223,6 +229,9 @@ int main(int argc, char *argv[]) {
 
 		if(!behindNatStr.isNull())
 			forceBehindNAT = true;
+
+		if(!lwipStr.isNull())
+			useLwIP = true;
 	}
 
 	RSAKeyPair hostPair;
@@ -255,24 +264,31 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&linkLayer, SIGNAL(leavedNetwork()), &app, SLOT(quit()));
 	QObject::connect(&linkLayer, SIGNAL(joinFailed()), &linkLayer, SLOT(exitNetwork()));
 
-	EthernetApplicationLayer* appLayer;
-#ifdef Q_OS_LINUX
-	if(!noTap) {
 
-		LinuxTAP *tap = new LinuxTAP(linkLayer);
+	TapInterface *tapIf = 0;
 
-		if(tap->createInterface("sparkle%d") == false)
-			Log::fatal("cannot initialize TAP");
+	if(useLwIP) {
+		tcpip_init(NULL, NULL);
 
-		tap = tap;
+		tapIf = new LwIPTAP();
 
-		appLayer = new EthernetApplicationLayer(linkLayer, tap);
 	} else {
-		appLayer = new EthernetApplicationLayer(linkLayer, NULL); //dummy
-	}
+
+		if(!noTap) {
+#ifdef Q_OS_LINUX
+			LinuxTAP *tap = new LinuxTAP();
+
+			if(tap->createInterface("sparkle%d") == false)
+				Log::fatal("cannot initialize TAP");
+
+			tapIf = tap;
 #else
-		appLayer = new EthernetApplicationLayer(linkLayer, NULL);
+			Log::fatal("no tap implementation for your platform; use headless or lwip mode");
 #endif	
+		}
+	}
+
+	new EthernetApplicationLayer(linkLayer, tapIf);
 
 	if(createNetwork) {
 		if(!linkLayer.createNetwork(localAddress, networkDivisor))

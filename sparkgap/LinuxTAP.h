@@ -26,7 +26,6 @@
 #include "TapInterface.h"
 
 namespace Sparkle {
-	class LinkLayer;
 	class SparkleAddress;
 }
 
@@ -38,8 +37,8 @@ class LinuxTAP : public TapInterface
 	Q_OBJECT
 
 public:
-	LinuxTAP(Sparkle::LinkLayer &linkLayer);
-	~LinuxTAP();
+	LinuxTAP();
+	virtual ~LinuxTAP();
 
 	bool createInterface(QString pattern);
 
@@ -54,7 +53,6 @@ signals:
 	void havePacket(QByteArray packet);
 
 private:
-	Sparkle::LinkLayer &linkLayer;
 	QSocketNotifier *notify;
 
 	int tun;

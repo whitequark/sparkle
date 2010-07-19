@@ -32,7 +32,7 @@ using namespace Sparkle;
 
 EthernetApplicationLayer::EthernetApplicationLayer(LinkLayer &_linkLayer, TapInterface* _tap) : router(_linkLayer.router()), linkLayer(_linkLayer), tap(_tap) {
 	
-	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode *)), SLOT(initialize(SparkleNode *)));
+	connect(&linkLayer, SIGNAL(joinedNetwork(Sparkle::SparkleNode *)), SLOT(initialize(Sparkle::SparkleNode *)));
 	
 	linkLayer.attachApplicationLayer(Ethernet, this);
 	

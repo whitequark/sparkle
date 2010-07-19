@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <Sparkle/LinkLayer>
 #include <Sparkle/SparkleAddress>
 #include <Sparkle/Log>
 
@@ -35,7 +34,7 @@ using namespace Sparkle;
 
 #define MTU 1518
 
-LinuxTAP::LinuxTAP(LinkLayer &_linkLayer) : linkLayer(_linkLayer)
+LinuxTAP::LinuxTAP()
 {
 	tun = -1;
 	framebuf = new char[MTU];

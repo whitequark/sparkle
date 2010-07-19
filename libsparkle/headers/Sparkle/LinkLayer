@@ -64,7 +64,7 @@ signals:
 	void networkPacketReady(QByteArray &data, QHostAddress host, quint16 port);
 
 	void joinFailed();
-	void joinedNetwork(SparkleNode* self);
+	void joinedNetwork(Sparkle::SparkleNode* self);
 	void leavedNetwork();
 
 	void routeMissing(SparkleAddress addr);

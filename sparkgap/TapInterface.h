@@ -28,7 +28,7 @@ class TapInterface: public QObject {
 	Q_OBJECT
 
 public:
-	TapInterface() : QObject() { }
+	TapInterface(QObject *parent = 0) : QObject(parent) { }
 	virtual ~TapInterface() { }
 
 public slots:
