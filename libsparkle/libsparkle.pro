@@ -20,17 +20,14 @@ HEADERS += headers/BlowfishKey.h \
 	headers/LinkLayer.h \
 	headers/Log.h \
 	headers/PacketTransport.h \
-	headers/random.h \
+	random.h \
 	headers/Router.h \
 	headers/RSAKeyPair.h \
 	headers/SparkleNode.h \
 	headers/UdpPacketTransport.h \
 	crypto/bignum.h \
 	crypto/bn_mul.h \
-	crypto/havege.h \
 	crypto/rsa.h \
-	crypto/sha1.h \
-	crypto/timing.h \
 	ApplicationLayer.h \
 	SparkleAddress.h
 SOURCES += BlowfishKey.cpp \
@@ -43,8 +40,5 @@ SOURCES += BlowfishKey.cpp \
 	UdpPacketTransport.cpp \
 	crypto/bignum.c \
 	crypto/blowfish.c \
-	crypto/havege.c \
 	crypto/rsa.c \
-	crypto/sha1.c \
-	crypto/timing.c \
 	SparkleAddress.cpp

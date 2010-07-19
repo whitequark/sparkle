@@ -20,7 +20,7 @@
 #define __RANDOM__H__
 
 int get_random(void *);
-void random_bytes(unsigned char *buf, size_t length);
+void random_bytes(void *buf, size_t length);
 
 #endif
 

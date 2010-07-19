@@ -18,7 +18,6 @@
 
 #include "BlowfishKey.h"
 #include "Log.h"
-#include "crypto/havege.h"
 #include "random.h"
 #include <stdlib.h>
 

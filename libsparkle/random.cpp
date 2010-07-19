@@ -16,34 +16,51 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <QMutex>
-#include "random.h"
-#include "crypto/havege.h"
+#include <Log.h>
 
-static QMutex randomMutex;
+#include "random.h"
 
 int get_random(void *) {
-	static havege_state *context = NULL;
+	int num;
 
-	randomMutex.lock();
+	random_bytes(&num, sizeof(int));
 
-	if(context == NULL) { 
-		context = new havege_state;
-
-		havege_init(context);
-	}
-
-	int ret = havege_rand(context);
-
-	randomMutex.unlock();
-
-	return ret;
+	return num;
 }
 
-void random_bytes(unsigned char *buf, size_t length) {
+#if defined(Q_OS_UNIX)
 
-	for(int *ptr = (int *) buf; length > 0; length -= sizeof(int), ptr++)
-		*ptr = get_random(NULL);
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+
+void random_bytes(void *buf, size_t length) {
+	int random = open("/dev/urandom", O_RDONLY);
+
+	if(random == -1)
+		Log::fatal("open(/dev/urandom): %1") << strerror(errno);
+
+	read(random, buf, length);
+
+	close(random);
 }
 
+#elif defined(Q_OS_WIN32)
+
+#define SystemFunction036 NTAPI SystemFunction036
+
+#include <ntsecapi.h>
+
+#undef SystemFunction036
+
+void random_bytes(void *buf, size_t length) {
+	RtlGenRandom(buf, length);
+}
+
+#else
+
+#error random_bytes is not implemented for current platform
+
+#endif
 
