@@ -20,51 +20,82 @@
 #include "UdpPacketTransport.h"
 #include "Log.h"
 
-UdpPacketTransport::UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent)
-	: PacketTransport(parent), bound(false), _port(port), _addr(addr)
-{
-	socket = new QUdpSocket(this);
+class UdpPacketTransportPrivate {
+public:
+	UdpPacketTransportPrivate(QHostAddress addr, quint16 port);
+	
+	QUdpSocket *socket;
 
-	connect(socket, SIGNAL(readyRead()), this, SLOT(haveDatagram()));
+	bool bound;
+	quint16 port;
+	QHostAddress addr;
+};
+
+UdpPacketTransportPrivate::UdpPacketTransportPrivate(QHostAddress addr, quint16 port) : bound(false), port(port), addr(addr) {
+
+}
+
+
+UdpPacketTransport::UdpPacketTransport(UdpPacketTransportPrivate &dd, QObject *parent) : PacketTransport(parent), d_ptr(&dd) {
+
+}
+
+UdpPacketTransport::UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent)
+	: PacketTransport(parent), d_ptr(new UdpPacketTransportPrivate(addr, port))  {
+	Q_D(UdpPacketTransport);
+
+	d->socket = new QUdpSocket(this);
+
+	connect(d->socket, SIGNAL(readyRead()), this, SLOT(haveDatagram()));
 }
 
 UdpPacketTransport::~UdpPacketTransport() {
-
+	delete d_ptr;
 }
 
 bool UdpPacketTransport::beginReceiving() {
-	if(bound)
+	Q_D(UdpPacketTransport);
+
+	if(d->bound)
 		return true;
 
-	Log::debug("udp: receiving at [%1]:%2") << _addr << _port;
-	return (bound = socket->bind(_addr, _port));
+	Log::debug("udp: receiving at [%1]:%2") << d->addr << d->port;
+	return (d->bound = d->socket->bind(d->addr, d->port));
 }
 
 void UdpPacketTransport::endReceiving() {
-	if(!bound)
+	Q_D(UdpPacketTransport);
+	
+	if(!d->bound)
 		return;
 
 	Log::debug("udp: stopped receive");
-	socket->close();
-	bound = false;
+	d->socket->close();
+	d->bound = false;
 }
 
 void UdpPacketTransport::haveDatagram() {
-	while(socket->hasPendingDatagrams()) {
-		QByteArray data(socket->pendingDatagramSize(), 0);
+	Q_D(UdpPacketTransport);
+	
+	while(d->socket->hasPendingDatagrams()) {
+		QByteArray data(d->socket->pendingDatagramSize(), 0);
 		QHostAddress host;
 		quint16 port;
 
-		socket->readDatagram(data.data(), data.size(), &host, &port);
+		d->socket->readDatagram(data.data(), data.size(), &host, &port);
 
 		emit receivedPacket(data, host, port);
 	}
 }
 
 void UdpPacketTransport::sendPacket(QByteArray &packet, QHostAddress host, quint16 port) {
-	socket->writeDatagram(packet, host, port);
+	Q_D(UdpPacketTransport);
+	
+	d->socket->writeDatagram(packet, host, port);
 }
 
 quint16 UdpPacketTransport::port() {
-	return _port;
+	Q_D(const UdpPacketTransport);
+	
+	return d->port;
 }

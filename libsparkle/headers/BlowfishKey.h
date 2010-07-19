@@ -21,9 +21,16 @@
 
 #include <QObject>
 
+class BlowfishKeyPrivate;
+
 class BlowfishKey: public QObject
 {
 	Q_OBJECT
+	Q_DECLARE_PRIVATE(BlowfishKey)
+	
+protected:
+	BlowfishKey(BlowfishKeyPrivate &d, QObject *parent);
+	
 public:
 	BlowfishKey(QObject *parent = 0);
 	virtual ~BlowfishKey();
@@ -36,14 +43,8 @@ public:
 	QByteArray encrypt(QByteArray data) const;
 	QByteArray decrypt(QByteArray data) const;
 
-private:
-	void *key;
-	QByteArray rawKey;
-
-	size_t keylen, blocksize, contextsize;
-	int (*cb_setkey)(void *c, const quint8 *key, unsigned keylen);
-	void (*cb_encrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
-	void (*cb_decrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
+protected:
+	BlowfishKeyPrivate * const d_ptr;
 };
 
 #endif

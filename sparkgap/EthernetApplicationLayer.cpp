@@ -26,6 +26,7 @@
 
 #include "EthernetApplicationLayer.h"
 #include "TapInterface.h"
+#include "SparkleNode.h"
 
 EthernetApplicationLayer::EthernetApplicationLayer(LinkLayer &_linkLayer, TapInterface* _tap) : router(_linkLayer.router()), linkLayer(_linkLayer), tap(_tap) {
 	connect(&linkLayer, SIGNAL(joinedNetwork(SparkleNode *)), SLOT(initialize(SparkleNode *)));

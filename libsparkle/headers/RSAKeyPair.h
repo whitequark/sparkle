@@ -20,10 +20,14 @@
 #define __RSA_KEY_PAIR__H__
 
 #include <QObject>
-#include "crypto/rsa.h"
 
-class RSAKeyPair: public QObject {
-	Q_OBJECT
+class RSAKeyPairPrivate;
+
+class RSAKeyPair {
+	Q_DECLARE_PRIVATE(RSAKeyPair)
+
+protected:
+	RSAKeyPair(RSAKeyPairPrivate &dd);
 
 public:
 	RSAKeyPair();
@@ -39,11 +43,8 @@ public:
 	QByteArray encrypt(QByteArray data);
 	QByteArray decrypt(QByteArray data);
 
-private:
-	rsa_context key;
+protected:
+	RSAKeyPairPrivate * const d_ptr;
 };
-
-QDataStream & operator<< (QDataStream& stream, const mpi &data);
-QDataStream & operator>> (QDataStream& stream, mpi &data);
 
 #endif

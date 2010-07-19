@@ -23,13 +23,20 @@
 #include <QHostAddress>
 #include "LinkLayer.h"
 
+class RouterPrivate;
+
 class Router : public QObject
 {
 	Q_OBJECT
+	Q_DECLARE_PRIVATE(Router)
+
+protected:
+	Router(RouterPrivate &dd, QObject *parent);
 
 public:
-	Router();
-
+	Router(QObject *parent = 0);
+	virtual ~Router();
+	
 	void setSelfNode(SparkleNode* node);
 	SparkleNode* getSelfNode() const;
 
@@ -63,9 +70,8 @@ signals:
 	void peerAdded(SparkleAddress addr);
 	void peerRemoved(SparkleAddress addr);
 
-private:
-	SparkleNode* _self;
-	QList<SparkleNode*> _nodes;
+protected:
+	RouterPrivate * const d_ptr;
 };
 
 #endif

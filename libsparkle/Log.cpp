@@ -21,6 +21,7 @@
 #include <cstdlib>
 
 #include "Log.h"
+#include "SparkleNode.h"
 
 QString Log::prepare() {
 	QString imm = stream->format;
@@ -58,3 +59,79 @@ void Log::emitMessage(loglevel_t loglevel, QString message) {
 	}
 }
 
+Log& Log::operator<<(short v) {
+	stream->list.append(QString::number(v, stream->base));
+	
+	return *this;
+}
+
+Log& Log::operator<<(ushort v) {
+	stream->list.append(QString::number(v, stream->base));
+	
+	return *this;
+}
+
+Log& Log::operator<<(int v) {
+	stream->list.append(QString::number(v, stream->base));
+	
+	return *this;
+}
+
+Log& Log::operator<<(uint v)  {
+	stream->list.append(QString::number(v, stream->base));
+	
+	return *this;
+}
+
+Log& Log::operator<<(long v) {
+	stream->list.append(QString::number(v, stream->base));
+	
+	return *this;
+}
+
+Log& Log::operator<<(ulong v) {
+	stream->list.append(QString::number(v, stream->base));
+	
+	return *this;
+}
+
+Log& Log::operator<<(double v) {
+	stream->list.append(QString::number(v, 'g', 4));
+	
+	return *this;
+}
+
+Log& Log::operator<<(char v) {
+	stream->list.append(QString(v));
+	
+	return *this;
+}
+
+Log& Log::operator<<(const char* v)	{
+	stream->list.append(v);
+	
+	return *this;
+}
+
+Log& Log::operator<<(bool v) {
+	stream->list.append(v ? "true" : "false");
+	
+	return *this;
+}
+
+Log& Log::operator<<(const QString &v) {
+	stream->list.append(v);
+	
+	return *this;
+}
+
+Log& Log::operator<<(const QHostAddress &v)	{
+	stream->list.append(v.toString());
+	
+	return *this;
+}
+
+Log& Log::operator<<(const SparkleNode &v)	{
+	return *this << v.realIP().toString() << v.realPort();
+}
+	

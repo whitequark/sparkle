@@ -22,7 +22,9 @@
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <SparkleNode.h>
+
+class QHostAddress;
+class SparkleNode;
 
 class Log {
 	enum loglevel_t {
@@ -49,23 +51,23 @@ public:
 	inline Log(const char* format, loglevel_t loglevel = Info) : stream(new Stream(QString(format), loglevel)) {}
 	inline ~Log() { Log::emitMessage(stream->loglevel, prepare()); }
 
-	inline Log& operator<<(short v) { stream->list.append(QString::number(v, stream->base)); return *this; }
-	inline Log& operator<<(ushort v){ stream->list.append(QString::number(v, stream->base)); return *this; }
-	inline Log& operator<<(int v)   { stream->list.append(QString::number(v, stream->base)); return *this; }
-	inline Log& operator<<(uint v)  { stream->list.append(QString::number(v, stream->base)); return *this; }
-	inline Log& operator<<(long v)  { stream->list.append(QString::number(v, stream->base)); return *this; }
-	inline Log& operator<<(ulong v) { stream->list.append(QString::number(v, stream->base)); return *this; }
+	Log& operator<<(short v);
+	Log& operator<<(ushort v);
+	Log& operator<<(int v);
+	Log& operator<<(uint v);
+	Log& operator<<(long v);
+	Log& operator<<(ulong v);
 
-	inline Log& operator<<(double v)	{ stream->list.append(QString::number(v, 'g', 4)); return *this; }
+	Log& operator<<(double v);
 
-	inline Log& operator<<(char v)		{ stream->list.append(QString(v)); return *this; }
-	inline Log& operator<<(const char* v)	{ stream->list.append(v); return *this; }
-	inline Log& operator<<(bool v)		{ stream->list.append(v ? "true" : "false"); return *this; }
-	inline Log& operator<<(const QString v) { stream->list.append(v); return *this; }
+	Log& operator<<(char v);
+	Log& operator<<(const char* v);
+	Log& operator<<(bool v);
+	Log& operator<<(const QString &v);
 
-	inline Log& operator<<(const QHostAddress v)	{ stream->list.append(v.toString()); return *this; }
+	Log& operator<<(const QHostAddress &v);
 
-	inline Log& operator<<(const SparkleNode &v)	{ return *this << v.realIP().toString() << v.realPort(); }
+	Log& operator<<(const SparkleNode &v);
 
 	inline static Log debug(const char* format)	{ return Log(format, Debug);	}
 	inline static Log info(const char* format)	{ return Log(format, Info);	}

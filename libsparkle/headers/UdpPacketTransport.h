@@ -21,11 +21,16 @@
 
 #include "PacketTransport.h"
 
-class QUdpSocket;
+class UdpPacketTransportPrivate;
 
 class UdpPacketTransport : public PacketTransport
 {
 	Q_OBJECT
+	Q_DECLARE_PRIVATE(UdpPacketTransport)
+	
+protected:
+	UdpPacketTransport(UdpPacketTransportPrivate &dd, QObject *parent);
+	
 public:
 	UdpPacketTransport(QHostAddress addr, quint16 port, QObject *parent = 0);
 	virtual ~UdpPacketTransport();
@@ -43,12 +48,8 @@ private slots:
 signals:
 	void receivedPacket(QByteArray &packet, QHostAddress host, quint16 port);
 
-private:
-	QUdpSocket *socket;
-
-	bool bound;
-	quint16 _port;
-	QHostAddress _addr;
+protected:
+	UdpPacketTransportPrivate * const d_ptr;
 };
 
 #endif

@@ -23,7 +23,6 @@ HEADERS += headers/BlowfishKey.h \
 	headers/random.h \
 	headers/Router.h \
 	headers/RSAKeyPair.h \
-	headers/SHA1Digest.h \
 	headers/SparkleNode.h \
 	headers/UdpPacketTransport.h \
 	headers/crypto/bignum.h \
@@ -40,7 +39,6 @@ SOURCES += BlowfishKey.cpp \
 	random.cpp \
 	Router.cpp \
 	RSAKeyPair.cpp \
-	SHA1Digest.cpp \
 	SparkleNode.cpp \
 	UdpPacketTransport.cpp \
 	crypto/bignum.c \

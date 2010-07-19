@@ -24,10 +24,10 @@
 #include "LinkLayer.h"
 #include "SparkleNode.h"
 #include "PacketTransport.h"
-#include "SHA1Digest.h"
 #include "Router.h"
 #include "Log.h"
 #include "ApplicationLayer.h"
+#include "BlowfishKey.h"
 
 LinkLayer::LinkLayer(Router &router, PacketTransport &_transport, RSAKeyPair &_hostKeyPair)
 		: QObject(NULL), hostKeyPair(_hostKeyPair), _router(router), transport(_transport), joined(false), preparingForShutdown(false)

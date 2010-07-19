@@ -22,33 +22,37 @@
 
 #include <QObject>
 #include <QHostAddress>
-#include <QTimer>
-
-#include "RSAKeyPair.h"
-#include "BlowfishKey.h"
-#include "Router.h"
 
 class SparkleAddress;
+class SparkleNodePrivate;
+class BlowfishKey;
+class Router;
+class RSAKeyPair;
 
 class SparkleNode : public QObject
 {
 	Q_OBJECT
+	Q_DECLARE_PRIVATE(SparkleNode)
+
+protected:
+	SparkleNode(SparkleNodePrivate &dd, QObject *parent);
 
 public:
 	SparkleNode(Router& router, QHostAddress realIP, quint16 realPort);
-
+	virtual ~SparkleNode();
+	
 	bool operator==(const SparkleNode& another) const;
 	bool operator!=(const SparkleNode& another) const;
 
-	QHostAddress realIP() const		{ return _realIP; }
-	quint16 realPort() const		{ return _realPort; }
+	const QHostAddress &realIP() const;
+	quint16 realPort() const;
 
-	QHostAddress phantomIP() const;
+	const QHostAddress &phantomIP() const;
 	quint16 phantomPort() const;
 
-	SparkleAddress sparkleMAC() const	{ return _sparkleMAC; }
+	const SparkleAddress &sparkleMAC() const;
 
-	bool isBehindNAT() const		{ return behindNAT; }
+	bool isBehindNAT() const;
 	void setBehindNAT(bool behindNAT);
 
 	void setSparkleMAC(const SparkleAddress& mac);
@@ -59,10 +63,10 @@ public:
 	void setPhantomIP(const QHostAddress& ip);
 	void setPhantomPort(quint16 port);
 
-	const BlowfishKey *hisSessionKey() const	{ return &_hisSessionKey; }
-	const BlowfishKey *mySessionKey() const		{ return &_mySessionKey; }
+	const BlowfishKey *hisSessionKey() const;
+	const BlowfishKey *mySessionKey() const;
 
-	const RSAKeyPair *authKey() const	{ return &_authKey; }
+	const RSAKeyPair *authKey() const;
 
 	bool setAuthKey(const RSAKeyPair &keyPair);
 	bool setAuthKey(const QByteArray &publicKey);
@@ -93,24 +97,8 @@ signals:
 private slots:
 	void negotiationTimeout();
 
-private:
-	Router& _router;
-
-	QHostAddress _realIP, _phantomIP;
-	quint16 _realPort, _phantomPort;
-
-	SparkleAddress _sparkleMAC;
-
-	bool master, behindNAT;
-
-	RSAKeyPair _authKey;
-	bool authKeyPresent;
-	BlowfishKey _hisSessionKey, _mySessionKey;
-	bool keysNegotiated;
-
-	QList<QByteArray> queue;
-
-	QTimer negotiationTimer;
+protected:
+	SparkleNodePrivate * const d_ptr;
 };
 
 #endif

@@ -25,38 +25,62 @@
 #include "random.h"
 #include "Log.h"
 
-RSAKeyPair::RSAKeyPair() {
-	rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);
+QDataStream & operator<< (QDataStream& stream, const mpi &data);
+QDataStream & operator>> (QDataStream& stream, mpi &data);
+
+class RSAKeyPairPrivate {
+public:
+	RSAKeyPairPrivate() {
+		rsa_init(&key, RSA_PKCS_V15, 0, get_random, NULL);	
+	}
+	
+	virtual ~RSAKeyPairPrivate() {
+		mpi_free(&key.N, &key.E, &key.D, &key.P,
+			&key.Q, &key.DP, &key.DQ, &key.QP,
+			&key.RN, &key.RP, &key.RQ, NULL);
+	}
+
+	rsa_context key;
+};
+
+RSAKeyPair::RSAKeyPair() : d_ptr(new RSAKeyPairPrivate) {
+
+}
+
+RSAKeyPair::RSAKeyPair(RSAKeyPairPrivate &dd) : d_ptr(&dd) {
+
 }
 
 RSAKeyPair::~RSAKeyPair() {
-	mpi_free(&key.N, &key.E, &key.D, &key.P,
-		&key.Q, &key.DP, &key.DQ, &key.QP,
-		&key.RN, &key.RP, &key.RQ, NULL);
+	delete d_ptr;
 }
 
 bool RSAKeyPair::generate(int bits) {
-	return rsa_gen_key(&key, bits, 65537) == 0;
+	Q_D(RSAKeyPair);
+
+	return rsa_gen_key(&d->key, bits, 65537) == 0;
 }
 
 bool RSAKeyPair::writeToFile(QString filename) const {
+	Q_D(const RSAKeyPair);
+
 	QByteArray rawKey;
 
 	QDataStream stream(&rawKey, QIODevice::WriteOnly);
 
-	stream << key.ver;
-	stream << key.len;
-	stream << key.N;
-	stream << key.E;
-	stream << key.D;
-	stream << key.P;
-	stream << key.Q;
-	stream << key.DP;
-	stream << key.DQ;
-	stream << key.QP;
-	stream << key.RN;
-	stream << key.RP;
-	stream << key.RQ;
+	stream << d->key.ver;
+	stream << d->key.len;
+	stream << d->key.N;
+	stream << d->key.E;
+	stream << d->key.D;
+	stream << d->key.P;
+	stream << d->key.Q;
+	stream << d->key.DP;
+	stream << d->key.DQ;
+	stream << d->key.QP;
+	stream << d->key.RN;
+	stream << d->key.RP;
+	stream << d->key.RQ;
 
 	QFile keyFile(filename);
 	if(!keyFile.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
@@ -71,6 +95,8 @@ bool RSAKeyPair::writeToFile(QString filename) const {
 }
 
 bool RSAKeyPair::readFromFile(QString filename) {
+	Q_D(RSAKeyPair);
+
 	QFile keyFile(filename);
 
 	if(!keyFile.open(QIODevice::ReadOnly)) {
@@ -88,53 +114,59 @@ bool RSAKeyPair::readFromFile(QString filename) {
 
 	QDataStream stream(&data, QIODevice::ReadOnly);
 
-	stream >> key.ver;
-	stream >> key.len;
-	stream >> key.N;
-	stream >> key.E;
-	stream >> key.D;
-	stream >> key.P;
-	stream >> key.Q;
-	stream >> key.DP;
-	stream >> key.DQ;
-	stream >> key.QP;
-	stream >> key.RN;
-	stream >> key.RP;
-	stream >> key.RQ;
+	stream >> d->key.ver;
+	stream >> d->key.len;
+	stream >> d->key.N;
+	stream >> d->key.E;
+	stream >> d->key.D;
+	stream >> d->key.P;
+	stream >> d->key.Q;
+	stream >> d->key.DP;
+	stream >> d->key.DQ;
+	stream >> d->key.QP;
+	stream >> d->key.RN;
+	stream >> d->key.RP;
+	stream >> d->key.RQ;
 
 	return true;
 }
 
 QByteArray RSAKeyPair::publicKey() const {
+	Q_D(const RSAKeyPair);
+	
 	QByteArray rawKey;
 
 	QDataStream stream(&rawKey, QIODevice::WriteOnly);
 
-	stream << key.ver;
-	stream << key.len;
-	stream << key.N;
-	stream << key.E;
-	stream << key.RN;
+	stream << d->key.ver;
+	stream << d->key.len;
+	stream << d->key.N;
+	stream << d->key.E;
+	stream << d->key.RN;
 
 	return rawKey;
 }
 
 bool RSAKeyPair::setPublicKey(QByteArray data) {
+	Q_D(RSAKeyPair);
+	
 	QDataStream stream(&data, QIODevice::ReadOnly);
 
-	stream >> key.ver;
-	stream >> key.len;
-	stream >> key.N;
-	stream >> key.E;
-	stream >> key.RN;
+	stream >> d->key.ver;
+	stream >> d->key.len;
+	stream >> d->key.N;
+	stream >> d->key.E;
+	stream >> d->key.RN;
 
 	return true;
 }
 
 QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
+	Q_D(RSAKeyPair);
+
 	QByteArray output;
 
-	int rsize = key.len;
+	int rsize = d->key.len;
 
 	int flen = rsize - 11;
 	unsigned char *chunk = new unsigned char[rsize];
@@ -142,7 +174,7 @@ QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
 	for(; plaintext.size() > 0; ) {
 		int dlen = qMin<int>(flen, plaintext.length());
 
-		rsa_pkcs1_encrypt(&key, RSA_PUBLIC, dlen, (unsigned char *) plaintext.data(), chunk);
+		rsa_pkcs1_encrypt(&d->key, RSA_PUBLIC, dlen, (unsigned char *) plaintext.data(), chunk);
 
 		output += QByteArray((char *) chunk, rsize);
 
@@ -155,9 +187,11 @@ QByteArray RSAKeyPair::encrypt(QByteArray plaintext) {
 }
 
 QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
+	Q_D(RSAKeyPair);
+
 	QByteArray output;
 
-	int rsize = key.len;
+	int rsize = d->key.len;
 
 	unsigned char *chunk = new unsigned char[rsize];
 
@@ -166,7 +200,7 @@ QByteArray RSAKeyPair::decrypt(QByteArray cryptotext) {
 
 		int dec;
 
-		rsa_pkcs1_decrypt(&key, RSA_PRIVATE, &dec, (unsigned char *) cryptotext.data(), chunk, dlen);
+		rsa_pkcs1_decrypt(&d->key, RSA_PRIVATE, &dec, (unsigned char *) cryptotext.data(), chunk, dlen);
 
 		output += QByteArray((char *) chunk, dec);
 

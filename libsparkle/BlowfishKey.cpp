@@ -28,8 +28,26 @@ blowfish_get_info(int algo, size_t *keylen, size_t *blocksize, size_t *contextsi
 		  void (**r_encrypt)(void *c, quint8 *outbuf, const quint8 *inbuf),
 		  void (**r_decrypt)( void *c, quint8 *outbuf, const quint8 *inbuf));
 
-BlowfishKey::BlowfishKey(QObject *parent) : QObject(parent)
-{
+class BlowfishKeyPrivate {
+public:
+	BlowfishKeyPrivate();
+	
+	void generate();
+	void setBytes(const QByteArray &raw);
+	QByteArray encrypt(QByteArray data) const;
+	QByteArray decrypt(QByteArray data) const;	
+	
+	void *key;
+	QByteArray rawKey;
+
+	size_t keylen, blocksize, contextsize;
+
+	int (*cb_setkey)(void *c, const quint8 *key, unsigned keylen);
+	void (*cb_encrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
+	void (*cb_decrypt)(void *c, quint8 *outbuf, const quint8 *inbuf);
+};
+
+BlowfishKeyPrivate::BlowfishKeyPrivate() {
 	if(blowfish_get_info(4, &keylen, &blocksize, &contextsize, &cb_setkey, &cb_encrypt, &cb_decrypt) == NULL)
 		Log::fatal("blowfish_get_info failed");
 
@@ -38,28 +56,21 @@ BlowfishKey::BlowfishKey(QObject *parent) : QObject(parent)
 	key = malloc(contextsize);
 }
 
-BlowfishKey::~BlowfishKey() {
-	free(key);
-}
-
-void BlowfishKey::generate() {
+void BlowfishKeyPrivate::generate() {
 	rawKey.resize(32);
 	random_bytes((unsigned char *) rawKey.data(), rawKey.size());
 
 	cb_setkey(key, (unsigned char *) rawKey.data(), rawKey.size());
 }
 
-QByteArray BlowfishKey::bytes() const {
-	return rawKey;
-}
-
-void BlowfishKey::setBytes(QByteArray raw) {
+void BlowfishKeyPrivate::setBytes(const QByteArray &raw) {
 	rawKey = raw;
 
 	cb_setkey(key, (unsigned char *) rawKey.data(), rawKey.size());
 }
 
-QByteArray BlowfishKey::encrypt(QByteArray data) const {
+QByteArray BlowfishKeyPrivate::encrypt(QByteArray data) const {
+
 	unsigned char *chunk = new unsigned char[blocksize];
 
 	QByteArray output;
@@ -78,7 +89,7 @@ QByteArray BlowfishKey::encrypt(QByteArray data) const {
 	return output;
 }
 
-QByteArray BlowfishKey::decrypt(QByteArray data) const {
+QByteArray BlowfishKeyPrivate::decrypt(QByteArray data) const {
 	unsigned char *chunk = new unsigned char[blocksize];
 	
 	QByteArray output;
@@ -92,5 +103,50 @@ QByteArray BlowfishKey::decrypt(QByteArray data) const {
 	delete chunk;
 
 	return output;
+}
+
+BlowfishKey::BlowfishKey(BlowfishKeyPrivate &dd, QObject *parent) : QObject(parent), d_ptr(&dd)
+{
+
+}
+
+BlowfishKey::BlowfishKey(QObject *parent) : QObject(parent), d_ptr(new BlowfishKeyPrivate)
+{
+
+}
+
+BlowfishKey::~BlowfishKey() {
+	delete d_ptr;
+}
+
+void BlowfishKey::generate() {
+	Q_D(BlowfishKey);
+
+	d->generate();
+}
+
+QByteArray BlowfishKey::bytes() const {
+	Q_D(const BlowfishKey);
+
+	return d->rawKey;
+}
+
+void BlowfishKey::setBytes(QByteArray raw) {
+	Q_D(BlowfishKey);
+	
+	d->setBytes(raw);
+}
+
+QByteArray BlowfishKey::encrypt(QByteArray data) const {
+	Q_D(const BlowfishKey);
+
+	return d->encrypt(data);
+}
+
+
+QByteArray BlowfishKey::decrypt(QByteArray data) const {
+	Q_D(const BlowfishKey);
+
+	return d->decrypt(data);
 }
 
