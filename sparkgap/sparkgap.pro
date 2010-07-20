@@ -5,14 +5,12 @@ DESTDIR = ../output
 DEPENDPATH += . ../libsparkle/headers
 INCLUDEPATH += ../libsparkle/headers \
 	../lwip/port/headers ../lwip/src/include ../lwip/src/include/ipv4
-unix:PRE_TARGETDEPS += ../output/libsparkle.a
 
 QT -= gui
 QT += network
 CONFIG += console
 	
 LIBS += -L../output -lsparkle -llwip
-
 
 HEADERS += ArgumentParser.h EthernetApplicationLayer.h TapInterface.h LwIPTAP.h
 

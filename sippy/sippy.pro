@@ -9,8 +9,6 @@ QT += network
 
 debug:DEFINES += DEBUG
 
-unix:PRE_TARGETDEPS += ../output/libsparkle.a
-
 win32:LIBS += -ladvapi32
 	
 LIBS += -lsparkle -L../output
