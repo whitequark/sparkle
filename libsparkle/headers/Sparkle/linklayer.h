@@ -178,11 +178,6 @@ private:
 
 	struct route_request_t {
 		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
-	};
-
-	// protocol level 10 compatibility
-	struct route_request_extended_t {
-		quint8		sparkleMAC[SPARKLE_ADDRESS_SIZE];
 		quint8		length;
 	};
 

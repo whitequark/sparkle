@@ -259,7 +259,7 @@ SparkleAddress LinkLayer::findPartialRoute(QByteArray mac) {
 	if(_router.getSelfNode()->isMaster())
 		return SparkleAddress();
 
-	route_request_extended_t req;
+	route_request_t req;
 	memcpy(req.sparkleMAC, mac.constData(), mac.size());
 	req.length = mac.size();
 
@@ -269,7 +269,7 @@ SparkleAddress LinkLayer::findPartialRoute(QByteArray mac) {
 		return SparkleAddress();
 	}
 
-	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_extended_t)), targetMaster);
+	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)), targetMaster);
 
 	return SparkleAddress();
 }
@@ -963,33 +963,26 @@ void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 		return;
 	}
 
-	if(payload.size() == sizeof(route_request_extended_t)) {
-		const route_request_extended_t* req = (const route_request_extended_t*) payload.constData();
-
-		if(req->length > 6) {
-			Log::warn("link: got malformed extended RouteRequest from [%1]:%2") << *node;
-			return;
-		}
-
-		QByteArray mac((const char*) req->sparkleMAC, req->length);
-		SparkleAddress fullMAC = findPartialRoute(mac);
-
-		if(!fullMAC.isNull())
-			sendRoute(node, _router.findSparkleNode(fullMAC));
-
-		return;
-	}
-
 	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest"))
 		return;
 
 	const route_request_t* req = (const route_request_t*) payload.constData();
 
-	SparkleNode* target = _router.findSparkleNode(req->sparkleMAC);
-	if(target) {
-		sendRoute(node, target);
+	if(req->length > 6) {
+		Log::warn("link: got malformed extended RouteRequest from [%1]:%2") << *node;
+	} else if(req->length < 6) {
+		QByteArray mac((const char*) req->sparkleMAC, req->length);
+		SparkleAddress fullMAC = findPartialRoute(mac);
+
+		if(!fullMAC.isNull())
+			sendRoute(node, _router.findSparkleNode(fullMAC));
 	} else {
-		sendRouteMissing(node, req->sparkleMAC);
+		SparkleNode* target = _router.findSparkleNode(req->sparkleMAC);
+		if(target) {
+			sendRoute(node, target);
+		} else {
+			sendRouteMissing(node, req->sparkleMAC);
+		}
 	}
 }
 
