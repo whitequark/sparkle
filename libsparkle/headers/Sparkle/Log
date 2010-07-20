@@ -19,6 +19,7 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 
+#include <Sparkle/Sparkle>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -29,7 +30,7 @@ namespace Sparkle {
 
 class SparkleNode;
 
-class Log {
+class SPARKLE_DECL Log {
 	enum loglevel_t {
 		Debug		= 1,
 		Info		= 2,

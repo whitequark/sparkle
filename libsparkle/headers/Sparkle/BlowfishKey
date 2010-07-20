@@ -19,13 +19,15 @@
 #ifndef __BLOWFISH__H__
 #define __BLOWFISH__H__
 
+#include <Sparkle/Sparkle>
+
 #include <QObject>
 
 namespace Sparkle {
 
 class BlowfishKeyPrivate;
 
-class BlowfishKey: public QObject
+class SPARKLE_DECL BlowfishKey: public QObject
 {
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(BlowfishKey)

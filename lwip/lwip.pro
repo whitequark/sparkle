@@ -23,6 +23,9 @@
 
 TARGET      = lwip
 TEMPLATE    = lib
+
+DESTDIR	= ../output
+
 CONFIG += staticlib
 INCLUDEPATH = port/headers src/include src/include/ipv4
 

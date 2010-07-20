@@ -20,12 +20,13 @@
 #define __RSA_KEY_PAIR__H__
 
 #include <QObject>
+#include <Sparkle/Sparkle>
 
 namespace Sparkle {
 
 class RSAKeyPairPrivate;
 
-class RSAKeyPair {
+class SPARKLE_DECL RSAKeyPair {
 	Q_DECLARE_PRIVATE(RSAKeyPair)
 
 protected:

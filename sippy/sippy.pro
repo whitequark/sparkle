@@ -1,13 +1,19 @@
 TEMPLATE = app
 TARGET = sippy
-DEPENDPATH += . \
-    ../libsparkle/headers
-INCLUDEPATH += . \
-    ../libsparkle/headers
+DESTDIR = ../output
+
+DEPENDPATH += . ../libsparkle/headers
+INCLUDEPATH += ../libsparkle/headers
+	
 QT += network
+
 debug:DEFINES += DEBUG
-unix:PRE_TARGETDEPS += ../libsparkle/libsparkle.a
+
+unix:PRE_TARGETDEPS += ../output/libsparkle.a
+
 win32:LIBS += -ladvapi32
+	
+LIBS += -lsparkle -L../output
 
 # Input
 HEADERS += ConfigurationStorage.h \
@@ -26,6 +32,7 @@ HEADERS += ConfigurationStorage.h \
     ChatWindow.h \
     ChatMessageEdit.h \
     Messaging.h
+	
 SOURCES += main.cpp \
     ConfigurationStorage.cpp \
     ConnectDialog.cpp \
@@ -41,21 +48,13 @@ SOURCES += main.cpp \
     ChatWindow.cpp \
     ChatMessageEdit.cpp \
     Messaging.cpp
-LIBS += -lsparkle
-win32:{
-	contains(QMAKESPEC,msvc) {
-		release:QMAKE_LFLAGS += -L../libsparkle/release
-		debug:QMAKE_LFLAGS += -L../libsparkle/debug
-	} else {
-		release:QMAKE_LFLAGS += /LIBPATH:../libsparkle/release
-		debug:QMAKE_LFLAGS += /LIBPATH:../libsparkle/debug
-	}
-} else:QMAKE_LFLAGS += -L../libsparkle
+	
 FORMS += Roster.ui \
     ConnectDialog.ui \
     AddContactDialog.ui \
     EditContactDialog.ui \
     PreferencesDialog.ui
+
 equals(QT_MAJOR_VERSION, "4"):lessThan(QT_MINOR_VERSION, "6") { 
     warning("Using bundled QtMultimedia from Qt 4.6.1")
     include("multimedia/audio.pri")

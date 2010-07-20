@@ -20,12 +20,13 @@
 #define __UDP_PACKET_TRANSPORT__H__
 
 #include <Sparkle/PacketTransport>
+#include <Sparkle/Sparkle>
 
 namespace Sparkle {
 
 class UdpPacketTransportPrivate;
 
-class UdpPacketTransport : public PacketTransport
+class SPARKLE_DECL UdpPacketTransport : public PacketTransport
 {
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(UdpPacketTransport)

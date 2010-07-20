@@ -1,0 +1,25 @@
+#include <winver.h>
+
+1 VERSIONINFO
+    FILEVERSION 1,0,0,0
+    PRODUCTVERSION 1,0,0,0
+    FILEOS VOS_NT_WINDOWS32
+    FILETYPE VFT_APP
+    {
+        BLOCK "VarFileInfo" {
+            VALUE "Translation", 0x409, 1200
+        }
+
+        BLOCK "StringFileInfo" {
+            BLOCK "040904B0" {
+                VALUE "CompanyName", "Sparkle Team"
+                VALUE "FileDescription", "Link layer of Sparkle network"
+                VALUE "FileVersion", "1.0"
+                VALUE "InternalName", "sparkle"
+                VALUE "OriginalFilename", "sparkle.dll"
+                VALUE "ProductName", "Sparkle"
+                VALUE "ProductVersion", "0.1"
+                VALUE "LegalCopyright", "© 2009 - 2010 Sparkle Team"
+            }
+        }
+    }

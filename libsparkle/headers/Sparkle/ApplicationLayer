@@ -19,13 +19,15 @@
 #ifndef __APPLICATION_LAYER_H__
 #define __APPLICATION_LAYER_H__
 
+#include <Sparkle/Sparkle>
+
 class QByteArray;
 
 namespace Sparkle {
 
 class SparkleAddress;
 
-class ApplicationLayer {
+class SPARKLE_DECL ApplicationLayer {
 public:
 	enum Encapsulation {
 		Ethernet	= 1,

@@ -23,6 +23,7 @@
 #include <QHostInfo>
 #include <QTime>
 
+#include <Sparkle/Sparkle>
 #include <Sparkle/RSAKeyPair>
 #include <Sparkle/SparkleAddress>
 #include <Sparkle/ApplicationLayer>
@@ -36,7 +37,7 @@ class SparkleNode;
 class PacketTransport;
 class Router;
 
-class LinkLayer : public QObject
+class SPARKLE_DECL LinkLayer : public QObject
 {
 	Q_OBJECT
 

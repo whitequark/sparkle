@@ -22,6 +22,7 @@
 #include <QObject>
 #include <QHostAddress>
 
+#include <Sparkle/Sparkle>
 #include <Sparkle/SparkleAddress>
 
 namespace Sparkle {
@@ -29,7 +30,7 @@ namespace Sparkle {
 class RouterPrivate;
 class SparkleNode;
 
-class Router : public QObject
+class SPARKLE_DECL Router : public QObject
 {
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(Router)

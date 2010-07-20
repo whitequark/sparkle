@@ -20,12 +20,13 @@
 #define SPARKLEADDRESS_H
 
 #include <QByteArray>
+#include <Sparkle/Sparkle>
 
 #define SPARKLE_ADDRESS_SIZE	6
 
 namespace Sparkle {
 
-class SparkleAddress
+class SPARKLE_DECL SparkleAddress
 {	
 public:
 	SparkleAddress();
@@ -47,7 +48,7 @@ private:
 	quint8 _bytes[SPARKLE_ADDRESS_SIZE];
 };
 
-uint qHash(const SparkleAddress &key);
+uint SPARKLE_DECL qHash(const SparkleAddress &key);
 }
 
 

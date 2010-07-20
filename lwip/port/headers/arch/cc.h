@@ -25,12 +25,18 @@
 #define __PORT__ARCH__CC__H__
 
 #include <QtGlobal>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifndef Q_CC_MSVC
 #include <sys/time.h>
+#include <errno.h>
 
 #define LWIP_TIMEVAL_PRIVATE 0
+
+#else
+#define LWIP_PROVIDE_ERRNO 1
+#endif
 
 typedef quint8 u8_t;
 typedef quint16 u16_t;
@@ -54,11 +60,28 @@ typedef quint64 mem_ptr_t;
 
 #endif
 
+#if defined (Q_CC_MSVC)
+
+#pragma warning(disable:4103)
+
 #define PACK_STRUCT_USE_INCLUDES 1
 #define PACK_STRUCT_BEGIN
 #define PACK_STRUCT_FIELD(a) a
 #define PACK_STRUCT_STRUCT
 #define PACK_STRUCT_END
+
+#elif defined(Q_CC_GNU)
+
+#define PACK_STRUCT_BEGIN 
+#define PACK_STRUCT_FIELD(a) a
+#define PACK_STRUCT_STRUCT __attribute__((packed))
+#define PACK_STRUCT_END 
+
+#else
+
+#error Unknown compiler
+
+#endif
 
 #undef BYTE_ORDER
 

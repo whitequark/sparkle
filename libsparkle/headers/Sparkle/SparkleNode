@@ -20,6 +20,8 @@
 #ifndef __SPARKLE_NODE__H__
 #define __SPARKLE_NODE__H__
 
+#include <Sparkle/Sparkle>
+
 #include <QObject>
 #include <QHostAddress>
 
@@ -31,7 +33,7 @@ class BlowfishKey;
 class Router;
 class RSAKeyPair;
 
-class SparkleNode : public QObject
+class SPARKLE_DECL SparkleNode : public QObject
 {
 	Q_OBJECT
 	Q_DECLARE_PRIVATE(SparkleNode)
