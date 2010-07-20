@@ -215,7 +215,7 @@ QList<SparkleNode*> Router::masters() const {
 QList<SparkleNode*> Router::otherMasters() const {
 	Q_D(const Router);
 
-	Q_ASSERT(_self != NULL && d->self->isMaster());
+	Q_ASSERT(d->self != NULL && d->self->isMaster());
 
 	QList<SparkleNode*> masters;
 

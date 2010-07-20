@@ -46,7 +46,7 @@ typedef quint32 mem_ptr_t;
 
 #elif QT_POINTER_SIZE == 8
 
-typedef quint64 mem_ptr_t
+typedef quint64 mem_ptr_t;
 
 #else
 
