@@ -119,7 +119,7 @@ bool Router::hasRouteTo(SparkleAddress sparkleMAC) const {
 
 SparkleNode* Router::findNode(QHostAddress realIP, quint16 realPort) const {
 	Q_D(const Router);
-	
+
 	foreach(SparkleNode *node, d->nodes) {
 		if(node->realIP() == realIP && node->realPort() == realPort)
 			return node;
@@ -128,70 +128,27 @@ SparkleNode* Router::findNode(QHostAddress realIP, quint16 realPort) const {
 	return NULL;
 }
 
-SparkleNode* Router::selectMaster() const {
-	Q_D(const Router);
-	
-	QList<SparkleNode*> list = masters();
-
-	if(list.size() == 0) {
-		Log::error("router: no masters are present according to my DB. Strange.");
-		return NULL;
-	}
-
-	if(list.size() == 1)
-		return list[0];
-
-	if(d->self != NULL)
-		list.removeOne(d->self);
-
-	return list[qrand() % list.size()];
-}
-
-SparkleNode* Router::selectJoinMaster(QHostAddress excludeIP) const {
-	Q_D(const Router);
-	
-	QList<SparkleNode*> list = masters();
-
-	if(list.size() == 0) {
-		Log::error("router: no masters are present according to my DB. Strange.");
-		return NULL;
-	}
-
-	if(list.size() == 1)
-		return list[0];
-
-	foreach(SparkleNode* node, list) {
-		if(node->realIP() == excludeIP)
-			list.removeOne(node);
-	}
-
-	if(list.size() == 0) {
-		Log::error("router: all masters belong to the same IP");
-		Log::error("router: returning random master because join will fail anyway");
-		list = masters();
-		return list[qrand() % list.size()];
-	}
-
-	if(list.size() == 1)
-		return list[0];
-
-	if(d->self != NULL)
-		list.removeOne(d->self);
-
-	return list[qrand() % list.size()];
-}
-
-SparkleNode* Router::selectWhiteSlave() const {
+QList<SparkleNode*> Router::find(Router::NodeQueryFlags flags, QHostAddress excludeIP) {
 	Q_D(const Router);
 
-	Q_ASSERT(d->self != NULL && d->self->isMaster());
-	
 	QList<SparkleNode*> list = d->nodes;
 
 	foreach(SparkleNode* node, list) {
-		if(node->isMaster() || node->isBehindNAT() || node == d->self)
+		if((flags & White       &&  node->isBehindNAT()) ||
+		   (flags & BehindNAT   && !node->isBehindNAT()) ||
+		   (flags & Master      && !node->isMaster()) ||
+		   (flags & Slave       &&  node->isMaster()) ||
+		   (flags & ExcludeSelf &&  node == d->self) ||
+		   (node->realIP() == excludeIP)) {
 			list.removeOne(node);
+		}
 	}
+
+	return list;
+}
+
+SparkleNode* Router::select(Router::NodeQueryFlags flags, QHostAddress excludeIP) {
+	QList<SparkleNode*> list = find(flags, excludeIP);
 
 	if(list.size() == 0)
 		return NULL;
@@ -199,70 +156,19 @@ SparkleNode* Router::selectWhiteSlave() const {
 	return list[qrand() % list.size()];
 }
 
-QList<SparkleNode*> Router::masters() const {
-	Q_D(const Router);
-
-	QList<SparkleNode*> masters;
-
-	foreach(SparkleNode *node, d->nodes) {
-		if(node->isMaster())
-			masters.append(node);
-	}
-
-	return masters;
+int Router::count(Router::NodeQueryFlags flags, QHostAddress excludeIP) {
+	return find(flags, excludeIP).count();
 }
-
-QList<SparkleNode*> Router::otherMasters() const {
-	Q_D(const Router);
-
-	Q_ASSERT(d->self != NULL && d->self->isMaster());
-
-	QList<SparkleNode*> masters;
-
-	foreach(SparkleNode *node, d->nodes) {
-		if(node->isMaster() && node != d->self)
-			masters.append(node);
-	}
-
-	return masters;
-}
-
-QList<SparkleNode*> Router::slaves() const {
-	Q_D(const Router);
-
-	QList<SparkleNode*> slaves;
-
-	foreach(SparkleNode *node, d->nodes) {
-		if(!node->isMaster())
-			slaves.append(node);
-	}
-
-	return slaves;
-}
-
 
 QList<SparkleNode*> Router::nodes() const {
 	Q_D(const Router);
-	
+
 	return d->nodes;
-}
-
-QList<SparkleNode*> Router::otherNodes() const {
-	Q_D(const Router);
-	
-	QList<SparkleNode*> selNodes;
-
-	foreach(SparkleNode *node, d->nodes) {
-		if(node != d->self)
-			selNodes.append(node);
-	}
-
-	return selNodes;
 }
 
 void Router::notifyNodeUpdated(SparkleNode* target) {
 	Q_D(const Router);
-	
+
 	foreach(SparkleNode *node, d->nodes) {
 		if(node == target)
 			emit nodeUpdated(target);
@@ -271,7 +177,7 @@ void Router::notifyNodeUpdated(SparkleNode* target) {
 
 void Router::clear() {
 	Q_D(Router);
-	
+
 	foreach(SparkleNode* node, d->nodes) {
 		d->nodes.removeOne(node);
 		emit peerRemoved(node->sparkleMAC());

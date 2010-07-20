@@ -21,6 +21,7 @@
 
 #include <QObject>
 #include <QHostAddress>
+#include <QFlags>
 
 #include <Sparkle/Sparkle>
 #include <Sparkle/SparkleAddress>
@@ -39,9 +40,19 @@ protected:
 	Router(RouterPrivate &dd, QObject *parent);
 
 public:
+	enum NodeQueryFlag {
+		White		= 0x01,
+		BehindNAT	= 0x02,
+		Master		= 0x04,
+		Slave		= 0x08,
+		ExcludeSelf = 0x10,
+	};
+
+	Q_DECLARE_FLAGS(NodeQueryFlags, NodeQueryFlag);
+
 	explicit Router(QObject *parent = 0);
 	virtual ~Router();
-	
+
 	void setSelfNode(SparkleNode* node);
 	SparkleNode* getSelfNode() const;
 
@@ -53,15 +64,11 @@ public:
 
 	bool hasRouteTo(SparkleAddress sparkleMAC) const;
 
-	SparkleNode* selectMaster() const;
-	SparkleNode* selectJoinMaster(QHostAddress excludeIP) const;
-	SparkleNode* selectWhiteSlave() const;
-
-	QList<SparkleNode*> masters() const;
-	QList<SparkleNode*> otherMasters() const;
-	QList<SparkleNode*> slaves() const;
 	QList<SparkleNode*> nodes() const;
-	QList<SparkleNode*> otherNodes() const;
+
+	SparkleNode* select(NodeQueryFlags flags, QHostAddress excludeIP = QHostAddress());
+	QList<SparkleNode*> find(NodeQueryFlags flags, QHostAddress excludeIP = QHostAddress());
+	int count(NodeQueryFlags flags, QHostAddress excludeIP = QHostAddress());
 
 	void clear();
 
@@ -80,5 +87,7 @@ protected:
 };
 
 }
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(Sparkle::Router::NodeQueryFlags);
 
 #endif
