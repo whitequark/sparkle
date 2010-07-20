@@ -28,20 +28,20 @@ contains(QMAKESPEC,msvc) {
 win32: QMAKE_LFLAGS_DLL += advapi32.lib
 
 # Input
-HEADERS += headers/Sparkle/BlowfishKey \
-	headers/Sparkle/LinkLayer \
-	headers/Sparkle/Log \
-	headers/Sparkle/PacketTransport \
+HEADERS += headers/Sparkle/blowfishkey.h \
+	headers/Sparkle/linklayer.h \
+	headers/Sparkle/log.h \
+	headers/Sparkle/packettransport.h \
 	SparkleRandom.h \
-	headers/Sparkle/Router \
-	headers/Sparkle/RSAKeyPair \
-	headers/Sparkle/SparkleNode \
-	headers/Sparkle/UdpPacketTransport \
+	headers/Sparkle/router.h \
+	headers/Sparkle/rsakeypair.h \
+	headers/Sparkle/sparklenode.h \
+	headers/Sparkle/udppackettransport.h \
 	crypto/bignum.h \
 	crypto/bn_mul.h \
 	crypto/rsa.h \
-	headers/Sparkle/ApplicationLayer \
-	headers/Sparkle/SparkleAddress
+	headers/Sparkle/applicationlayer.h \
+	headers/Sparkle/sparkleaddress.h
 	
 SOURCES += BlowfishKey.cpp \
 	LinkLayer.cpp \
