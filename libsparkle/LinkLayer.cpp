@@ -125,12 +125,12 @@ void LinkLayer::exitNetwork() {
 		return;
 	}
 
-	if(_router.getSelfNode()->isMaster() && _router.masters().count() == 1) {
+	if(_router.getSelfNode()->isMaster() && _router.count(Router::Master) == 1) {
 		Log::debug("link: i'm the last master");
 		reincarnateSomeone();
 	} else {
 		Log::debug("link: sending exit notification");
-		sendExitNotification(_router.selectMaster());
+		sendExitNotification(_router.select(Router::Master | Router::ExcludeSelf));
 	}
 
 	if(awaitingNegotiation.count() > 0) {
@@ -245,7 +245,7 @@ void LinkLayer::negotiationTimeout(SparkleNode* node) {
 }
 
 void LinkLayer::keepNATAlive() {
-	foreach(SparkleNode* node, _router.otherNodes()) {
+	foreach(SparkleNode* node, _router.find(Router::ExcludeSelf)) {
 		sendKeepalive(node);
 	}
 }
@@ -259,11 +259,17 @@ SparkleAddress LinkLayer::findPartialRoute(QByteArray mac) {
 	if(_router.getSelfNode()->isMaster())
 		return SparkleAddress();
 
-	route_request_extended_t req;
+	route_request_t req;
 	memcpy(req.sparkleMAC, mac.constData(), mac.size());
 	req.length = mac.size();
 
-	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_extended_t)), _router.selectMaster());
+	SparkleNode* targetMaster = _router.select(Router::Master);
+	if(targetMaster == NULL) {
+		Log::error("findPartialRoute: no masters are present");
+		return SparkleAddress();
+	}
+
+	sendEncryptedPacket(RouteRequest, QByteArray((const char*) &req, sizeof(route_request_t)), targetMaster);
 
 	return SparkleAddress();
 }
@@ -515,7 +521,7 @@ void LinkLayer::handleLocalRewritePacket(QByteArray &payload, SparkleNode* node)
 		return;
 
 	SparkleNode* target = NULL;
-	foreach(SparkleNode* slave, _router.slaves()) {
+	foreach(SparkleNode* slave, _router.find(Router::Slave)) {
 		if(SparkleNode::addressFromKey(node->authKey()) == slave->sparkleMAC())
 			target = slave;
 	}
@@ -564,7 +570,12 @@ void LinkLayer::handleMasterNodeRequest(QByteArray &payload, SparkleNode* node) 
 		return;
 
 	// scatter load over the whole network
-	SparkleNode* master = _router.selectJoinMaster(node->realIP());
+	SparkleNode* master = _router.select(Router::Master | Router::ExcludeSelf, node->realIP());
+
+	if(master == NULL) {
+		Log::warn("only one master, self, is present in the network; NAT passthrough may work incorrectly");
+		master = _router.getSelfNode();
+	}
 
 	if(master == NULL)
 		Log::fatal("link: cannot choose master, this is probably a bug");
@@ -761,11 +772,11 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	node->setBehindNAT(req->isBehindNAT);
 
 	if(!node->isBehindNAT()) {
-		if(_router.masters().count() == 1) {
+		if(_router.count(Router::Master) == 1) {
 			node->setMaster(true);
 		} else {
 			double ik = 1. / networkDivisor;
-			double rk = ((double) _router.masters().count()) / (_router.nodes().count() + 1);
+			double rk = ((double) _router.count(Router::Master)) / (_router.nodes().count() + 1);
 			if(rk < ik) {
 				Log::debug("link: insufficient masters (I %1; R %2), adding one") << ik << rk;
 				node->setMaster(true);
@@ -778,8 +789,8 @@ void LinkLayer::handleRegisterRequest(QByteArray &payload, SparkleNode* node) {
 	}
 
 	QList<SparkleNode*> updates;
-	if(node->isMaster())	updates = _router.otherNodes();
-	else			updates = _router.otherMasters();
+	if(node->isMaster())	updates = _router.find(Router::ExcludeSelf);
+	else			updates = _router.find(Router::Master | Router::ExcludeSelf);
 
 	foreach(SparkleNode* update, updates) {
 		sendRoute(node, update);
@@ -930,7 +941,7 @@ void LinkLayer::sendRouteRequest(SparkleAddress mac) {
 		return;
 	}
 
-	SparkleNode* master = _router.selectMaster();
+	SparkleNode* master = _router.select(Router::Master);
 	if(master == _router.getSelfNode()) {
 		// i'm the one master & i don't know route
 		Log::debug("link: no route to %1") << mac.pretty();
@@ -952,33 +963,26 @@ void LinkLayer::handleRouteRequest(QByteArray &payload, SparkleNode* node) {
 		return;
 	}
 
-	if(payload.size() == sizeof(route_request_extended_t)) {
-		const route_request_extended_t* req = (const route_request_extended_t*) payload.constData();
-
-		if(req->length > 6) {
-			Log::warn("link: got malformed extended RouteRequest from [%1]:%2") << *node;
-			return;
-		}
-
-		QByteArray mac((const char*) req->sparkleMAC, req->length);
-		SparkleAddress fullMAC = findPartialRoute(mac);
-
-		if(!fullMAC.isNull())
-			sendRoute(node, _router.findSparkleNode(fullMAC));
-
-		return;
-	}
-
 	if(!checkPacketSize(payload, sizeof(route_request_t), node, "RouteRequest"))
 		return;
 
 	const route_request_t* req = (const route_request_t*) payload.constData();
 
-	SparkleNode* target = _router.findSparkleNode(req->sparkleMAC);
-	if(target) {
-		sendRoute(node, target);
+	if(req->length > 6) {
+		Log::warn("link: got malformed extended RouteRequest from [%1]:%2") << *node;
+	} else if(req->length < 6) {
+		QByteArray mac((const char*) req->sparkleMAC, req->length);
+		SparkleAddress fullMAC = findPartialRoute(mac);
+
+		if(!fullMAC.isNull())
+			sendRoute(node, _router.findSparkleNode(fullMAC));
 	} else {
-		sendRouteMissing(node, req->sparkleMAC);
+		SparkleNode* target = _router.findSparkleNode(req->sparkleMAC);
+		if(target) {
+			sendRoute(node, target);
+		} else {
+			sendRouteMissing(node, req->sparkleMAC);
+		}
 	}
 }
 
@@ -1028,7 +1032,7 @@ void LinkLayer::handleRouteInvalidate(QByteArray& payload, SparkleNode* node) {
 	quint16 targetPort = qFromBigEndian<quint16>(inv->realPort);
 
 	SparkleNode* target = NULL;
-	foreach(SparkleNode* node, _router.otherNodes()) {
+	foreach(SparkleNode* node, _router.find(Router::ExcludeSelf)) {
 		if(node->realIP() == targetIP && node->realPort() == targetPort) {
 			target = node;
 			break;
@@ -1057,7 +1061,13 @@ void LinkLayer::sendBacklinkRedirect(SparkleNode* node) {
 	redirect.realIP = qToBigEndian<quint32>(node->realIP().toIPv4Address());
 	redirect.realPort = qToBigEndian<quint16>(node->realPort());
 
-	sendEncryptedPacket(BacklinkRedirect, QByteArray((const char*) &redirect, sizeof(backlink_redirect_t)), _router.selectMaster());
+	SparkleNode* targetMaster = _router.select(Router::Master);
+	if(targetMaster == NULL) {
+		Log::error("sendBacklinkRedirect: master not found");
+		return;
+	}
+
+	sendEncryptedPacket(BacklinkRedirect, QByteArray((const char*) &redirect, sizeof(backlink_redirect_t)), targetMaster);
 }
 
 void LinkLayer::handleBacklinkRedirect(QByteArray &payload, SparkleNode* node) {
@@ -1155,7 +1165,7 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 
 	_router.removeNode(node);
 
-	foreach(SparkleNode* target, _router.otherNodes())
+	foreach(SparkleNode* target, _router.find(Router::ExcludeSelf))
 		sendRouteInvalidate(target, node);
 
 	Log::debug("link: removing [%1]:%2 from node spool [exit]") << *node;
@@ -1164,8 +1174,8 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 	delete node;
 
 	double ik = 1. / networkDivisor;
-	double rk = ((double) _router.masters().count()) / (_router.nodes().count());
-	if(rk < ik || _router.masters().count() == 1) {
+	double rk = ((double) _router.count(Router::Master)) / (_router.nodes().count());
+	if(rk < ik || _router.count(Router::Master) == 1) {
 		Log::debug("link: insufficient masters (I %1; R %2)") << ik << rk;
 
 		reincarnateSomeone();
@@ -1173,7 +1183,7 @@ void LinkLayer::handleExitNotification(QByteArray& payload, SparkleNode* node) {
 }
 
 void LinkLayer::reincarnateSomeone() {
-	SparkleNode* target = _router.selectWhiteSlave();
+	SparkleNode* target = _router.select(Router::Slave | Router::White);
 
 	if(target == NULL) {
 		Log::warn("link: there're no nodes to reincarnate");
@@ -1186,7 +1196,7 @@ void LinkLayer::reincarnateSomeone() {
 
 	_router.updateNode(target);
 
-	foreach(SparkleNode* node, _router.otherNodes()) {
+	foreach(SparkleNode* node, _router.find(Router::ExcludeSelf)) {
 		if(!node->isMaster() && node != target) {
 			sendRoute(node, target);
 			sendRoute(target, node);
@@ -1284,7 +1294,7 @@ const LinkLayer::packet_handler_t LinkLayer::packetHandlers[] = {
 	{ RouteInvalidate,        true,  &LinkLayer::handleRouteInvalidate },
 
 	{ RoleUpdate,             true,  &LinkLayer::handleRoleUpdate },
-	
+
 	{ KeepalivePacket,        true,  &LinkLayer::handleKeepalive },
 
 	{ BacklinkRedirect,       true,  &LinkLayer::handleBacklinkRedirect },
