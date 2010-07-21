@@ -53,6 +53,8 @@ FORMS += Roster.ui \
     EditContactDialog.ui \
     PreferencesDialog.ui
 
+unix:QMAKE_LFLAGS += -Wl,-rpath ${PWD}/../output
+
 equals(QT_MAJOR_VERSION, "4"):lessThan(QT_MINOR_VERSION, "6") { 
     warning("Using bundled QtMultimedia from Qt 4.6.1")
     include("multimedia/audio.pri")

@@ -28,8 +28,9 @@
 #define IP_FRAG_USES_STATIC_BUF	0
 #define LWIP_RAW		0
 #define LWIP_NETIF_LOOPBACK	1
-#define LWIP_POSIX_SOCKETS_IO_NAMES 0
 #define LWIP_STATS	0
+
+#define LWIP_SOCKET	0
 
 #undef LWIP_DEBUG
 

@@ -55,7 +55,7 @@ public:
 
 }
 
-SparkleNodePrivate::SparkleNodePrivate(Router &router, QHostAddress realIP, quint16 realPort) : router(router), realIP(realIP), realPort(realPort), phantomPort(0), authKeyPresent(false), keysNegotiated(false) {
+SparkleNodePrivate::SparkleNodePrivate(Router &router, QHostAddress realIP, quint16 realPort) : router(router), realIP(realIP), realPort(realPort), phantomPort(0), authKeyPresent(false), keysNegotiated(false), master(false), behindNAT(false) {
 	mySessionKey.generate();
 	
 	negotiationTimer.setSingleShot(true);

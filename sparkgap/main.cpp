@@ -42,8 +42,9 @@
 #include "SignalHandler.h"
 #endif
 
-#include <lwip/tcpip.h>
 #include "LwIPTAP.h"
+#include "LwIPDispatcher.h"
+#include "TelnetServer.h"
 
 using namespace Sparkle;
 
@@ -69,7 +70,6 @@ QHostAddress checkoutAddress(QString strAddr) {
 	}
 	return ipAddr;
 }
-
 int main(int argc, char *argv[]) {
 #ifdef Q_OS_UNIX
 	bool daemonize = false;
@@ -268,7 +268,9 @@ int main(int argc, char *argv[]) {
 	TapInterface *tapIf = 0;
 
 	if(useLwIP) {
-		tcpip_init(NULL, NULL);
+		new LwIPDispatcher();
+
+		new TelnetServer();
 
 		tapIf = new LwIPTAP();
 

@@ -28,6 +28,8 @@ namespace Sparkle {
 
 class RouterPrivate {
 public:
+	RouterPrivate() : self(0) { }
+
 	SparkleNode *self;
 	QList<SparkleNode *> nodes;
 };

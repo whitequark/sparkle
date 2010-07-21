@@ -21,7 +21,6 @@
  * THE SOFTWARE.
  */
 
-#include <QtDebug>
 #include <QSemaphore>
 #include <QTime>
 
@@ -114,8 +113,6 @@ struct sys_timeouts *sys_arch_timeouts(void) {
 sys_thread_t sys_thread_new(char *name, void (* thread)(void *arg), void *arg, int stacksize, int prio) {
 	Q_UNUSED(stacksize);
 	Q_UNUSED(prio);
-
-	qDebug() << "Started thread" << name;
 
 	return new LwIPThread(thread, arg);
 }
